@@ -5,3 +5,8 @@ dist/
 *.egg-info/
 .venv/
 .env
+.coverage
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+outbox/
