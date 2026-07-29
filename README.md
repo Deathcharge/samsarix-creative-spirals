@@ -15,7 +15,7 @@ review/export step without connecting social accounts or sending draft content t
 Prerequisite: Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/Deathcharge/helix-creative-spirals.git
+git clone https://github.com/Deathcharge/samsarix-creative-spirals.git
 cd helix-creative-spirals
 python -m venv .venv
 ```

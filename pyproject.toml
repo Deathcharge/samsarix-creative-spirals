@@ -45,9 +45,9 @@ samsarix-campaign = "samsarix_creative_spirals.cli:main"
 
 [project.urls]
 Homepage = "https://samsarix.com"
-Documentation = "https://github.com/Deathcharge/helix-creative-spirals#readme"
-Repository = "https://github.com/Deathcharge/helix-creative-spirals.git"
-Issues = "https://github.com/Deathcharge/helix-creative-spirals/issues"
+Documentation = "https://github.com/Deathcharge/samsarix-creative-spirals#readme"
+Repository = "https://github.com/Deathcharge/samsarix-creative-spirals.git"
+Issues = "https://github.com/Deathcharge/samsarix-creative-spirals/issues"
 
 [tool.setuptools]
 packages = ["samsarix_creative_spirals"]
