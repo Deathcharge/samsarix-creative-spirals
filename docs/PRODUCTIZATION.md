@@ -153,8 +153,8 @@ No locally actionable P0 remains.
 - [x] Document trust boundaries, privacy, cost, recovery, and limitations.
 - [x] Replace the contradictory customized BSL/proprietary files with owner-selected MPL-2.0,
   consistent Samsarix LLC metadata, origin notices, contacts, and trademark guidance.
-- [ ] Exercise the committed GitHub Actions workflow on GitHub-hosted Linux/Python 3.10 and 3.13
-  (external gate; local Windows verification cannot substitute for a hosted run).
+- [x] Exercise the committed GitHub Actions workflow on GitHub-hosted Linux/Python 3.10 and 3.13;
+  both jobs passed in run `30418387807`.
 
 ### P2 — valuable post-release work
 
@@ -198,7 +198,7 @@ No locally actionable P0 remains.
 - [x] No credentials, telemetry, production endpoints, or imaginary Helix services are required.
 - [x] README examples and commands match implemented scripts.
 - [x] License identity, company, contacts, package metadata, and documentation are consistent.
-- [ ] Hosted CI completes successfully on the declared Python matrix.
+- [x] Hosted CI completes successfully on the declared Python matrix.
 
 ## Known risks
 
@@ -207,9 +207,9 @@ No locally actionable P0 remains.
 - X's complete `twitter-text` parser contains edge cases beyond this dependency-free implementation.
   The current algorithm follows documented weights and keeps detected URLs atomic, but does not
   claim conformance certification.
-- The full quality suite has been verified locally on Windows/Python 3.11; Python 3.13 passed
-  compile/import/validate/build smoke checks. Hosted CI is configured for Linux and full Python
-  3.10/3.13 quality runs but remains an external execution gate.
+- The full quality suite has been verified locally on Windows/Python 3.11, with isolated wheel
+  smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel jobs passed on
+  Python 3.10 and 3.13.
 - `--overwrite` updates draft files then writes the manifest last. A process/filesystem failure
   during explicit overwrite can leave files newer than the old manifest; rerunning the same command
   recovers the bundle.
@@ -238,6 +238,8 @@ run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass
 | isolated `python -m pip check` | 0 | No broken requirements. |
 | isolated metadata/API inspection | 0 | Name, version, `MPL-2.0` license expression, package version, and schema resource matched. |
 | Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, preview, and public import successfully. |
+| GitHub Actions `quality (3.10)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 25 seconds. |
+| GitHub Actions `quality (3.13)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 33 seconds. |
 
 Artifact inspection found only the intended Samsarix package plus distribution metadata in the
 wheel. It includes the JSON Schema, `py.typed`, unmodified MPL-2.0 text, and NOTICE; it includes no
@@ -248,13 +250,12 @@ The public package index and real platform publishing were not used. Public publ
 explicit owner action; platform publishing is deliberately absent from the product and therefore
 is not an untested claim.
 
-## External and owner-controlled blockers
+## External and owner-controlled follow-ups
 
-1. **Hosted CI:** obtain a green run for `.github/workflows/ci.yml` on the declared Python matrix.
-2. **Public distribution:** if desired, the owner must confirm the PyPI name, create/configure the
+1. **Public distribution:** if desired, the owner must confirm the PyPI name, create/configure the
    trusted publisher, and publish the locally verified artifacts. No account or package was created
    during this pass.
-3. **Optional legal review:** MPL-2.0 and the owner-supplied company/contact identity are now
+2. **Optional legal review:** MPL-2.0 and the owner-supplied company/contact identity are now
    internally consistent. Counsel may still confirm the ownership chain, trademarks, and any future
    contributor or alternative commercial-license process; this is prudent governance rather than a
    contradictory-license release blocker.
@@ -270,7 +271,7 @@ content.
 
 ## Release disposition
 
-**0.2 release candidate with one technical external gate:** a green hosted GitHub Actions run on
-the declared Python matrix. The local product journey, package artifacts, tests, branding,
-licensing, and documentation meet the 0.2 acceptance criteria, and no locally actionable P0 is
-known. Public package publication remains a separate owner-controlled release action.
+**0.2 release candidate; all declared technical acceptance gates pass.** The local product journey,
+package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.2 acceptance
+criteria, and no locally actionable P0 is known. Public package publication remains a separate
+owner-controlled release action.
