@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from helix_creative_spirals import ConfigError, build_campaign, export_campaign, load_campaign
+from samsarix_creative_spirals import ConfigError, build_campaign, export_campaign, load_campaign
 
 
 def _write_campaign(path: Path, data: dict[str, Any]) -> None:
@@ -19,7 +19,7 @@ def test_build_is_deterministic(campaign_data: dict[str, Any]) -> None:
     second = build_campaign(campaign_data)
 
     assert first == second
-    assert first.campaign_id.startswith("csp_")
+    assert first.campaign_id.startswith("scs_")
     assert len(first.source_hash) == 64
 
 

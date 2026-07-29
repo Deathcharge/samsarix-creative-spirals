@@ -1,4 +1,7 @@
-"""Command-line interface for Helix Creative Spirals."""
+# Copyright (c) 2026 Samsarix LLC
+# SPDX-License-Identifier: MPL-2.0
+
+"""Command-line interface for Samsarix Creative Spirals."""
 
 from __future__ import annotations
 
@@ -10,6 +13,7 @@ from pathlib import Path
 
 from . import __version__
 from .models import CampaignBundle, ConfigError
+from .schema import load_campaign_schema
 from .templates import starter_campaign
 from .workflow import build_campaign, export_campaign, load_campaign
 
@@ -40,7 +44,7 @@ def _init_command(args: argparse.Namespace) -> int:
     except FileExistsError:
         raise ConfigError(f"refusing to overwrite existing file: {path}") from None
     print(f"Created {path}")
-    print(f"Next: helix-spirals preview {path}")
+    print(f"Next: samsarix-campaign preview {path}")
     return 0
 
 
@@ -79,10 +83,28 @@ def _export_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _schema_command(args: argparse.Namespace) -> int:
+    schema = load_campaign_schema()
+    if args.output is None:
+        _json_print(schema)
+        return 0
+
+    path = Path(args.output)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(schema, ensure_ascii=False, indent=2) + "\n"
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            handle.write(payload)
+    except FileExistsError:
+        raise ConfigError(f"refusing to overwrite existing file: {path}") from None
+    print(f"Wrote campaign schema to {path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build the public argument parser."""
     parser = argparse.ArgumentParser(
-        prog="helix-spirals",
+        prog="samsarix-campaign",
         description="Preview and export one draft for multiple social platforms, locally.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -114,6 +136,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     export_parser.add_argument("--json", action="store_true", help="emit machine-readable output")
     export_parser.set_defaults(handler=_export_command)
+
+    schema_parser = subparsers.add_parser(
+        "schema", help="print or write the bundled campaign JSON Schema"
+    )
+    schema_parser.add_argument("--output", help="write to a new file instead of standard output")
+    schema_parser.set_defaults(handler=_schema_command)
     return parser
 
 

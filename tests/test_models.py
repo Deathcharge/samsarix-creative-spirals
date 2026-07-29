@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from helix_creative_spirals import CampaignConfig, ConfigError
+from samsarix_creative_spirals import CampaignConfig, ConfigError
 
 
 def test_campaign_normalizes_input(campaign_data: dict[str, Any]) -> None:

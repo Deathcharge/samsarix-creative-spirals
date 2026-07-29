@@ -1,14 +1,14 @@
-# Helix Creative Spirals
+# Samsarix Creative Spirals
 
-Helix Creative Spirals is a local-first CLI and Python library that turns one approved source
-draft into copy-ready files for X, LinkedIn, and Discord. It validates campaign input, applies
-platform-aware limits, reports every truncation, and exports a deterministic review bundle.
+Samsarix Creative Spirals is a local-first CLI and typed Python library that turns one approved
+source draft into copy-ready files for X, LinkedIn, and Discord. It validates campaign input,
+applies platform-aware limits, reports every truncation, and exports a deterministic review bundle.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.1 release candidate.** Preview and local export are implemented and tested.
-> Automatic publishing, scheduling, analytics, and AI generation are deliberately not included.
+> Maturity: **0.2 alpha.** Preview and local export are implemented and tested. Automatic
+> publishing, scheduling, analytics, and AI generation are deliberately not included.
 
 ## Fastest successful path
 
@@ -34,27 +34,29 @@ Install and preview the included campaign:
 
 ```bash
 python -m pip install -e .
-helix-spirals preview examples/campaign.json
+samsarix-campaign preview examples/campaign.json
 ```
 
-No API keys, accounts, database, or private Helix repository are required.
+No API keys, accounts, database, network connection, or other Samsarix repository is required.
+The GitHub repository retains its legacy `helix-creative-spirals` slug for continuity; the product,
+package, import namespace, and CLI are Samsarix-branded.
 
 ## Core journey
 
 Create a starter file, preview it, then export only after reviewing the output:
 
 ```bash
-helix-spirals init campaign.json
-helix-spirals validate campaign.json
-helix-spirals preview campaign.json
-helix-spirals export campaign.json --output outbox
+samsarix-campaign init campaign.json
+samsarix-campaign validate campaign.json
+samsarix-campaign preview campaign.json
+samsarix-campaign export campaign.json --output outbox
 ```
 
 The export command creates a deterministic directory such as:
 
 ```text
 outbox/
-└── product-launch-csp_8b7f2a12c941/
+└── product-launch-scs_8b7f2a12c941/
     ├── manifest.json
     ├── x.md
     ├── linkedin.md
@@ -91,31 +93,39 @@ behavior.
 | `link` | no | Absolute HTTP(S) URL, at most 500 characters, no embedded credentials. |
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
 
-Formatting defaults are 280 weighted characters for X, 3,000 characters for LinkedIn, and
-2,000 characters for Discord. The X counter implements X's published Unicode weighting and
-23-character URL rule. Content is normalized to NFC and truncated on conservative text clusters;
-links and suffix metadata are preserved where possible. Every modification is recorded as a
-warning in preview output and `manifest.json`.
+Print the bundled JSON Schema for editor or CI integration, or write it to a new file:
+
+```bash
+samsarix-campaign schema
+samsarix-campaign schema --output campaign.schema.json
+```
+
+Formatting defaults are 280 weighted characters for X, 3,000 characters for LinkedIn, and 2,000
+characters for Discord. The X counter implements the published Unicode weighting and 23-character
+URL rule. Content is normalized to NFC and truncated on conservative text clusters; links and
+suffix metadata are preserved where possible. Every modification is recorded as a warning in
+preview output and `manifest.json`.
 
 ## CLI reference
 
 ```text
-helix-spirals --help
-helix-spirals --version
-helix-spirals init [PATH]
-helix-spirals validate CONFIG [--json]
-helix-spirals preview CONFIG [--json]
-helix-spirals export CONFIG [--output DIRECTORY] [--overwrite] [--json]
+samsarix-campaign --help
+samsarix-campaign --version
+samsarix-campaign init [PATH]
+samsarix-campaign validate CONFIG [--json]
+samsarix-campaign preview CONFIG [--json]
+samsarix-campaign export CONFIG [--output DIRECTORY] [--overwrite] [--json]
+samsarix-campaign schema [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
-usage returns `2`. Human-readable errors go to stderr. `--json` keeps successful output suitable
-for scripts.
+usage returns `2`. Human-readable errors go to stderr. `--json` keeps successful campaign output
+suitable for scripts.
 
 ## Python API
 
 ```python
-from helix_creative_spirals import build_campaign, export_campaign, load_campaign
+from samsarix_creative_spirals import build_campaign, export_campaign, load_campaign
 
 config = load_campaign("examples/campaign.json")
 bundle = build_campaign(config)       # deterministic and side-effect free
@@ -139,30 +149,27 @@ python -m pip install -r requirements-dev.txt
 Run the same checks enforced by CI:
 
 ```bash
-python -m black --check helix_creative_spirals tests examples
-python -m flake8 helix_creative_spirals tests examples
+python -m black --check samsarix_creative_spirals tests examples
+python -m flake8 samsarix_creative_spirals tests examples
 python -m mypy
-python -m pytest --cov=helix_creative_spirals --cov-report=term-missing
+python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing
 python -m build
 ```
 
-CI is configured to run these checks on Python 3.10 and 3.13 and smoke-test the built wheel and
-console command.
-The `requirements-dev.txt` file pins the direct development tools; the installed package has no
-third-party runtime dependencies.
+CI runs these checks on Python 3.10 and 3.13 and smoke-tests the built wheel, schema resource, and
+console command. The package has no third-party runtime dependencies.
 
-## Architecture
-
-The package has four boundaries:
+## Architecture and boundaries
 
 - `models.py` validates and normalizes local JSON input.
 - `formatters.py` creates bounded platform drafts without network access.
 - `workflow.py` computes deterministic IDs and safely exports review bundles.
+- `schema.py` exposes the campaign JSON Schema bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
-`build_campaign` has no file or network side effects. Only `load_campaign`, `init`, and
-`export_campaign` touch disk. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for trust boundaries and
-failure behavior.
+`build_campaign` has no file or network side effects. Only `load_campaign`, `init`, `schema
+--output`, and `export_campaign` touch disk. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for trust
+boundaries and failure behavior.
 
 ## Security, privacy, cost, and limitations
 
@@ -174,24 +181,28 @@ failure behavior.
 - Export paths are generated from a sanitized name plus a content hash. Existing bundles are not
   overwritten without explicit opt-in, and symbolic-link bundle targets are rejected.
 - Discord broadcast mentions are surfaced as warnings. This tool never posts them.
-- Runtime operating cost is zero beyond the user's local compute and storage.
-- Platform policies and edge-case counting rules change. Review final text in the platform's own
-  composer before publishing. The tool does not claim API conformance or automatic policy
-  compliance.
+- Runtime operating cost is zero beyond local compute and storage.
+- Platform policies and edge-case counting rules change. Review final text in each platform's own
+  composer before publishing; this tool does not claim API conformance.
 - Media, per-account capabilities, calendars, approvals, network publishing, and analytics are
-  outside the 0.1 scope.
+  outside the 0.2 scope.
 
-## Distribution and release status
+Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
+
+## Distribution and license
 
 The simplest distribution is a source checkout or locally built wheel installed with `pipx` or
-`pip`. This repository is not currently published on PyPI, so do not assume
-`pip install helix-creative-spirals` resolves from the public index.
+`pip`. The package is not currently published on PyPI, so do not assume
+`pip install samsarix-creative-spirals` resolves from the public index.
 
-The repository's `LICENSE` is a customized Business Source License document. Its named Licensed
-Work, licensor identity, contact domain, change date, and the separate `LICENSE.PROPRIETARY` file
-require owner/legal confirmation before public package publication. Package metadata reports a
-custom `LicenseRef` and does not claim an OSI-approved license. No license text was changed during
-productization.
+The code is licensed under [MPL-2.0](LICENSE), a file-level copyleft license selected to keep
+distributed changes to covered source files open while allowing use in larger works. Copyright
+and origin notices are in [NOTICE](NOTICE), practical licensing context is in
+[LICENSING.md](LICENSING.md), and brand use is addressed in [TRADEMARKS.md](TRADEMARKS.md).
+
+General and licensing contact: `contact@samsarix.com`
+
+Support and security contact: `support@samsarix.com`
 
 See [PRODUCTIZATION.md](docs/PRODUCTIZATION.md) for the evidence, completed work, known risks, and
 release gates. Contribution instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).

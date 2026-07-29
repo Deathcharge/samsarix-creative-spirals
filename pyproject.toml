@@ -3,15 +3,19 @@ requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "helix-creative-spirals"
-version = "0.1.0"
+name = "samsarix-creative-spirals"
+version = "0.2.0"
 description = "Local-first, reviewable social campaign packaging"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LicenseRef-Helix-Business-Source-1.1"
-license-files = ["LICENSE", "LICENSE.PROPRIETARY"]
-authors = [{ name = "Helix Collective" }]
-keywords = ["content-operations", "local-first", "social-media", "workflow"]
+license = "MPL-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+    { name = "Andrew John Ward", email = "contact@samsarix.com" },
+    { name = "Samsarix LLC", email = "contact@samsarix.com" },
+]
+maintainers = [{ name = "Samsarix LLC", email = "support@samsarix.com" }]
+keywords = ["content-operations", "local-first", "samsarix", "social-media", "workflow"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -37,15 +41,19 @@ dev = [
 ]
 
 [project.scripts]
-helix-spirals = "helix_creative_spirals.cli:main"
+samsarix-campaign = "samsarix_creative_spirals.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/Deathcharge/helix-creative-spirals"
+Homepage = "https://samsarix.com"
+Documentation = "https://github.com/Deathcharge/helix-creative-spirals#readme"
 Repository = "https://github.com/Deathcharge/helix-creative-spirals.git"
 Issues = "https://github.com/Deathcharge/helix-creative-spirals/issues"
 
 [tool.setuptools]
-packages = ["helix_creative_spirals"]
+packages = ["samsarix_creative_spirals"]
+
+[tool.setuptools.package-data]
+samsarix_creative_spirals = ["py.typed", "*.json"]
 
 [tool.black]
 line-length = 100
@@ -53,7 +61,7 @@ target-version = ["py310"]
 
 [tool.mypy]
 python_version = "3.10"
-files = ["helix_creative_spirals", "tests"]
+files = ["samsarix_creative_spirals", "tests"]
 strict = true
 warn_unreachable = true
 
@@ -63,8 +71,8 @@ addopts = ["--strict-config", "--strict-markers"]
 
 [tool.coverage.run]
 branch = true
-source = ["helix_creative_spirals"]
-omit = ["helix_creative_spirals/__main__.py"]
+source = ["samsarix_creative_spirals"]
+omit = ["samsarix_creative_spirals/__main__.py"]
 
 [tool.coverage.report]
 fail_under = 90

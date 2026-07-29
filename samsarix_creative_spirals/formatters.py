@@ -1,4 +1,7 @@
-"""Platform-aware content formatting with conservative limits."""
+# Copyright (c) 2026 Samsarix LLC
+# SPDX-License-Identifier: MPL-2.0
+
+"""Platform-aware Samsarix content formatting with conservative limits."""
 
 from __future__ import annotations
 

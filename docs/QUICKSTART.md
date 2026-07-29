@@ -1,6 +1,6 @@
 # Quick start
 
-Helix Creative Spirals needs Python 3.10+ and no API credentials.
+Samsarix Creative Spirals needs Python 3.10+ and no API credentials.
 
 ## 1. Install from this checkout
 
@@ -18,14 +18,14 @@ source .venv/bin/activate
 
 ```bash
 python -m pip install -e .
-helix-spirals --version
+samsarix-campaign --version
 ```
 
 ## 2. Create and preview a campaign
 
 ```bash
-helix-spirals init campaign.json
-helix-spirals preview campaign.json
+samsarix-campaign init campaign.json
+samsarix-campaign preview campaign.json
 ```
 
 Edit `campaign.json`, then run `preview` again. Preview is side-effect free: it reads the file and
@@ -34,7 +34,7 @@ writes only to stdout/stderr.
 ## 3. Validate for automation
 
 ```bash
-helix-spirals validate campaign.json --json
+samsarix-campaign validate campaign.json --json
 ```
 
 Example success:
@@ -42,17 +42,24 @@ Example success:
 ```json
 {
   "valid": true,
-  "campaignId": "csp_8b7f2a12c941",
+  "campaignId": "scs_8b7f2a12c941",
   "platforms": ["x", "linkedin", "discord"]
 }
 ```
 
 Validation failures return exit code `1` and write the reason to stderr.
 
+For editor or CI support, print the bundled schema or write it to a new file:
+
+```bash
+samsarix-campaign schema
+samsarix-campaign schema --output campaign.schema.json
+```
+
 ## 4. Export the approved drafts
 
 ```bash
-helix-spirals export campaign.json --output outbox
+samsarix-campaign export campaign.json --output outbox
 ```
 
 The resulting folder contains one Markdown file per platform and `manifest.json` with the source
@@ -64,7 +71,7 @@ If the exact same campaign was already exported, the command refuses to replace 
 replacement is explicit:
 
 ```bash
-helix-spirals export campaign.json --output outbox --overwrite
+samsarix-campaign export campaign.json --output outbox --overwrite
 ```
 
 ## Troubleshooting
@@ -74,5 +81,5 @@ helix-spirals export campaign.json --output outbox --overwrite
 - `link must be an absolute http or https URL`: include the full scheme and hostname.
 - `bundle already exists`: review the existing bundle, change the campaign, choose another output
   root, or explicitly pass `--overwrite`.
-- `helix-spirals: command not found`: activate the environment where the package was installed, or
-  run `python -m helix_creative_spirals` with the same arguments.
+- `samsarix-campaign: command not found`: activate the environment where the package was installed,
+  or run `python -m samsarix_creative_spirals` with the same arguments.

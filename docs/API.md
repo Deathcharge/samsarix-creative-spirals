@@ -59,10 +59,16 @@ for reproducible tests; normal callers should leave it unset.
 
 I/O failures raise the relevant `OSError` subclass.
 
+### `load_campaign_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the JSON Schema bundled in the installed wheel. It performs no
+network access and is useful for editor, form, or CI integration. The CLI exposes the same artifact
+through `samsarix-campaign schema`.
+
 ## Example
 
 ```python
-from helix_creative_spirals import (
+from samsarix_creative_spirals import (
     ConfigError,
     build_campaign,
     export_campaign,
@@ -85,6 +91,6 @@ else:
 ## Compatibility policy
 
 The package is pre-1.0. The exported names, JSON `schemaVersion: 1`, manifest shape, and documented
-CLI behavior are the compatibility surface for 0.1.x. Internal helpers and exact prose in warning
+CLI behavior are the compatibility surface for 0.2.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from helix_creative_spirals.cli import main
+from samsarix_creative_spirals.cli import main
 
 
 def _write_campaign(path: Path, data: dict[str, Any]) -> None:
@@ -35,7 +35,7 @@ def test_cli_json_preview(tmp_path: Path, capsys: Any, campaign_data: dict[str, 
 
     assert main(["preview", str(path), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["campaignId"].startswith("csp_")
+    assert payload["campaignId"].startswith("scs_")
     assert len(payload["drafts"]) == 3
 
 
@@ -62,3 +62,17 @@ def test_init_refuses_to_overwrite(tmp_path: Path, capsys: Any) -> None:
 def test_cli_without_command_returns_usage_error(capsys: Any) -> None:
     assert main([]) == 2
     assert "usage:" in capsys.readouterr().err
+
+
+def test_cli_prints_and_writes_schema(tmp_path: Path, capsys: Any) -> None:
+    assert main(["schema"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["title"] == "Samsarix Creative Spirals campaign"
+
+    output = tmp_path / "schemas" / "campaign.schema.json"
+    assert main(["schema", "--output", str(output)]) == 0
+    capsys.readouterr()
+    assert json.loads(output.read_text(encoding="utf-8"))["additionalProperties"] is False
+
+    assert main(["schema", "--output", str(output)]) == 1
+    assert "refusing to overwrite" in capsys.readouterr().err

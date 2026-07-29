@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Samsarix LLC
+# SPDX-License-Identifier: MPL-2.0
+
 """Campaign loading, deterministic preview, and safe local export."""
 
 from __future__ import annotations
@@ -59,7 +62,7 @@ def build_campaign(config: CampaignConfig | dict[str, Any]) -> CampaignBundle:
     source_hash = hashlib.sha256(_canonical_source(normalized)).hexdigest()
     drafts = tuple(format_platform(normalized, platform) for platform in normalized.platforms)
     return CampaignBundle(
-        campaign_id=f"csp_{source_hash[:12]}",
+        campaign_id=f"scs_{source_hash[:12]}",
         source_hash=source_hash,
         name=normalized.name,
         drafts=drafts,

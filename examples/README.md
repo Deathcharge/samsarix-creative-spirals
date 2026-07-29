@@ -3,9 +3,9 @@
 `campaign.json` is a complete input for the primary CLI journey:
 
 ```bash
-helix-spirals validate examples/campaign.json
-helix-spirals preview examples/campaign.json
-helix-spirals export examples/campaign.json --output outbox
+samsarix-campaign validate examples/campaign.json
+samsarix-campaign preview examples/campaign.json
+samsarix-campaign export examples/campaign.json --output outbox
 ```
 
 Expected behavior:

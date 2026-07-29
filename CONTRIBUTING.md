@@ -27,10 +27,10 @@ python -m pip install -r requirements-dev.txt
 ## Required checks
 
 ```bash
-python -m black --check helix_creative_spirals tests examples
-python -m flake8 helix_creative_spirals tests examples
+python -m black --check samsarix_creative_spirals tests examples
+python -m flake8 samsarix_creative_spirals tests examples
 python -m mypy
-python -m pytest --cov=helix_creative_spirals --cov-report=term-missing
+python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing
 python -m build
 ```
 
@@ -56,6 +56,9 @@ privacy impact, and any deferred work. CI must pass on every supported matrix ve
 
 ## License
 
-Contributions are subject to the repository's existing license files. The current license metadata
-has owner/legal confirmation items documented in `docs/PRODUCTIZATION.md`; maintainers should
-resolve those before accepting public distribution or external contributions.
+Contributions are made under MPL-2.0; see `LICENSE`. Preserve applicable copyright and SPDX
+notices. The license does not grant rights to Samsarix trademarks; see `TRADEMARKS.md`.
+
+By submitting a contribution, you represent that you have the right to submit it under MPL-2.0.
+Large or strategically significant contributions may require a separate contributor agreement in
+the future, but none is currently required. Contact `contact@samsarix.com` with licensing questions.

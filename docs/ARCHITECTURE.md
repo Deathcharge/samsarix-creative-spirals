@@ -2,9 +2,9 @@
 
 ## Product boundary
 
-Helix Creative Spirals is a local transformation and export layer. It begins with human-approved
+Samsarix Creative Spirals is a local transformation and export layer. It begins with human-approved
 text and ends with reviewable local files. It has no provider clients, account connectors,
-scheduler, background process, persistence service, analytics, or dependency on another Helix
+scheduler, background process, persistence service, analytics, or dependency on another Samsarix
 repository.
 
 ```text
@@ -47,9 +47,15 @@ New bundles are assembled in a private temporary sibling and renamed into place.
 opt-in, rejects non-directory/symbolic-link targets, replaces the manifest last, and never writes
 outside the generated child path.
 
+### `schema.py` and `campaign.schema.json`
+
+Package the authoring contract with the wheel and return a fresh decoded dictionary to library
+callers. The schema helps editors and generic validators, while `CampaignConfig` remains the
+authoritative runtime validator and provides more actionable error messages.
+
 ### `cli.py`
 
-Provides `init`, `validate`, `preview`, and `export`. Successful JSON output stays on stdout;
+Provides `init`, `validate`, `preview`, `export`, and `schema`. Successful JSON output stays on stdout;
 errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`, and success
 returns `0`.
 
@@ -75,7 +81,7 @@ path. It never reads environment variables or logs draft content automatically.
 - During an explicit overwrite, draft files are replaced before `manifest.json`; readers can treat
   the manifest as the commit marker.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.1 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.2 scope.
 
 ## Dependency and cost model
 

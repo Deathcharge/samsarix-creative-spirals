@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from helix_creative_spirals import build_campaign, export_campaign, load_campaign
+from samsarix_creative_spirals import build_campaign, export_campaign, load_campaign
 
 
 def main() -> None:

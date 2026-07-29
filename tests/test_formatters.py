@@ -4,8 +4,8 @@ from typing import Any
 
 import pytest
 
-from helix_creative_spirals import CampaignConfig, ConfigError
-from helix_creative_spirals.formatters import format_platform, x_weighted_length
+from samsarix_creative_spirals import CampaignConfig, ConfigError
+from samsarix_creative_spirals.formatters import format_platform, x_weighted_length
 
 
 def test_x_weighted_length_handles_unicode_and_urls() -> None:

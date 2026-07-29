@@ -1,4 +1,7 @@
-"""Starter campaign configuration."""
+# Copyright (c) 2026 Samsarix LLC
+# SPDX-License-Identifier: MPL-2.0
+
+"""Starter Samsarix campaign configuration."""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""Validated data models for local campaign packaging."""
+# Copyright (c) 2026 Samsarix LLC
+# SPDX-License-Identifier: MPL-2.0
+
+"""Validated data models for local Samsarix campaign packaging."""
 
 from __future__ import annotations
 

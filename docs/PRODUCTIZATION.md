@@ -28,9 +28,17 @@ The worktree was clean on `main` and matched `origin/main` at `1c5c9f6` before c
 in this productization pass are therefore attributable to this work; no pre-existing dirty or
 untracked user work was overwritten.
 
+On the same date, the owner confirmed that the company and product family now use the Samsarix
+brand, supplied `contact@samsarix.com` and `support@samsarix.com`, identified Samsarix LLC as the
+company, and authorized further productization and publication of commits. A read-only portfolio
+check confirmed that related repositories already use full Samsarix distribution/import rebrands,
+MPL-2.0, and the same contact pattern. This repository follows that pattern without adding runtime
+coupling. Its legacy GitHub slug remains unchanged for continuity.
+
 ## Chosen product definition
 
-**Product:** a dependency-free, local-first campaign preview/export CLI and Python library.
+**Product:** Samsarix Creative Spirals, a dependency-free, local-first campaign preview/export CLI
+and typed Python library.
 
 **Target user:** a solo creator, developer advocate, or small content team with an approved source
 draft who needs consistent platform variants and reviewable artifacts, but does not want to grant
@@ -46,9 +54,9 @@ publishing process.
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
 boundary with no credentials, network calls, hosted state, or account risk. It can complement any
-publisher without depending on Helix Unified.
+publisher without depending on another Samsarix repository or the flagship application.
 
-**Deliberately out of scope for 0.1:** automatic publishing; social authentication; background
+**Deliberately out of scope for 0.2:** automatic publishing; social authentication; background
 scheduling; analytics; AI generation; media processing; collaborative approvals; account-specific
 capabilities; a web UI; database/cloud infrastructure; and private Helix integrations.
 
@@ -60,15 +68,20 @@ capabilities; a web UI; database/cloud infrastructure; and private Helix integra
    user control.
 3. Use strict, versioned JSON. The Python standard library handles it on every supported platform;
    rejecting unknown keys catches mistakes early.
-4. Maintain a minimal public API: validated models plus load, build, and export functions.
+4. Maintain a minimal public API: validated models plus load, build, export, and packaged-schema
+   functions.
 5. Derive campaign IDs from canonical normalized input. Equal inputs produce equal preview IDs and
    changed inputs produce new bundle paths.
 6. Default to no overwrite. Replacement requires `--overwrite`; bundle child paths are generated,
    not accepted from campaign input.
 7. Keep zero runtime dependencies. This removes the original install blocker and minimizes supply
    chain, compatibility, operating-cost, and maintenance risk.
-8. Keep the existing license text unchanged. Metadata no longer makes the false Apache/MIT/OSI
-   claims that appeared in prior packaging and documentation.
+8. Use the full Samsarix product/distribution/import identity. The console command is
+   `samsarix-campaign` because the separate workflow runner already owns `samsarix-spirals`.
+9. Adopt the unmodified MPL-2.0 text. It provides file-level copyleft, notice preservation, and
+   contributor patent grants while allowing the package in larger works under other terms.
+10. Keep trademark permission separate from source-code permission and record product origin,
+    copyright, support, security, and licensing contacts explicitly.
 
 ## Bounded current research
 
@@ -88,6 +101,16 @@ capabilities; a web UI; database/cloud infrastructure; and private Helix integra
   <https://docs.postiz.com/cli/introduction>.
 - The Python Packaging User Guide recommends `[project.scripts]` for console commands and a modern
   `pyproject.toml`: <https://packaging.python.org/en/latest/guides/writing-pyproject-toml/>.
+- Mozilla describes MPL-2.0 as a file-level copyleft license; its terms preserve source notices,
+  cover distributed modifications to covered files, permit larger works under other terms, include
+  contributor patent grants, and do not grant trademark rights:
+  <https://www.mozilla.org/en-US/MPL/2.0/>.
+- The Open Source Initiative lists MPL-2.0 as an approved license with SPDX identifier `MPL-2.0`:
+  <https://opensource.org/license/mpl-2-0>.
+- MariaDB's Business Source License guidance states that BSL is not an open-source license and is
+  designed around time-delayed conversion plus additional-use terms. That did not fit a small,
+  adoption-oriented local library—especially when the inherited custom text named a different
+  product and organization: <https://mariadb.com/bsl11/>.
 
 ## Untouched baseline results
 
@@ -128,16 +151,17 @@ No locally actionable P0 remains.
 - [x] Preserve URLs/metadata during platform truncation and surface every modification.
 - [x] Add a pinned direct development toolchain and 90% coverage gate.
 - [x] Document trust boundaries, privacy, cost, recovery, and limitations.
-- [ ] Owner/legal confirmation of license identity and distribution rights (external gate).
+- [x] Replace the contradictory customized BSL/proprietary files with owner-selected MPL-2.0,
+  consistent Samsarix LLC metadata, origin notices, contacts, and trademark guidance.
 - [ ] Exercise the committed GitHub Actions workflow on GitHub-hosted Linux/Python 3.10 and 3.13
   (external gate; local Windows verification cannot substitute for a hosted run).
 
 ### P2 — valuable post-release work
 
-1. Add an optional JSON Schema artifact and editor integration for campaign authoring.
-2. Add Bluesky/Mastodon formatters only after sourcing and testing their current official limits.
-3. Add a `diff` command for comparing two deterministic campaign bundles.
-4. Add media-reference validation without reading or uploading media.
+1. Add Bluesky/Mastodon formatters only after sourcing and testing their current official limits.
+2. Add a `diff` command for comparing two deterministic campaign bundles.
+3. Add media-reference validation without reading or uploading media.
+4. Evaluate optional editor snippets that reference the bundled JSON Schema.
 5. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
@@ -151,10 +175,14 @@ No locally actionable P0 remains.
 - [x] Implement X, LinkedIn, and Discord formatting with warnings.
 - [x] Implement deterministic, side-effect-free preview.
 - [x] Implement safe, explicit outbox persistence and overwrite recovery behavior.
-- [x] Implement `--help`, `--version`, `init`, `validate`, `preview`, and `export`.
+- [x] Implement `--help`, `--version`, `init`, `validate`, `preview`, `export`, and `schema`.
 - [x] Add representative unit, integration, command-level, and security regression tests.
 - [x] Add current packaging, build metadata, changelog, and CI.
 - [x] Replace all user and contributor documentation with verified behavior.
+- [x] Rebrand distribution/import/CLI surfaces for Samsarix LLC without a conflicting legacy alias.
+- [x] Package a JSON Schema and `py.typed` marker in both wheel and source distribution.
+- [x] Replace conflicting license files with MPL-2.0 and add licensing, notice, trademark, security,
+  and current contact documentation.
 - [x] Complete final clean-environment install/build/wheel smoke verification.
 - [x] Complete adversarial final review and update final disposition.
 
@@ -169,7 +197,7 @@ No locally actionable P0 remains.
 - [x] CI protects the meaningful checks and smoke-tests the installed wheel.
 - [x] No credentials, telemetry, production endpoints, or imaginary Helix services are required.
 - [x] README examples and commands match implemented scripts.
-- [ ] License identity/distribution terms are confirmed by the owner/legal reviewer.
+- [x] License identity, company, contacts, package metadata, and documentation are consistent.
 - [ ] Hosted CI completes successfully on the declared Python matrix.
 
 ## Known risks
@@ -185,64 +213,64 @@ No locally actionable P0 remains.
 - `--overwrite` updates draft files then writes the manifest last. A process/filesystem failure
   during explicit overwrite can leave files newer than the old manifest; rerunning the same command
   recovers the bundle.
-- The existing license files use different contact domains and the main license names “Helix
-  Licensing System” rather than this package. This is a legal/distribution ambiguity, not a local
-  engineering defect that should be guessed at.
+- The owner selected MPL-2.0, but formal legal advice and ownership-chain review remain prudent,
+  especially for any contribution created before Samsarix LLC owned the project. This is not a
+  blocker created by conflicting repository terms anymore.
 
 ## Final verification results
 
-Final local environment: Windows, Python 3.11.9. All commands below were run after the adversarial
-fix pass.
+Final local environment: Windows, Python 3.11.9. The complete quality suite was rerun in a fresh
+virtual environment installed from the pinned `requirements-dev.txt`; wheel smoke checks were also
+run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass.
 
 | Command | Exit | Actual result |
 | --- | ---: | --- |
-| `python -m black --check helix_creative_spirals tests examples` | 0 | 14 files unchanged. |
-| `python -m flake8 helix_creative_spirals tests examples` | 0 | No findings. |
-| `python -m mypy` | 0 | No issues in 13 source files. |
-| `python -m pytest --cov=helix_creative_spirals --cov-report=term-missing` | 0 | 65 passed; 93.68% total coverage. |
-| `python -m compileall -q helix_creative_spirals tests examples` | 0 | All files compiled. |
-| `python -m build --outdir <isolated-temp-dir>/dist` | 0 | Built `0.1.0` sdist and universal wheel from an isolated build environment. |
-| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `0.1.0`; metadata has zero default runtime and six optional dev dependencies. |
-| isolated `helix-spirals --version` | 0 | Reported `helix-spirals 0.1.0`. |
-| isolated validate → preview → export | 0 | Example produced three drafts and a valid manifest outside the source checkout. |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 15 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | No issues in 14 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 67 passed; 93.96% total coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | All files compiled. |
+| `git diff --check` | 0 | No whitespace errors. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.2.0` sdist and universal wheel from an isolated build environment. |
+| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `samsarix-creative-spirals 0.2.0` with zero default dependencies. |
+| isolated `samsarix-campaign --version` | 0 | Reported `samsarix-campaign 0.2.0`. |
+| isolated schema → validate → preview → export | 0 | Loaded the wheel-bundled schema and produced three drafts plus a valid local manifest. |
 | isolated `python -m pip check` | 0 | No broken requirements. |
-| isolated `python examples/library_usage.py` | 0 | Exported all three drafts through the installed public API. |
-| `py -3.13 -m compileall ...` plus validate/build smoke | 0 | Python 3.13.14 compiled and exercised the stdlib-only core successfully. |
+| isolated metadata/API inspection | 0 | Name, version, `MPL-2.0` license expression, package version, and schema resource matched. |
+| Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, preview, and public import successfully. |
 
-Artifact inspection found 14 wheel entries containing the intended public package and no tests or
-orphan consensus package. The 43-entry sdist contains the package, documentation, examples, and
-complete test suite (including `tests/conftest.py`). `git diff --check` is part of the final
-worktree review.
+Artifact inspection found only the intended Samsarix package plus distribution metadata in the
+wheel. It includes the JSON Schema, `py.typed`, unmodified MPL-2.0 text, and NOTICE; it includes no
+tests, legacy Helix package, or orphan consensus package. The sdist contains the package,
+documentation, legal/support files, examples, and complete test suite.
 
-The hosted GitHub Actions matrix, public package index resolution, and real platform publishing
-were not run. The local Python 3.13 installation did not include pytest, and a bounded isolated
-development-tool installation was stopped after it failed to complete; only its dependency-free
-smoke path is claimed. Hosted CI and public distribution require external repository/owner action;
-platform publishing is deliberately absent from the product and therefore is not an untested claim.
+The public package index and real platform publishing were not used. Public publication remains an
+explicit owner action; platform publishing is deliberately absent from the product and therefore
+is not an untested claim.
 
 ## External and owner-controlled blockers
 
-1. **License confirmation:** the owner/legal reviewer must confirm the licensor, Licensed Work,
-   initial/change dates, additional-use/production-call terms, contact domain, and relationship
-   between `LICENSE` and `LICENSE.PROPRIETARY`. Verification: update approved license files and
-   ensure package metadata/README exactly match them.
-2. **Hosted CI:** enable GitHub Actions for the repository and obtain a green run for `.github/workflows/ci.yml`.
-3. **Public distribution:** if desired, the owner must confirm the PyPI name, create/configure the
+1. **Hosted CI:** obtain a green run for `.github/workflows/ci.yml` on the declared Python matrix.
+2. **Public distribution:** if desired, the owner must confirm the PyPI name, create/configure the
    trusted publisher, and publish the locally verified artifacts. No account or package was created
    during this pass.
+3. **Optional legal review:** MPL-2.0 and the owner-supplied company/contact identity are now
+   internally consistent. Counsel may still confirm the ownership chain, trademarks, and any future
+   contributor or alternative commercial-license process; this is prudent governance rather than a
+   contradictory-license release blocker.
 
 ## Distribution and sustainability model
 
 For validation, distribute as a Git checkout or wheel and install with `pipx`/`pip`. Public PyPI
-publication is appropriate only after the license and hosted-CI gates. The core tool has no
-operating cost and can remain a free local utility. If commercial sustainability is desired later,
-paid, separately permissioned publishing connectors or team workflow integrations are plausible;
-the local preview/export core should remain useful without them and must never silently send draft
+publication is appropriate after hosted CI is green and the owner configures a trusted publisher.
+The core tool has no operating cost and can remain a free local utility. Paid support, warranties,
+or separately permissioned publishing/team integrations are plausible sustainability paths; the
+local preview/export core should remain useful without them and must never silently send draft
 content.
 
 ## Release disposition
 
-**Release candidate with two named external gates:** owner/legal confirmation of the license files
-and a green hosted GitHub Actions run on the declared Python matrix. The local product journey,
-package artifacts, tests, and documentation meet the 0.1 acceptance criteria, and no locally
-actionable P0 is known. Public publication should wait for both gates.
+**0.2 release candidate with one technical external gate:** a green hosted GitHub Actions run on
+the declared Python matrix. The local product journey, package artifacts, tests, branding,
+licensing, and documentation meet the 0.2 acceptance criteria, and no locally actionable P0 is
+known. Public package publication remains a separate owner-controlled release action.
