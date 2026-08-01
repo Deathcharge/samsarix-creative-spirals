@@ -16,7 +16,7 @@ Prerequisite: Python 3.10 or newer.
 
 ```bash
 git clone https://github.com/Deathcharge/samsarix-creative-spirals.git
-cd helix-creative-spirals
+cd samsarix-creative-spirals
 python -m venv .venv
 ```
 
@@ -38,8 +38,6 @@ samsarix-campaign preview examples/campaign.json
 ```
 
 No API keys, accounts, database, network connection, or other Samsarix repository is required.
-The GitHub repository retains its legacy `helix-creative-spirals` slug for continuity; the product,
-package, import namespace, and CLI are Samsarix-branded.
 
 ## Core journey
 
