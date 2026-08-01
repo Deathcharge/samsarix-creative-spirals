@@ -38,29 +38,31 @@ coupling. The GitHub repository was subsequently renamed to
 
 ## Chosen product definition
 
-**Product:** Samsarix Creative Spirals, a dependency-free, local-first campaign preview/export CLI
-and typed Python library.
+**Product:** Samsarix Creative Spirals, a dependency-free, local-first campaign and launch-plan
+preview/export CLI and typed Python library.
 
 **Target user:** a solo creator, developer advocate, or small content team with an approved source
 draft who needs consistent platform variants and reviewable artifacts, but does not want to grant
 account access or deploy a social-management service.
 
-**Problem solved:** safely turn one source draft into bounded X, LinkedIn, Bluesky, Mastodon, and
-Discord files with a deterministic identity, explicit quality findings, and a machine-readable
-manifest.
+**Problem solved:** safely turn approved source drafts into bounded X, LinkedIn, Bluesky, Mastodon,
+and Discord artifacts, then review a complete sequence with deterministic identities, explicit
+quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
-**Primary journey:** install locally → create or supply campaign JSON → validate → preview all
-platform variants → run a deterministic quality gate → explicitly export an outbox bundle →
-review/copy the files into an approved publishing process.
+**Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
+→ validate and preview every platform variant → run deterministic quality gates → explicitly
+export review/interchange bundles → hand them to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
 boundary with no credentials, network calls, hosted state, or account risk. It can complement any
 publisher without depending on another Samsarix repository or the flagship application.
 
-**Deliberately out of scope for 0.3:** automatic publishing; social authentication; background
-scheduling; analytics; AI generation; media processing; collaborative approvals; account-specific
-capabilities; a web UI; database/cloud infrastructure; and private Helix integrations.
+**Deliberately out of scope at the 0.3 checkpoint:** automatic publishing; social authentication;
+background scheduling; analytics; AI generation; media processing; collaborative approvals;
+account-specific capabilities; a web UI; database/cloud infrastructure; and private Helix
+integrations. Version 0.4 adds bounded local plans and interchange artifacts without adding a
+scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -70,9 +72,9 @@ capabilities; a web UI; database/cloud infrastructure; and private Helix integra
    user control.
 3. Use strict, versioned JSON. The Python standard library handles it on every supported platform;
    rejecting unknown keys catches mistakes early.
-4. Maintain a minimal public API: validated models plus load, build, export, and packaged-schema
-   functions.
-5. Derive campaign IDs from canonical normalized input. Equal inputs produce equal preview IDs and
+4. Maintain a focused public API: validated campaign/plan models plus load, build, check, export,
+   calendar, and packaged-schema functions.
+5. Derive campaign and plan IDs from canonical normalized input. Equal inputs produce equal IDs and
    changed inputs produce new bundle paths.
 6. Default to no overwrite. Replacement requires `--overwrite`; bundle child paths are generated,
    not accepted from campaign input.
@@ -188,11 +190,10 @@ No locally actionable P0 remains.
 
 ### P2 — valuable post-release work
 
-1. Add bounded multi-campaign plans with portable CSV/calendar export.
-2. Add a `diff` command for comparing two deterministic campaign bundles.
-3. Add media-reference validation without reading or uploading media.
-4. Evaluate optional editor snippets that reference the bundled JSON Schema.
-5. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+1. Add a `diff` command for comparing two deterministic campaign bundles.
+2. Add media-reference validation without reading or uploading media.
+3. Evaluate optional editor snippets that reference the bundled JSON Schema.
+4. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -318,3 +319,43 @@ content.
 package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.3 acceptance
 criteria, and no locally actionable P0 is known. Public package publication remains a separate
 owner-controlled release action.
+
+## 0.4 campaign-plan release evidence
+
+The 0.4 slice composes standalone campaign files into a bounded local launch sequence. A plan may
+contain 1–100 items, declares optional required channels, and records optional RFC 3339 intended
+times with explicit offsets. Paths remain relative to and confined beneath the plan directory;
+canonical identity covers both plan metadata and every normalized referenced campaign.
+
+The quality gate aggregates campaign truncation/warnings, fails missing required channels, and
+reports duplicate or out-of-order times. Export writes one neutral UTF-8 CSV per used platform, a
+manifest, and an RFC 5545 calendar. Scheduled entries are transparent events and unscheduled
+entries are tasks, so the artifact records intent without claiming to schedule or publish.
+
+Current local verification on Windows/Python 3.11:
+
+| Command | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 19 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | No issues in 18 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 125 passed; 93.48% total coverage. |
+| Draft 2020-12 schema validation | 0 | The plan schema and included two-campaign example passed. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built the `0.4.0` sdist and universal wheel with the patched setuptools floor. |
+| Python 3.11 installed-wheel plan journey | 0 | Version, plan schema, validate, check, preview, export, metadata, artifacts, and `pip check` passed. |
+| Python 3.13 installed-wheel plan journey | 0 | Version, plan schema, check, export, public API, and `pip check` passed. |
+| GitHub Actions Python 3.10/3.13 | pending | Required before the 0.4 pull request can merge. |
+
+Known 0.4 boundaries:
+
+- CSV columns are stable Samsarix interchange fields, not a promise of direct import into every
+  publisher. Buffer, for example, requires channel-specific templates and interprets posting times
+  in configured channel context.
+- iCalendar export follows RFC 5545 CRLF, escaping, required component fields, UTC times, and
+  UTF-8-safe 75-octet folding. Importer behavior still varies, so the included file is an
+  interchange artifact rather than a delivery guarantee.
+- Intended times are metadata. There is no timer, daemon, retry loop, credential, or delivery side
+  effect in this package.
+
+**0.4 release candidate; all local technical gates pass.** Hosted CI and review remain the merge
+gates. Public package publication remains a separate owner-controlled action.

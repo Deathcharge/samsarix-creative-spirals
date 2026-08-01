@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.3.x` release line is supported. Earlier pre-productization and
+The latest `0.4.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -18,8 +18,8 @@ time SLA.
 
 ## Security and privacy boundary
 
-Samsarix Creative Spirals reads local UTF-8 JSON and writes local Markdown and
-JSON files selected by the invoking user. The supported workflow:
+Samsarix Creative Spirals reads local UTF-8 JSON and writes local Markdown, JSON, CSV, and iCalendar
+files selected by the invoking user. The supported workflow:
 
 - performs no network requests, subprocess execution, dynamic imports, telemetry,
   account access, or remote publishing;
@@ -29,6 +29,8 @@ JSON files selected by the invoking user. The supported workflow:
 - constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
   documented instance-specific maximum;
 - evaluates quality gates deterministically without writing files or contacting platforms;
+- confines plan campaign references beneath the plan directory and rejects absolute, parent,
+  backslash, drive-qualified, and symbolic-link escape paths;
 - generates output names instead of trusting configuration as a filesystem path;
 - refuses implicit replacement of existing bundles and symbolic-link targets.
 

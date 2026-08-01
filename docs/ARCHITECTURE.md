@@ -25,6 +25,18 @@ generated bundle directory
     └── one copy-ready Markdown file per platform
 ```
 
+Campaign plans compose those standalone files without weakening their boundary:
+
+```text
+plan.json ──confined relative paths──► CampaignConfig (1..100)
+    │                                      │
+    │ canonical plan + campaign content    └──► CampaignBundle
+    ▼
+CampaignPlanBundle
+    ├──► aggregate quality report
+    └──► manifest.json + calendar.ics + per-platform CSV
+```
+
 ## Components
 
 ### `models.py`
@@ -54,7 +66,16 @@ Converts a built bundle into stable error/warning findings. Truncation is a bloc
 warnings are optionally promoted to errors. The operation is pure and gives CI a distinct exit path
 without conflating valid-but-unacceptable output with malformed configuration.
 
-### `schema.py` and `campaign.schema.json`
+### `plans.py`
+
+Validates a bounded sequence of relative campaign references and explicit-offset intended times.
+References must remain beneath the plan directory even after symbolic-link resolution. Canonical
+plan identity includes each normalized campaign configuration, so a referenced content change
+changes the plan ID. Aggregate checks report missing required channels, duplicate or out-of-order
+times, and every campaign finding. Export writes a commit-last manifest, neutral CSV files, and an
+RFC 5545 calendar with UTF-8-safe 75-octet folding and CRLF line endings.
+
+### `schema.py`, `campaign.schema.json`, and `plan.schema.json`
 
 Package the authoring contract with the wheel and return a fresh decoded dictionary to library
 callers. The schema helps editors and generic validators, while `CampaignConfig` remains the
@@ -62,15 +83,17 @@ authoritative runtime validator and provides more actionable error messages.
 
 ### `cli.py`
 
-Provides `init`, `validate`, `preview`, `check`, `export`, and `schema`. Successful output and
-valid quality reports stay on stdout; configuration/I/O errors stay on stderr. Validation/I/O
-errors return `1`, usage errors return `2`, quality-gate failures return `3`, and success returns `0`.
+Provides the single-campaign commands plus nested `plan validate`, `plan preview`, `plan check`,
+and `plan export` operations. Successful output and valid quality reports stay on stdout;
+configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
+quality-gate failures return `3`, and success returns `0`.
 
 ## Trust boundaries
 
 | Boundary | Untrusted input | Control |
 | --- | --- | --- |
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
+| Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
 | Campaign fields | Text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, allowlists, hard platform ceilings. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
@@ -81,14 +104,17 @@ path. It never reads environment variables or logs draft content automatically.
 ## Reliability and recovery
 
 - Preview is deterministic and has no write side effects.
-- Campaign identity changes whenever normalized source input changes.
+- Campaign and plan identities change whenever normalized source input changes; plan identity also
+  covers every referenced campaign configuration.
 - Export refuses an existing ID by default, which protects reviewed artifacts from accidental
   replacement.
 - New bundle creation uses a temporary sibling and atomic directory rename on the same filesystem.
 - During an explicit overwrite, draft files are replaced before `manifest.json`; readers can treat
   the manifest as the commit marker.
+- Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
+  record intent but trigger no background work.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.3 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.4 scope.
 
 ## Dependency and cost model
 
