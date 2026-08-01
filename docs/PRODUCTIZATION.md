@@ -251,8 +251,8 @@ No locally actionable P0 remains.
   an explicit instance character maximum and uses Mastodon's documented 23-character URL default;
   it does not contact an instance or infer remote-mention accounting.
 - The full quality suite has been verified locally on Windows/Python 3.11, with isolated wheel
-  smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel verification for
-  this 0.3 release remains an acceptance gate until the release PR is green.
+  smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel jobs passed on
+  Python 3.10 and 3.13 after the cross-version nesting guard fix.
 - `--overwrite` updates draft files then writes the manifest last. A process/filesystem failure
   during explicit overwrite can leave files newer than the old manifest; rerunning the same command
   recovers the bundle.
@@ -281,8 +281,8 @@ run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass
 | isolated `python -m pip check` | 0 | No broken requirements. |
 | isolated metadata/API inspection | 0 | Name, version, `MPL-2.0` license expression, package version, and schema resource matched. |
 | Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, quality check, preview, and public import successfully. |
-| GitHub Actions `quality (3.10)` | pending | Required before the 0.3 release PR can merge. |
-| GitHub Actions `quality (3.13)` | pending | Required before the 0.3 release PR can merge. |
+| GitHub Actions `quality (3.10)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed. |
+| GitHub Actions `quality (3.13)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed. |
 
 Artifact inspection found only the intended Samsarix package plus distribution metadata in the
 wheel. It includes the JSON Schema, `py.typed`, unmodified MPL-2.0 text, and NOTICE; it includes no
@@ -314,7 +314,7 @@ content.
 
 ## Release disposition
 
-**0.3 release candidate; all local technical acceptance gates pass.** The local product journey,
-package artifacts, tests, branding, licensing, and documentation meet the 0.3 acceptance criteria,
-and no locally actionable P0 is known. Hosted CI remains the merge gate; public package publication
-remains a separate owner-controlled release action.
+**0.3 release candidate; all declared technical acceptance gates pass.** The product journey,
+package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.3 acceptance
+criteria, and no locally actionable P0 is known. Public package publication remains a separate
+owner-controlled release action.
