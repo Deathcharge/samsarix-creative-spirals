@@ -344,7 +344,7 @@ Current local verification on Windows/Python 3.11:
 | `python -m build --outdir <isolated-dir>/dist` | 0 | Built the `0.4.0` sdist and universal wheel with the patched setuptools floor. |
 | Python 3.11 installed-wheel plan journey | 0 | Version, plan schema, validate, check, preview, export, metadata, artifacts, and `pip check` passed. |
 | Python 3.13 installed-wheel plan journey | 0 | Version, plan schema, check, export, public API, and `pip check` passed. |
-| GitHub Actions Python 3.10/3.13 | pending | Required before the 0.4 pull request can merge. |
+| GitHub Actions Python 3.10/3.13 | 0 | Hosted Linux quality, build, and installed-wheel plan journeys passed on both versions. |
 
 Known 0.4 boundaries:
 
@@ -357,5 +357,5 @@ Known 0.4 boundaries:
 - Intended times are metadata. There is no timer, daemon, retry loop, credential, or delivery side
   effect in this package.
 
-**0.4 release candidate; all local technical gates pass.** Hosted CI and review remain the merge
-gates. Public package publication remains a separate owner-controlled action.
+**0.4 release candidate; all declared technical gates pass.** Automated review remains the merge
+gate. Public package publication remains a separate owner-controlled action.
