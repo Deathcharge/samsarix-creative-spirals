@@ -18,6 +18,7 @@ from .formatters import format_platform
 from .models import CampaignBundle, CampaignConfig, ConfigError
 
 MAX_CONFIG_BYTES = 1_000_000
+MAX_JSON_NESTING = 100
 
 
 def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -27,6 +28,30 @@ def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
             raise ConfigError(f"duplicate JSON field: {key}")
         result[key] = value
     return result
+
+
+def _ensure_bounded_json_nesting(text: str) -> None:
+    """Reject deeply nested containers before parser behavior can vary by Python version."""
+    depth = 0
+    in_string = False
+    escaped = False
+    for character in text:
+        if in_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                in_string = False
+            continue
+        if character == '"':
+            in_string = True
+        elif character in "[{":
+            depth += 1
+            if depth > MAX_JSON_NESTING:
+                raise ConfigError("campaign JSON nesting is too deep")
+        elif character in "]}":
+            depth -= 1
 
 
 def load_campaign(path: str | Path) -> CampaignConfig:
@@ -45,6 +70,7 @@ def load_campaign(path: str | Path) -> CampaignConfig:
         text = config_path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeError) as error:
         raise ConfigError(f"cannot read campaign file as UTF-8: {error}") from error
+    _ensure_bounded_json_nesting(text)
     try:
         raw = json.loads(text, object_pairs_hook=_reject_duplicate_json_keys)
     except json.JSONDecodeError as error:

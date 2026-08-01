@@ -271,7 +271,7 @@ run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass
 | `python -m black --check samsarix_creative_spirals tests examples` | 0 | 17 files unchanged. |
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
 | `python -m mypy` | 0 | No issues in 16 source files. |
-| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 89 passed; 95.10% total coverage. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 90 passed; 95.22% total coverage. |
 | `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | All files compiled. |
 | `git diff --check` | 0 | No whitespace errors. |
 | `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.3.0` sdist and universal wheel from an isolated build environment. |
