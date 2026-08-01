@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented here.
 
+## Unreleased
+
+- Require setuptools 83 or newer for isolated builds and pin development to 83.0.0, closing
+  GHSA-h35f-9h28-mq5c in the source-distribution toolchain.
+
 ## 0.3.0 - 2026-08-01
 
 - Added bounded Bluesky and Mastodon drafts alongside X, LinkedIn, and Discord.
