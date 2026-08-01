@@ -97,6 +97,21 @@ def test_bluesky_grapheme_counter_handles_common_clusters() -> None:
     assert grapheme_length("cafe\u0301") == 4
     assert grapheme_length("👨‍👩‍👧‍👦") == 1
     assert grapheme_length("🇺🇸") == 1
+    assert grapheme_length("1\ufe0f\u20e3") == 1
+
+
+def test_bluesky_truncation_keeps_keycap_cluster_together(campaign_data: dict[str, Any]) -> None:
+    campaign_data.pop("title")
+    campaign_data.pop("link")
+    campaign_data["hashtags"] = []
+    campaign_data["platforms"] = ["bluesky"]
+    campaign_data["platformLimits"] = {"bluesky": 2}
+    campaign_data["body"] = "1\ufe0f\u20e3" * 3
+
+    draft = format_platform(CampaignConfig.from_dict(campaign_data), "bluesky")
+
+    assert draft.content == "1\ufe0f\u20e3…"
+    assert draft.character_count == draft.character_limit == 2
 
 
 def test_bluesky_respects_grapheme_and_byte_limits(campaign_data: dict[str, Any]) -> None:

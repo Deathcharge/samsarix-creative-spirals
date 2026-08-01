@@ -75,7 +75,7 @@ def _grapheme_clusters(text: str) -> Iterator[str]:
     for character in text:
         codepoint = ord(character)
         is_modifier = (
-            bool(unicodedata.combining(character))
+            unicodedata.category(character).startswith("M")
             or 0xFE00 <= codepoint <= 0xFE0F
             or 0x1F3FB <= codepoint <= 0x1F3FF
             or 0xE0020 <= codepoint <= 0xE007F

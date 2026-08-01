@@ -57,18 +57,19 @@ def _ensure_bounded_json_nesting(text: str) -> None:
 def load_campaign(path: str | Path) -> CampaignConfig:
     """Load a UTF-8 JSON campaign file with bounded input size."""
     config_path = Path(path)
+    if config_path.exists() and not config_path.is_file():
+        raise ConfigError("campaign path must be a file")
     try:
-        size = config_path.stat().st_size
+        with config_path.open("rb") as campaign_file:
+            encoded = campaign_file.read(MAX_CONFIG_BYTES + 1)
     except OSError as error:
         raise ConfigError(f"cannot read campaign file: {error}") from error
-    if size > MAX_CONFIG_BYTES:
+    if len(encoded) > MAX_CONFIG_BYTES:
         raise ConfigError(f"campaign file exceeds the {MAX_CONFIG_BYTES}-byte limit")
-    if not config_path.is_file():
-        raise ConfigError("campaign path must be a file")
 
     try:
-        text = config_path.read_text(encoding="utf-8-sig")
-    except (OSError, UnicodeError) as error:
+        text = encoded.decode("utf-8-sig")
+    except UnicodeError as error:
         raise ConfigError(f"cannot read campaign file as UTF-8: {error}") from error
     _ensure_bounded_json_nesting(text)
     try:

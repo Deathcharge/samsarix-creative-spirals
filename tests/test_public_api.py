@@ -27,3 +27,16 @@ def test_packaged_schema_is_available() -> None:
     assert schema["properties"]["schemaVersion"]["const"] == 1
     assert "bluesky" in schema["properties"]["platforms"]["items"]["enum"]
     assert schema["properties"]["platformLimits"]["properties"]["mastodon"]["maximum"] == 100000
+    requested_limit_conditions = {
+        condition["if"]["properties"]["platformLimits"]["required"][0]: condition["then"][
+            "properties"
+        ]["platforms"]["contains"]["const"]
+        for condition in schema["allOf"]
+    }
+    assert requested_limit_conditions == {
+        "x": "x",
+        "linkedin": "linkedin",
+        "bluesky": "bluesky",
+        "mastodon": "mastodon",
+        "discord": "discord",
+    }

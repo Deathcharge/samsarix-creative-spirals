@@ -92,7 +92,7 @@ behavior.
 | `name` | yes | Single line, 1–120 characters; used to derive a safe folder name. |
 | `body` | yes | 1–100,000 characters. |
 | `platforms` | yes | Unique values from `x`, `linkedin`, `bluesky`, `mastodon`, `discord`. |
-| `title` | no | Single line, at most 200 characters; omitted from X output. |
+| `title` | no | Single line, at most 200 characters; omitted from X and Bluesky output. |
 | `link` | no | Absolute HTTP(S) URL, at most 500 characters, no embedded credentials. |
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
