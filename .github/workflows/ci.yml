@@ -42,4 +42,5 @@ jobs:
           python -m pip install --force-reinstall --no-deps dist/*.whl
           samsarix-campaign --version
           samsarix-campaign schema > /tmp/campaign.schema.json
+          samsarix-campaign check examples/campaign.json --json
           samsarix-campaign preview examples/campaign.json

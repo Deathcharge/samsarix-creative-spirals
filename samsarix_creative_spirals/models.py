@@ -12,8 +12,14 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
-SUPPORTED_PLATFORMS = ("x", "linkedin", "discord")
-PLATFORM_LIMITS = {"x": 280, "linkedin": 3000, "discord": 2000}
+SUPPORTED_PLATFORMS = ("x", "linkedin", "bluesky", "mastodon", "discord")
+PLATFORM_LIMITS = {
+    "x": 280,
+    "linkedin": 3000,
+    "bluesky": 300,
+    "mastodon": 500,
+    "discord": 2000,
+}
 
 _CAMPAIGN_KEYS = {
     "schemaVersion",
@@ -23,6 +29,7 @@ _CAMPAIGN_KEYS = {
     "link",
     "hashtags",
     "platforms",
+    "platformLimits",
 }
 _HASHTAG_RE = re.compile(r"^[\w]+$", re.UNICODE)
 
@@ -60,6 +67,7 @@ class CampaignConfig:
     title: str | None = None
     link: str | None = None
     hashtags: tuple[str, ...] = ()
+    platform_limits: tuple[tuple[str, int], ...] = ()
 
     @classmethod
     def from_dict(cls, raw: Mapping[str, Any]) -> CampaignConfig:
@@ -191,6 +199,39 @@ class CampaignConfig:
                     seen_platforms.add(platform)
                     platforms.append(platform)
 
+        platform_limits_value = raw.get("platformLimits", {})
+        parsed_limits: dict[str, int] = {}
+        if not isinstance(platform_limits_value, Mapping):
+            issues.append("platformLimits must be an object mapping platforms to integers")
+        else:
+            for key, value in platform_limits_value.items():
+                if not isinstance(key, str):
+                    issues.append("platformLimits keys must be platform strings")
+                    continue
+                platform = key.strip().lower()
+                if platform not in SUPPORTED_PLATFORMS:
+                    supported = ", ".join(SUPPORTED_PLATFORMS)
+                    issues.append(f"platformLimits.{key} must name one of: {supported}")
+                    continue
+                if platform in parsed_limits:
+                    issues.append(f"platformLimits.{key} duplicates {platform}")
+                    continue
+                if platform not in platforms:
+                    issues.append(
+                        f"platformLimits.{key} is not useful unless {platform} is requested"
+                    )
+                if isinstance(value, bool) or not isinstance(value, int):
+                    issues.append(f"platformLimits.{key} must be an integer")
+                elif (
+                    not 1
+                    <= value
+                    <= (100_000 if platform == "mastodon" else PLATFORM_LIMITS[platform])
+                ):
+                    maximum = 100_000 if platform == "mastodon" else PLATFORM_LIMITS[platform]
+                    issues.append(f"platformLimits.{key} must be between 1 and {maximum}")
+                else:
+                    parsed_limits[platform] = value
+
         if issues:
             raise ConfigError(issues)
 
@@ -202,7 +243,17 @@ class CampaignConfig:
             link=link,
             hashtags=tuple(hashtags),
             platforms=tuple(platforms),
+            platform_limits=tuple(
+                (platform, parsed_limits[platform])
+                for platform in SUPPORTED_PLATFORMS
+                if platform in parsed_limits
+            ),
         )
+
+    def limit_for(self, platform: str) -> int:
+        """Return the configured or default character limit for a platform."""
+        overrides = dict(self.platform_limits)
+        return overrides.get(platform, PLATFORM_LIMITS[platform])
 
     def to_dict(self) -> dict[str, Any]:
         """Return the normalized, JSON-compatible configuration."""
@@ -217,7 +268,44 @@ class CampaignConfig:
             result["title"] = self.title
         if self.link is not None:
             result["link"] = self.link
+        if self.platform_limits:
+            result["platformLimits"] = dict(self.platform_limits)
         return result
+
+
+@dataclass(frozen=True, slots=True)
+class QualityIssue:
+    """One stable, machine-readable campaign quality finding."""
+
+    code: str
+    severity: str
+    platform: str
+    message: str
+
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "code": self.code,
+            "severity": self.severity,
+            "platform": self.platform,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class CampaignCheck:
+    """A quality-gate result for one built campaign."""
+
+    campaign_id: str
+    publishable: bool
+    issues: tuple[QualityIssue, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "schemaVersion": 1,
+            "campaignId": self.campaign_id,
+            "publishable": self.publishable,
+            "issues": [issue.to_dict() for issue in self.issues],
+        }
 
 
 @dataclass(frozen=True, slots=True)

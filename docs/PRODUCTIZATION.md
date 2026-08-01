@@ -1,6 +1,6 @@
 # Productization record
 
-Last updated: 2026-07-28
+Last updated: 2026-08-01
 
 ## Repository assessment
 
@@ -33,7 +33,8 @@ brand, supplied `contact@samsarix.com` and `support@samsarix.com`, identified Sa
 company, and authorized further productization and publication of commits. A read-only portfolio
 check confirmed that related repositories already use full Samsarix distribution/import rebrands,
 MPL-2.0, and the same contact pattern. This repository follows that pattern without adding runtime
-coupling. Its legacy GitHub slug remains unchanged for continuity.
+coupling. The GitHub repository was subsequently renamed to
+`Deathcharge/samsarix-creative-spirals`; the old coordinate remains only in preserved history.
 
 ## Chosen product definition
 
@@ -44,19 +45,20 @@ and typed Python library.
 draft who needs consistent platform variants and reviewable artifacts, but does not want to grant
 account access or deploy a social-management service.
 
-**Problem solved:** safely turn one source draft into bounded X, LinkedIn, and Discord files with a
-deterministic identity, explicit warnings, and a machine-readable manifest.
+**Problem solved:** safely turn one source draft into bounded X, LinkedIn, Bluesky, Mastodon, and
+Discord files with a deterministic identity, explicit quality findings, and a machine-readable
+manifest.
 
 **Primary journey:** install locally → create or supply campaign JSON → validate → preview all
-platform variants → explicitly export an outbox bundle → review/copy the files into an approved
-publishing process.
+platform variants → run a deterministic quality gate → explicitly export an outbox bundle →
+review/copy the files into an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
 boundary with no credentials, network calls, hosted state, or account risk. It can complement any
 publisher without depending on another Samsarix repository or the flagship application.
 
-**Deliberately out of scope for 0.2:** automatic publishing; social authentication; background
+**Deliberately out of scope for 0.3:** automatic publishing; social authentication; background
 scheduling; analytics; AI generation; media processing; collaborative approvals; account-specific
 capabilities; a web UI; database/cloud infrastructure; and private Helix integrations.
 
@@ -112,6 +114,34 @@ capabilities; a web UI; database/cloud infrastructure; and private Helix integra
   adoption-oriented local library—especially when the inherited custom text named a different
   product and organization: <https://mariadb.com/bsl11/>.
 
+### 0.3 competitive follow-up
+
+- Buffer's bulk upload flow requires a preview/confirmation step and its team plans add draft
+  approvals, validating demand for batch preparation and explicit review boundaries:
+  <https://support.buffer.com/article/926-how-to-upload-posts-in-bulk-to-buffer> and
+  <https://support.buffer.com/article/665-managing-and-approving-draft-posts>.
+- Typefully groups drafts, schedules, analytics, and collaboration around connected social sets;
+  its API creates, schedules, and publishes with API keys. That reinforces the opportunity for a
+  credential-free upstream quality layer rather than a competing account hub:
+  <https://support.typefully.com/en/articles/8717684-social-sets-and-accounts> and
+  <https://support.typefully.com/en/articles/8718287-typefully-api>.
+- Postiz supports broad provider drafts and schedules, while its self-hosted path requires a server,
+  PostgreSQL, Redis, Temporal, storage, credentials, and provider network access. Samsarix remains
+  deliberately smaller and operationally inert:
+  <https://docs.postiz.com/public-api/posts/create> and
+  <https://docs.postiz.com/installation/system-requirements>.
+- Bluesky's canonical Lexicon limits post text to 300 graphemes and 3,000 UTF-8 bytes:
+  <https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/feed/post.json>.
+- Mastodon documents a 500-character default and 23-character URL accounting, while each instance
+  can advertise another `configuration.statuses.max_characters` value:
+  <https://docs.joinmastodon.org/user/posting/> and
+  <https://docs.joinmastodon.org/entities/Instance/>.
+
+The resulting wedge is **Git-native, publisher-neutral campaign QA** for release communications,
+agency review, and privacy-sensitive drafting. The 0.3 slice adds federated platforms, explicit
+instance limits, and a CI-safe quality report without adding credentials, hosted state, or runtime
+dependencies.
+
 ## Untouched baseline results
 
 Environment: Windows, Python 3.11.9, pip 26.1.1.
@@ -158,7 +188,7 @@ No locally actionable P0 remains.
 
 ### P2 — valuable post-release work
 
-1. Add Bluesky/Mastodon formatters only after sourcing and testing their current official limits.
+1. Add bounded multi-campaign plans with portable CSV/calendar export.
 2. Add a `diff` command for comparing two deterministic campaign bundles.
 3. Add media-reference validation without reading or uploading media.
 4. Evaluate optional editor snippets that reference the bundled JSON Schema.
@@ -172,10 +202,11 @@ No locally actionable P0 remains.
 - [x] Define a narrow independent product and out-of-scope boundary.
 - [x] Implement immutable config/result models.
 - [x] Implement strict normalization and validation.
-- [x] Implement X, LinkedIn, and Discord formatting with warnings.
+- [x] Implement X, LinkedIn, Bluesky, Mastodon, and Discord formatting with warnings.
 - [x] Implement deterministic, side-effect-free preview.
 - [x] Implement safe, explicit outbox persistence and overwrite recovery behavior.
-- [x] Implement `--help`, `--version`, `init`, `validate`, `preview`, `export`, and `schema`.
+- [x] Implement `--help`, `--version`, `init`, `validate`, `preview`, `check`, `export`, and
+  `schema`.
 - [x] Add representative unit, integration, command-level, and security regression tests.
 - [x] Add current packaging, build metadata, changelog, and CI.
 - [x] Replace all user and contributor documentation with verified behavior.
@@ -183,6 +214,10 @@ No locally actionable P0 remains.
 - [x] Package a JSON Schema and `py.typed` marker in both wheel and source distribution.
 - [x] Replace conflicting license files with MPL-2.0 and add licensing, notice, trademark, security,
   and current contact documentation.
+- [x] Add a typed, side-effect-free quality API and distinct CLI exit code for valid campaigns that
+  require intervention.
+- [x] Add validated per-platform limits without allowing hard service ceilings to be raised; permit
+  Mastodon instance-specific limits explicitly.
 - [x] Complete final clean-environment install/build/wheel smoke verification.
 - [x] Complete adversarial final review and update final disposition.
 
@@ -193,6 +228,8 @@ No locally actionable P0 remains.
 - [x] Validate, preview, export, existing-output failure, and explicit overwrite work end to end.
 - [x] Empty/malformed/oversized/unsafe inputs fail with actionable messages.
 - [x] Drafts stay within configured platform limits and modifications are visible.
+- [x] Quality checks distinguish malformed input, truncation failures, optional warning failures,
+  and successful output for CI.
 - [x] Build, format, lint, strict type checking, and tests pass locally.
 - [x] CI protects the meaningful checks and smoke-tests the installed wheel.
 - [x] No credentials, telemetry, production endpoints, or imaginary Helix services are required.
@@ -207,9 +244,15 @@ No locally actionable P0 remains.
 - X's complete `twitter-text` parser contains edge cases beyond this dependency-free implementation.
   The current algorithm follows documented weights and keeps detected URLs atomic, but does not
   claim conformance certification.
+- Bluesky enforcement covers its canonical grapheme and UTF-8 byte ceilings with a conservative
+  standard-library cluster iterator. It handles combining marks, modifiers, ZWJ emoji, regional
+  pairs, and emoji tags, but does not claim full Unicode grapheme-break conformance.
+- Mastodon servers can advertise custom status and URL accounting values. The configuration accepts
+  an explicit instance character maximum and uses Mastodon's documented 23-character URL default;
+  it does not contact an instance or infer remote-mention accounting.
 - The full quality suite has been verified locally on Windows/Python 3.11, with isolated wheel
   smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel jobs passed on
-  Python 3.10 and 3.13.
+  Python 3.10 and 3.13 after the cross-version nesting guard fix.
 - `--overwrite` updates draft files then writes the manifest last. A process/filesystem failure
   during explicit overwrite can leave files newer than the old manifest; rerunning the same command
   recovers the bundle.
@@ -225,21 +268,21 @@ run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass
 
 | Command | Exit | Actual result |
 | --- | ---: | --- |
-| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 15 files unchanged. |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 17 files unchanged. |
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
-| `python -m mypy` | 0 | No issues in 14 source files. |
-| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 67 passed; 93.96% total coverage. |
+| `python -m mypy` | 0 | No issues in 16 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 91 passed; 95.22% total coverage. |
 | `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | All files compiled. |
 | `git diff --check` | 0 | No whitespace errors. |
-| `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.2.0` sdist and universal wheel from an isolated build environment. |
-| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `samsarix-creative-spirals 0.2.0` with zero default dependencies. |
-| isolated `samsarix-campaign --version` | 0 | Reported `samsarix-campaign 0.2.0`. |
-| isolated schema → validate → preview → export | 0 | Loaded the wheel-bundled schema and produced three drafts plus a valid local manifest. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.3.0` sdist and universal wheel from an isolated build environment. |
+| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `samsarix-creative-spirals 0.3.0` with zero default dependencies. |
+| isolated `samsarix-campaign --version` | 0 | Reported `samsarix-campaign 0.3.0`. |
+| isolated schema → validate → check → preview → export | 0 | Loaded the wheel-bundled schema, passed the quality gate, and produced five drafts plus a valid local manifest. |
 | isolated `python -m pip check` | 0 | No broken requirements. |
 | isolated metadata/API inspection | 0 | Name, version, `MPL-2.0` license expression, package version, and schema resource matched. |
-| Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, preview, and public import successfully. |
-| GitHub Actions `quality (3.10)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 25 seconds. |
-| GitHub Actions `quality (3.13)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 33 seconds. |
+| Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, quality check, preview, and public import successfully. |
+| GitHub Actions `quality (3.10)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed. |
+| GitHub Actions `quality (3.13)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed. |
 
 Artifact inspection found only the intended Samsarix package plus distribution metadata in the
 wheel. It includes the JSON Schema, `py.typed`, unmodified MPL-2.0 text, and NOTICE; it includes no
@@ -271,7 +314,7 @@ content.
 
 ## Release disposition
 
-**0.2 release candidate; all declared technical acceptance gates pass.** The local product journey,
-package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.2 acceptance
+**0.3 release candidate; all declared technical acceptance gates pass.** The product journey,
+package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.3 acceptance
 criteria, and no locally actionable P0 is known. Public package publication remains a separate
 owner-controlled release action.

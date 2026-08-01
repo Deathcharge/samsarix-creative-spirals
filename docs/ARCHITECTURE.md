@@ -17,6 +17,7 @@ CampaignConfig
     │ platform formatting and limit checks
     ▼
 CampaignBundle
+    ├──────────────► deterministic quality report
     │ explicit export only
     ▼
 generated bundle directory
@@ -47,6 +48,12 @@ New bundles are assembled in a private temporary sibling and renamed into place.
 opt-in, rejects non-directory/symbolic-link targets, replaces the manifest last, and never writes
 outside the generated child path.
 
+### `quality.py`
+
+Converts a built bundle into stable error/warning findings. Truncation is a blocking issue; review
+warnings are optionally promoted to errors. The operation is pure and gives CI a distinct exit path
+without conflating valid-but-unacceptable output with malformed configuration.
+
 ### `schema.py` and `campaign.schema.json`
 
 Package the authoring contract with the wheel and return a fresh decoded dictionary to library
@@ -55,16 +62,16 @@ authoritative runtime validator and provides more actionable error messages.
 
 ### `cli.py`
 
-Provides `init`, `validate`, `preview`, `export`, and `schema`. Successful JSON output stays on stdout;
-errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`, and success
-returns `0`.
+Provides `init`, `validate`, `preview`, `check`, `export`, and `schema`. Successful output and
+valid quality reports stay on stdout; configuration/I/O errors stay on stderr. Validation/I/O
+errors return `1`, usage errors return `2`, quality-gate failures return `3`, and success returns `0`.
 
 ## Trust boundaries
 
 | Boundary | Untrusted input | Control |
 | --- | --- | --- |
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
-| Campaign fields | Text, URL, hashtags, platforms | Length bounds, control checks, URL scheme/credential checks, allowlists. |
+| Campaign fields | Text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, allowlists, hard platform ceilings. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 
@@ -81,7 +88,7 @@ path. It never reads environment variables or logs draft content automatically.
 - During an explicit overwrite, draft files are replaced before `manifest.json`; readers can treat
   the manifest as the commit marker.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.2 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.3 scope.
 
 ## Dependency and cost model
 

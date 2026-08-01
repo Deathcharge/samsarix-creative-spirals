@@ -100,3 +100,45 @@ def test_config_error_accepts_single_issue() -> None:
     error = ConfigError("one problem")
 
     assert error.issues == ("one problem",)
+
+
+def test_platform_limits_are_normalized_and_serialized(campaign_data: dict[str, Any]) -> None:
+    campaign_data["platforms"] = ["mastodon", "x"]
+    campaign_data["platformLimits"] = {"mastodon": 5_000, "x": 200}
+
+    config = CampaignConfig.from_dict(campaign_data)
+
+    assert config.platform_limits == (("x", 200), ("mastodon", 5_000))
+    assert config.limit_for("x") == 200
+    assert config.limit_for("mastodon") == 5_000
+    assert config.limit_for("discord") == 2_000
+    assert config.to_dict()["platformLimits"] == {"x": 200, "mastodon": 5_000}
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [
+        ([], "must be an object"),
+        ({"unknown": 10}, "must name one of"),
+        ({"x": True}, "must be an integer"),
+        ({"x": 281}, "between 1 and 280"),
+        ({"x": 0}, "between 1 and 280"),
+        ({"mastodon": 100_001}, "between 1 and 100000"),
+        ({"mastodon": 1_000}, "not useful unless mastodon is requested"),
+        ({"X": 200, "x": 180}, "duplicates x"),
+    ],
+)
+def test_campaign_rejects_invalid_platform_limits(
+    campaign_data: dict[str, Any], value: object, message: str
+) -> None:
+    campaign_data["platformLimits"] = value
+
+    with pytest.raises(ConfigError, match=message):
+        CampaignConfig.from_dict(campaign_data)
+
+
+def test_campaign_rejects_non_string_platform_limit_key(campaign_data: dict[str, Any]) -> None:
+    campaign_data["platformLimits"] = {42: 10}
+
+    with pytest.raises(ConfigError, match="keys must be platform strings"):
+        CampaignConfig.from_dict(campaign_data)

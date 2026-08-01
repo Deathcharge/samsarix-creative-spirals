@@ -8,8 +8,9 @@ change without notice.
 ### `CampaignConfig`
 
 `CampaignConfig.from_dict(mapping)` validates and normalizes a JSON-compatible mapping. It returns
-an immutable dataclass with `schema_version`, `name`, `body`, `platforms`, `title`, `link`, and
-`hashtags`. `to_dict()` returns the normalized JSON shape.
+an immutable dataclass with `schema_version`, `name`, `body`, `platforms`, `title`, `link`,
+`hashtags`, and normalized `platform_limits`. `limit_for(platform)` returns an explicit override or
+the supported default. `to_dict()` returns the normalized JSON shape.
 
 ### `PlatformDraft`
 
@@ -27,6 +28,15 @@ An immutable result for one platform:
 
 An immutable collection with deterministic `campaign_id`, full SHA-256 `source_hash`, `name`, and
 ordered `drafts`. `to_dict()` produces machine-readable preview output.
+
+### `QualityIssue`
+
+One stable quality finding with `code`, `severity`, `platform`, and human-readable `message`.
+
+### `CampaignCheck`
+
+An immutable quality result with `campaign_id`, `publishable`, and ordered `issues`. `to_dict()`
+returns the same schema used by `samsarix-campaign check --json`.
 
 ### `ConfigError`
 
@@ -47,6 +57,17 @@ performed.
 Accepts a `CampaignConfig` or plain dictionary. It normalizes the source, hashes canonical JSON,
 and formats each requested platform. Repeated calls with equal normalized input return equal
 bundles. It performs no file or network I/O.
+
+Supported platform defaults are X (280 weighted characters), LinkedIn (3,000 UTF-16 code units),
+Bluesky (300 graphemes and 3,000 UTF-8 bytes), Mastodon (500 characters with 23-character URL
+accounting), and Discord (2,000 UTF-16 code units). `platformLimits` may make any platform stricter;
+Mastodon may be raised to match an intended instance's advertised limit.
+
+### `check_campaign(bundle, *, warnings_as_errors=False) -> CampaignCheck`
+
+Produces a deterministic quality report without file or network I/O. Truncation is always an error.
+Other platform review warnings remain warnings unless `warnings_as_errors=True`. `publishable` is
+true when the report contains no error-severity issue.
 
 ### `export_campaign(bundle, output_root="outbox", *, overwrite=False, exported_at=None) -> Path`
 
@@ -71,6 +92,7 @@ through `samsarix-campaign schema`.
 from samsarix_creative_spirals import (
     ConfigError,
     build_campaign,
+    check_campaign,
     export_campaign,
     load_campaign,
 )
@@ -78,6 +100,9 @@ from samsarix_creative_spirals import (
 try:
     config = load_campaign("campaign.json")
     bundle = build_campaign(config)
+    report = check_campaign(bundle)
+    if not report.publishable:
+        raise ConfigError([issue.message for issue in report.issues])
     destination = export_campaign(bundle, "outbox")
 except ConfigError as error:
     for issue in error.issues:
@@ -91,6 +116,6 @@ else:
 ## Compatibility policy
 
 The package is pre-1.0. The exported names, JSON `schemaVersion: 1`, manifest shape, and documented
-CLI behavior are the compatibility surface for 0.2.x. Internal helpers and exact prose in warning
+CLI behavior are the compatibility surface for 0.3.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

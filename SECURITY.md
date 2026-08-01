@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.2.x` release line is supported. Earlier pre-productization and
+The latest `0.3.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -24,7 +24,11 @@ JSON files selected by the invoking user. The supported workflow:
 - performs no network requests, subprocess execution, dynamic imports, telemetry,
   account access, or remote publishing;
 - limits campaign files to 1 MiB and individual body text to 100,000 characters;
-- validates allowed fields, platforms, links, hashtags, and control characters;
+- rejects duplicate JSON fields and excessive nesting before validating allowed fields, platforms,
+  links, hashtags, and control characters;
+- constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
+  documented instance-specific maximum;
+- evaluates quality gates deterministically without writing files or contacting platforms;
 - generates output names instead of trusting configuration as a filesystem path;
 - refuses implicit replacement of existing bundles and symbolic-link targets.
 

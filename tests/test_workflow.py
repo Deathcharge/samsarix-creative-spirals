@@ -31,6 +31,35 @@ def test_load_reports_json_location(tmp_path: Path) -> None:
         load_campaign(config_path)
 
 
+def test_load_rejects_duplicate_json_fields(tmp_path: Path) -> None:
+    config_path = tmp_path / "duplicate.json"
+    config_path.write_text(
+        '{"schemaVersion":1,"name":"first","name":"second","body":"text","platforms":["x"]}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigError, match="duplicate JSON field: name"):
+        load_campaign(config_path)
+
+
+def test_load_rejects_excessive_json_nesting(tmp_path: Path) -> None:
+    config_path = tmp_path / "nested.json"
+    config_path.write_text("[" * 2_000 + "]" * 2_000, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="nesting is too deep"):
+        load_campaign(config_path)
+
+
+def test_load_ignores_json_delimiters_inside_strings(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    config_path = tmp_path / "string-delimiters.json"
+    campaign_data["body"] = ("[{" * 200) + '\\"quoted\\"' + ("]}" * 200)
+    _write_campaign(config_path, campaign_data)
+
+    assert load_campaign(config_path).body == campaign_data["body"]
+
+
 def test_load_reports_missing_and_non_file_paths(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="cannot read campaign file"):
         load_campaign(tmp_path / "missing.json")
