@@ -97,3 +97,46 @@ def test_cli_check_supports_quality_gate_exit_codes(
     assert main(["check", str(path), "--json"]) == 3
     report = json.loads(capsys.readouterr().out)
     assert any(issue["code"] == "truncated" for issue in report["issues"])
+
+
+def test_cli_plan_journey(tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]) -> None:
+    campaign_path = tmp_path / "campaign.json"
+    plan_path = tmp_path / "plan.json"
+    _write_campaign(campaign_path, campaign_data)
+    plan_path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Release sequence",
+                "requiredPlatforms": ["x", "linkedin", "discord"],
+                "items": [
+                    {
+                        "campaign": "campaign.json",
+                        "intendedAt": "2026-08-10T13:00:00Z",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["plan", "validate", str(plan_path), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["items"] == 1
+
+    assert main(["plan", "preview", str(plan_path)]) == 0
+    assert "Release sequence" in capsys.readouterr().out
+
+    assert main(["plan", "check", str(plan_path), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["publishable"] is True
+
+    output = tmp_path / "plan-outbox"
+    assert main(["plan", "export", str(plan_path), "--output", str(output), "--json"]) == 0
+    exported = Path(json.loads(capsys.readouterr().out)["path"])
+    assert (exported / "calendar.ics").is_file()
+    assert (exported / "csv" / "x.csv").is_file()
+
+
+def test_cli_emits_plan_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "plan"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["title"] == "Samsarix Creative Spirals campaign plan"

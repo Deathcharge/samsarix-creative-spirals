@@ -4,19 +4,31 @@ import samsarix_creative_spirals as package
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.3.0"
+    assert package.__version__ == "0.4.0"
     assert package.__all__ == [
         "CampaignBundle",
         "CampaignCheck",
         "CampaignConfig",
+        "CampaignPlan",
+        "CampaignPlanBundle",
+        "CampaignPlanCheck",
+        "CampaignPlanItem",
         "ConfigError",
+        "PlanIssue",
+        "PlannedCampaign",
         "PlatformDraft",
         "QualityIssue",
         "build_campaign",
+        "build_campaign_plan",
         "check_campaign",
+        "check_campaign_plan",
         "export_campaign",
+        "export_campaign_plan",
+        "load_campaign_plan",
         "load_campaign_schema",
         "load_campaign",
+        "load_plan_schema",
+        "render_plan_calendar",
     ]
 
 
@@ -40,3 +52,13 @@ def test_packaged_schema_is_available() -> None:
         "mastodon": "mastodon",
         "discord": "discord",
     }
+
+
+def test_packaged_plan_schema_is_available() -> None:
+    schema = package.load_plan_schema()
+
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["items"]["maxItems"] == 100
+    assert schema["properties"]["items"]["items"]["properties"]["intendedAt"]["format"] == (
+        "date-time"
+    )
