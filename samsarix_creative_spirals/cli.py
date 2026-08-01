@@ -12,7 +12,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
-from .models import CampaignBundle, ConfigError
+from .models import CampaignBundle, CampaignCheck, ConfigError
+from .quality import check_campaign
 from .schema import load_campaign_schema
 from .templates import starter_campaign
 from .workflow import build_campaign, export_campaign, load_campaign
@@ -32,6 +33,13 @@ def _print_preview(bundle: CampaignBundle) -> None:
         print(draft.content)
         for warning in draft.warnings:
             print(f"warning: {warning}")
+
+
+def _print_check(result: CampaignCheck) -> None:
+    status = "passed" if result.publishable else "failed"
+    print(f"Quality check {status} for {result.campaign_id}")
+    for issue in result.issues:
+        print(f"{issue.severity}: [{issue.platform}] {issue.message}")
 
 
 def _init_command(args: argparse.Namespace) -> int:
@@ -71,6 +79,16 @@ def _preview_command(args: argparse.Namespace) -> int:
     else:
         _print_preview(bundle)
     return 0
+
+
+def _check_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign(load_campaign(args.config))
+    result = check_campaign(bundle, warnings_as_errors=args.warnings_as_errors)
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_check(result)
+    return 0 if result.publishable else 3
 
 
 def _export_command(args: argparse.Namespace) -> int:
@@ -125,6 +143,18 @@ def build_parser() -> argparse.ArgumentParser:
     preview_parser.add_argument("config")
     preview_parser.add_argument("--json", action="store_true", help="emit machine-readable output")
     preview_parser.set_defaults(handler=_preview_command)
+
+    check_parser = subparsers.add_parser(
+        "check", help="fail when generated drafts require quality intervention"
+    )
+    check_parser.add_argument("config")
+    check_parser.add_argument(
+        "--warnings-as-errors",
+        action="store_true",
+        help="also fail on non-truncation review warnings",
+    )
+    check_parser.add_argument("--json", action="store_true", help="emit machine-readable output")
+    check_parser.set_defaults(handler=_check_command)
 
     export_parser = subparsers.add_parser("export", help="write a reviewable local outbox bundle")
     export_parser.add_argument("config")

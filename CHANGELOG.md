@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 0.3.0 - 2026-08-01
+
+- Added bounded Bluesky and Mastodon drafts alongside X, LinkedIn, and Discord.
+- Added conservative Bluesky grapheme and UTF-8 byte enforcement plus Mastodon's documented
+  23-character URL accounting.
+- Added validated `platformLimits` overrides for stricter policies and instance-specific Mastodon
+  limits without network discovery.
+- Added typed `QualityIssue` and `CampaignCheck` results plus the pure `check_campaign()` API.
+- Added `samsarix-campaign check`, with exit code `3` for valid campaigns that fail the quality gate
+  and optional `--warnings-as-errors` behavior.
+- Rejected duplicate JSON fields, normalized duplicate platform-limit keys, and excessive JSON
+  nesting instead of allowing ambiguous or interpreter-dependent input.
+- Expanded the product roadmap around Git-native release communications, review, and portable
+  publisher-neutral artifacts.
+
 ## 0.2.0 - 2026-07-28
 
 - Rebranded the product, distribution, import namespace, and metadata for Samsarix LLC.

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "Local-first campaign",
-  "title": "One draft, three reviewable outputs",
+  "title": "One draft, five reviewable outputs",
   "body": "Samsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.",
   "link": "https://example.com/local-first",
   "hashtags": [
@@ -11,6 +11,8 @@
   "platforms": [
     "x",
     "linkedin",
+    "bluesky",
+    "mastodon",
     "discord"
   ]
 }

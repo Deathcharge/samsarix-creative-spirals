@@ -20,6 +20,15 @@ from .models import CampaignBundle, CampaignConfig, ConfigError
 MAX_CONFIG_BYTES = 1_000_000
 
 
+def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ConfigError(f"duplicate JSON field: {key}")
+        result[key] = value
+    return result
+
+
 def load_campaign(path: str | Path) -> CampaignConfig:
     """Load a UTF-8 JSON campaign file with bounded input size."""
     config_path = Path(path)
@@ -37,11 +46,13 @@ def load_campaign(path: str | Path) -> CampaignConfig:
     except (OSError, UnicodeError) as error:
         raise ConfigError(f"cannot read campaign file as UTF-8: {error}") from error
     try:
-        raw = json.loads(text)
+        raw = json.loads(text, object_pairs_hook=_reject_duplicate_json_keys)
     except json.JSONDecodeError as error:
         raise ConfigError(
             f"invalid JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
+    except RecursionError as error:
+        raise ConfigError("campaign JSON nesting is too deep") from error
     if not isinstance(raw, dict):
         raise ConfigError("campaign configuration must be a JSON object")
     return CampaignConfig.from_dict(raw)

@@ -20,5 +20,5 @@ def starter_campaign() -> dict[str, Any]:
         ),
         "link": "https://example.com/launch",
         "hashtags": ["buildinpublic", "product"],
-        "platforms": ["x", "linkedin", "discord"],
+        "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
     }

@@ -13,6 +13,7 @@ from .models import CampaignConfig, ConfigError, PLATFORM_LIMITS, PlatformDraft
 
 _URL_RE = re.compile(r"https?://[^\s<>()]+", re.IGNORECASE)
 _URL_TRAILING_PUNCTUATION = ".,!?;:)]}"
+BLUESKY_MAX_BYTES = 3_000
 
 
 def _x_character_weight(character: str) -> int:
@@ -45,6 +46,23 @@ def x_weighted_length(text: str) -> int:
     return total
 
 
+def mastodon_weighted_length(text: str) -> int:
+    """Count text using Mastodon's documented 23-character URL rule."""
+    normalized = unicodedata.normalize("NFC", text)
+    total = 0
+    position = 0
+    for match in _URL_RE.finditer(normalized):
+        total += len(normalized[position : match.start()])
+        token = match.group(0)
+        core = token.rstrip(_URL_TRAILING_PUNCTUATION)
+        trailing = token[len(core) :]
+        total += 23 if core else 0
+        total += len(trailing)
+        position = match.end()
+    total += len(normalized[position:])
+    return total
+
+
 def _utf16_length(text: str) -> int:
     """Conservatively count code units used by common platform backends."""
     return len(text.encode("utf-16-le")) // 2
@@ -60,10 +78,16 @@ def _grapheme_clusters(text: str) -> Iterator[str]:
             bool(unicodedata.combining(character))
             or 0xFE00 <= codepoint <= 0xFE0F
             or 0x1F3FB <= codepoint <= 0x1F3FF
+            or 0xE0020 <= codepoint <= 0xE007F
+        )
+        regional_pair = (
+            0x1F1E6 <= codepoint <= 0x1F1FF
+            and len(cluster) == 1
+            and 0x1F1E6 <= ord(cluster) <= 0x1F1FF
         )
         if not cluster:
             cluster = character
-        elif join_next or is_modifier or character == "\u200d":
+        elif join_next or is_modifier or regional_pair or character == "\u200d":
             cluster += character
         else:
             yield cluster
@@ -71,6 +95,11 @@ def _grapheme_clusters(text: str) -> Iterator[str]:
         join_next = character == "\u200d"
     if cluster:
         yield cluster
+
+
+def grapheme_length(text: str) -> int:
+    """Count conservative user-perceived characters for Bluesky output."""
+    return sum(1 for _ in _grapheme_clusters(unicodedata.normalize("NFC", text)))
 
 
 def _text_units(text: str) -> list[str]:
@@ -91,7 +120,7 @@ def _text_units(text: str) -> list[str]:
 
 
 def _format_title(config: CampaignConfig, platform: str) -> str | None:
-    if config.title is None or platform == "x":
+    if config.title is None or platform in {"x", "bluesky"}:
         return None
     if platform == "discord":
         return f"**{config.title}**"
@@ -113,8 +142,7 @@ def _compose(
 def _truncate_body(
     body: str,
     render: Callable[[str], str],
-    measure: Callable[[str], int],
-    limit: int,
+    fits: Callable[[str], bool],
 ) -> str:
     units = _text_units(body)
     low = 0
@@ -124,7 +152,7 @@ def _truncate_body(
         midpoint = (low + high) // 2
         fragment = "".join(units[:midpoint]).rstrip()
         candidate_body = f"{fragment}…" if fragment else "…"
-        if measure(render(candidate_body)) <= limit:
+        if fits(render(candidate_body)):
             best = candidate_body
             low = midpoint + 1
         else:
@@ -139,8 +167,21 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
     if platform not in PLATFORM_LIMITS:
         raise ConfigError(f"unsupported platform: {platform}")
 
-    limit = PLATFORM_LIMITS[platform]
-    measure = x_weighted_length if platform == "x" else _utf16_length
+    limit = config.limit_for(platform)
+    if platform == "x":
+        measure = x_weighted_length
+    elif platform == "mastodon":
+        measure = mastodon_weighted_length
+    elif platform == "bluesky":
+        measure = grapheme_length
+    else:
+        measure = _utf16_length
+
+    def fits(value: str) -> bool:
+        return measure(value) <= limit and (
+            platform != "bluesky" or len(value.encode("utf-8")) <= BLUESKY_MAX_BYTES
+        )
+
     title = _format_title(config, platform)
     hashtags = [f"#{tag}" for tag in config.hashtags]
     warnings: list[str] = []
@@ -154,7 +195,7 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
     original_count = measure(original)
     active_hashtags = list(hashtags)
 
-    while active_hashtags and measure(render("…", active_hashtags)) > limit:
+    while active_hashtags and not fits(render("…", active_hashtags)):
         active_hashtags.pop()
     if len(active_hashtags) != len(hashtags):
         omitted = len(hashtags) - len(active_hashtags)
@@ -165,21 +206,23 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
 
     content = render_active(config.body)
     truncated = False
-    if measure(content) > limit:
-        body = _truncate_body(config.body, render_active, measure, limit)
+    if not fits(content):
+        body = _truncate_body(config.body, render_active, fits)
         content = render_active(body)
         truncated = True
         warnings.append("Body was truncated to fit the platform limit.")
 
-    if platform == "x" and config.title is not None:
-        warnings.append("Title is omitted from the X draft.")
+    if platform in {"x", "bluesky"} and config.title is not None:
+        warnings.append(f"Title is omitted from the {platform} draft.")
+    if platform == "mastodon" and any(tag.isdecimal() for tag in config.hashtags):
+        warnings.append("Mastodon does not recognize hashtags containing only numbers.")
     if platform == "discord" and ("@everyone" in content or "@here" in content):
         warnings.append("Draft contains a broadcast mention; review before pasting into Discord.")
 
     character_count = measure(content)
-    if character_count > limit:
+    if not fits(content):
         raise AssertionError(
-            f"formatter produced {character_count} characters for a {limit}-character limit"
+            f"formatter produced invalid {platform} output for a {limit}-character limit"
         )
 
     return PlatformDraft(

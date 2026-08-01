@@ -76,3 +76,24 @@ def test_cli_prints_and_writes_schema(tmp_path: Path, capsys: Any) -> None:
 
     assert main(["schema", "--output", str(output)]) == 1
     assert "refusing to overwrite" in capsys.readouterr().err
+
+
+def test_cli_check_supports_quality_gate_exit_codes(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    path = tmp_path / "campaign.json"
+    _write_campaign(path, campaign_data)
+
+    assert main(["check", str(path), "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["publishable"] is True
+    assert report["issues"]
+
+    assert main(["check", str(path), "--warnings-as-errors"]) == 3
+    assert "Quality check failed" in capsys.readouterr().out
+
+    campaign_data["body"] = "long content " * 100
+    _write_campaign(path, campaign_data)
+    assert main(["check", str(path), "--json"]) == 3
+    report = json.loads(capsys.readouterr().out)
+    assert any(issue["code"] == "truncated" for issue in report["issues"])
