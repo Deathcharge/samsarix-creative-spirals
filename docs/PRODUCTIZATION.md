@@ -251,8 +251,8 @@ No locally actionable P0 remains.
   an explicit instance character maximum and uses Mastodon's documented 23-character URL default;
   it does not contact an instance or infer remote-mention accounting.
 - The full quality suite has been verified locally on Windows/Python 3.11, with isolated wheel
-  smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel jobs passed on
-  Python 3.10 and 3.13.
+  smoke checks on Python 3.11 and 3.13. GitHub-hosted Linux quality/build/wheel verification for
+  this 0.3 release remains an acceptance gate until the release PR is green.
 - `--overwrite` updates draft files then writes the manifest last. A process/filesystem failure
   during explicit overwrite can leave files newer than the old manifest; rerunning the same command
   recovers the bundle.
@@ -268,21 +268,21 @@ run in isolated Python 3.11 and 3.13 environments after the adversarial fix pass
 
 | Command | Exit | Actual result |
 | --- | ---: | --- |
-| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 15 files unchanged. |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 17 files unchanged. |
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
-| `python -m mypy` | 0 | No issues in 14 source files. |
-| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 67 passed; 93.96% total coverage. |
+| `python -m mypy` | 0 | No issues in 16 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 89 passed; 95.10% total coverage. |
 | `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | All files compiled. |
 | `git diff --check` | 0 | No whitespace errors. |
-| `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.2.0` sdist and universal wheel from an isolated build environment. |
-| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `samsarix-creative-spirals 0.2.0` with zero default dependencies. |
-| isolated `samsarix-campaign --version` | 0 | Reported `samsarix-campaign 0.2.0`. |
-| isolated schema → validate → preview → export | 0 | Loaded the wheel-bundled schema and produced three drafts plus a valid local manifest. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built warning-free `0.3.0` sdist and universal wheel from an isolated build environment. |
+| isolated `python -m pip install --no-deps <wheel>` | 0 | Installed `samsarix-creative-spirals 0.3.0` with zero default dependencies. |
+| isolated `samsarix-campaign --version` | 0 | Reported `samsarix-campaign 0.3.0`. |
+| isolated schema → validate → check → preview → export | 0 | Loaded the wheel-bundled schema, passed the quality gate, and produced five drafts plus a valid local manifest. |
 | isolated `python -m pip check` | 0 | No broken requirements. |
 | isolated metadata/API inspection | 0 | Name, version, `MPL-2.0` license expression, package version, and schema resource matched. |
-| Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, preview, and public import successfully. |
-| GitHub Actions `quality (3.10)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 25 seconds. |
-| GitHub Actions `quality (3.13)` | 0 | Hosted Linux format, lint, type, test, build, and installed-wheel checks passed in 33 seconds. |
+| Python 3.13 isolated wheel smoke | 0 | Installed the wheel and exercised version, schema, quality check, preview, and public import successfully. |
+| GitHub Actions `quality (3.10)` | pending | Required before the 0.3 release PR can merge. |
+| GitHub Actions `quality (3.13)` | pending | Required before the 0.3 release PR can merge. |
 
 Artifact inspection found only the intended Samsarix package plus distribution metadata in the
 wheel. It includes the JSON Schema, `py.typed`, unmodified MPL-2.0 text, and NOTICE; it includes no
@@ -314,7 +314,7 @@ content.
 
 ## Release disposition
 
-**0.2 release candidate; all declared technical acceptance gates pass.** The local product journey,
-package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.2 acceptance
-criteria, and no locally actionable P0 is known. Public package publication remains a separate
-owner-controlled release action.
+**0.3 release candidate; all local technical acceptance gates pass.** The local product journey,
+package artifacts, tests, branding, licensing, and documentation meet the 0.3 acceptance criteria,
+and no locally actionable P0 is known. Hosted CI remains the merge gate; public package publication
+remains a separate owner-controlled release action.
