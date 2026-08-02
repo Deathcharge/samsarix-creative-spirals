@@ -32,8 +32,12 @@ files selected by the invoking user. The supported workflow:
 - confines plan campaign references beneath the plan directory and rejects absolute, parent,
   backslash, drive-qualified, and symbolic-link escape paths;
 - generates output names instead of trusting configuration as a filesystem path;
-- refuses implicit replacement of existing bundles and symbolic-link targets.
+- refuses implicit replacement of existing bundles and symbolic-link targets;
+- prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
+  spreadsheet applications treat them as text.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 files as potentially sensitive content, review drafts before pasting them into a
 platform, and do not commit private drafts or secrets.
+Consumers that require byte-for-byte source content should use the manifest and campaign source
+rather than stripping the CSV protection.

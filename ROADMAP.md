@@ -63,7 +63,7 @@ Official platform evidence:
   status limits: <https://docs.joinmastodon.org/user/posting/> and
   <https://docs.joinmastodon.org/entities/Instance/>.
 
-## Active milestone — 0.4 campaign plans
+## Completed milestone — 0.4 campaign plans
 
 - Define a bounded multi-campaign plan schema with optional intended publication times.
 - Validate and preview a complete launch sequence in one command.

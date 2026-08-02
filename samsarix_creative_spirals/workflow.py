@@ -60,8 +60,8 @@ def _load_json_object(path: str | Path, *, kind: str) -> dict[str, Any]:
     if config_path.exists() and not config_path.is_file():
         raise ConfigError(f"{kind} path must be a file")
     try:
-        with config_path.open("rb") as campaign_file:
-            encoded = campaign_file.read(MAX_CONFIG_BYTES + 1)
+        with config_path.open("rb") as source_file:
+            encoded = source_file.read(MAX_CONFIG_BYTES + 1)
     except OSError as error:
         raise ConfigError(f"cannot read {kind} file: {error}") from error
     if len(encoded) > MAX_CONFIG_BYTES:
@@ -76,7 +76,7 @@ def _load_json_object(path: str | Path, *, kind: str) -> dict[str, Any]:
         raw = json.loads(text, object_pairs_hook=_reject_duplicate_json_keys)
     except json.JSONDecodeError as error:
         raise ConfigError(
-            f"invalid JSON at line {error.lineno}, column {error.colno}: {error.msg}"
+            f"invalid {kind} JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
     except RecursionError as error:
         raise ConfigError(f"{kind} JSON nesting is too deep") from error

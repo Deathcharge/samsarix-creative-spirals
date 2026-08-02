@@ -140,3 +140,12 @@ def test_cli_emits_plan_schema(capsys: Any) -> None:
     assert main(["schema", "--kind", "plan"]) == 0
     schema = json.loads(capsys.readouterr().out)
     assert schema["title"] == "Samsarix Creative Spirals campaign plan"
+
+
+def test_cli_writes_plan_schema_with_kind_aware_message(tmp_path: Path, capsys: Any) -> None:
+    output = tmp_path / "plan.schema.json"
+
+    assert main(["schema", "--kind", "plan", "--output", str(output)]) == 0
+
+    assert f"Wrote plan schema to {output}" in capsys.readouterr().out
+    assert json.loads(output.read_text(encoding="utf-8"))["title"].endswith("campaign plan")

@@ -12,6 +12,8 @@ All notable changes to this project are documented here.
   out-of-order times, and every underlying campaign finding.
 - Added safe plan export with a manifest, one publisher-neutral CSV per platform, and an RFC 5545
   calendar containing scheduled events and unscheduled tasks.
+- Hardened CSV export against spreadsheet formulas, removed stale platform files during explicit
+  overwrite, and normalized RFC 3339 fractional seconds consistently across supported runtimes.
 - Added the packaged plan JSON Schema and typed plan models/functions to the public Python API.
 - Fixed output-root symbolic-link detection by preserving the selected path before inspection.
 

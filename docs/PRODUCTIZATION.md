@@ -339,7 +339,7 @@ Current local verification on Windows/Python 3.11:
 | `python -m black --check samsarix_creative_spirals tests examples` | 0 | 19 files unchanged. |
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
 | `python -m mypy` | 0 | No issues in 18 source files. |
-| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 125 passed; 93.48% total coverage. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 134 passed; 93.75% total coverage. |
 | Draft 2020-12 schema validation | 0 | The plan schema and included two-campaign example passed. |
 | `python -m build --outdir <isolated-dir>/dist` | 0 | Built the `0.4.0` sdist and universal wheel with the patched setuptools floor. |
 | Python 3.11 installed-wheel plan journey | 0 | Version, plan schema, validate, check, preview, export, metadata, artifacts, and `pip check` passed. |
@@ -351,6 +351,9 @@ Known 0.4 boundaries:
 - CSV columns are stable Samsarix interchange fields, not a promise of direct import into every
   publisher. Buffer, for example, requires channel-specific templates and interprets posting times
   in configured channel context.
+- CSV name, content, and warning fields are neutralized when they begin with a spreadsheet formula
+  marker; explicit overwrite removes obsolete generated platform CSVs before replacing the
+  manifest.
 - iCalendar export follows RFC 5545 CRLF, escaping, required component fields, UTC times, and
   UTF-8-safe 75-octet folding. Importer behavior still varies, so the included file is an
   interchange artifact rather than a delivery guarantee.

@@ -100,6 +100,40 @@ def test_plan_rejects_non_portable_or_unconfined_paths(
         load_campaign_plan(path)
 
 
+def test_plan_rejects_uppercase_json_suffix(tmp_path: Path, campaign_data: dict[str, Any]) -> None:
+    path = _write_plan(
+        tmp_path,
+        campaign_data,
+        items=[{"campaign": "campaigns/release.JSON"}],
+    )
+
+    with pytest.raises(ConfigError, match="portable relative"):
+        load_campaign_plan(path)
+
+
+def test_plan_rejects_symlink_escape(tmp_path: Path, campaign_data: dict[str, Any]) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside-campaign.json"
+    _write_json(outside, campaign_data)
+    plan_root = tmp_path / "plan-root"
+    _write_json(plan_root / "campaigns" / "release.json", campaign_data)
+    link = plan_root / "campaigns" / "escape.json"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("symbolic links are not available in this environment")
+    _write_json(
+        plan_root / "plan.json",
+        {
+            "schemaVersion": 1,
+            "name": "Escaping plan",
+            "items": [{"campaign": "campaigns/escape.json"}],
+        },
+    )
+
+    with pytest.raises(ConfigError, match="outside the plan directory"):
+        load_campaign_plan(plan_root / "plan.json")
+
+
 @pytest.mark.parametrize(
     "intended_at",
     ["2026-08-10T09:00:00", "2026-08-10 09:00:00Z", "2026-13-10T09:00:00Z"],
@@ -131,6 +165,34 @@ def test_plan_rejects_null_or_unknown_offset_times(
         load_campaign_plan(path)
 
 
+@pytest.mark.parametrize(
+    ("fraction", "expected_microsecond"),
+    [("1", 100_000), ("12345", 123_450), ("123456789", 123_456)],
+)
+def test_plan_normalizes_rfc3339_fractional_seconds(
+    tmp_path: Path,
+    campaign_data: dict[str, Any],
+    fraction: str,
+    expected_microsecond: int,
+) -> None:
+    path = _write_plan(
+        tmp_path,
+        campaign_data,
+        items=[
+            {
+                "campaign": "campaigns/release.json",
+                "intendedAt": f"2026-08-10T09:00:00.{fraction}Z",
+            }
+        ],
+    )
+
+    plan = load_campaign_plan(path)
+
+    assert plan.items[0].intended_at == datetime(
+        2026, 8, 10, 9, 0, 0, expected_microsecond, tzinfo=timezone.utc
+    )
+
+
 def test_plan_rejects_duplicate_json_fields(tmp_path: Path) -> None:
     path = tmp_path / "plan.json"
     path.write_text(
@@ -139,6 +201,14 @@ def test_plan_rejects_duplicate_json_fields(tmp_path: Path) -> None:
     )
 
     with pytest.raises(ConfigError, match="duplicate JSON field: name"):
+        load_campaign_plan(path)
+
+
+def test_plan_reports_kind_and_json_location(tmp_path: Path) -> None:
+    path = tmp_path / "broken-plan.json"
+    path.write_text('{"schemaVersion":', encoding="utf-8")
+
+    with pytest.raises(ConfigError, match=r"invalid plan JSON at line 1, column"):
         load_campaign_plan(path)
 
 
@@ -330,6 +400,35 @@ def test_plan_export_writes_manifest_calendar_and_platform_csv(
     )
     updated_manifest = json.loads((overwritten / "manifest.json").read_text(encoding="utf-8"))
     assert updated_manifest["generatedAt"] == "2026-08-02T12:00:00Z"
+
+
+def test_plan_export_neutralizes_spreadsheet_formula_prefixes(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    campaign_data["name"] = "=RELEASE"
+    campaign_data["body"] = "@SUM(A1:A2)"
+    bundle = build_campaign_plan(load_campaign_plan(_write_plan(tmp_path, campaign_data)))
+
+    target = export_campaign_plan(bundle, tmp_path / "outbox")
+
+    with (target / "csv" / "x.csv").open(encoding="utf-8", newline="") as csv_file:
+        row = next(csv.DictReader(csv_file))
+    assert row["name"] == "'=RELEASE"
+    assert row["content"].startswith("'@SUM(A1:A2)")
+
+
+def test_plan_export_overwrite_removes_stale_csv(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle = build_campaign_plan(load_campaign_plan(_write_plan(tmp_path, campaign_data)))
+    output = tmp_path / "outbox"
+    target = export_campaign_plan(bundle, output)
+    stale = target / "csv" / "removed-platform.csv"
+    stale.write_text("stale\n", encoding="utf-8")
+
+    export_campaign_plan(bundle, output, overwrite=True)
+
+    assert not stale.exists()
 
 
 def test_plan_export_handles_platforms_missing_from_some_items(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import samsarix_creative_spirals as package
 
 
@@ -62,3 +64,6 @@ def test_packaged_plan_schema_is_available() -> None:
     assert schema["properties"]["items"]["items"]["properties"]["intendedAt"]["format"] == (
         "date-time"
     )
+    campaign_pattern = schema["properties"]["items"]["items"]["properties"]["campaign"]["pattern"]
+    assert re.fullmatch(campaign_pattern, "campaigns/release.json")
+    assert not re.fullmatch(campaign_pattern, "campaigns/release.JSON")

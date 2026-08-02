@@ -27,6 +27,7 @@ _PLAN_KEYS = {"schemaVersion", "name", "requiredPlatforms", "items"}
 _PLAN_ITEM_KEYS = {"campaign", "intendedAt"}
 _RFC3339_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$")
 _MISSING = object()
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n", "＝", "＋", "－", "＠")
 _CSV_FIELDS = (
     "plan_id",
     "sequence",
@@ -56,8 +57,13 @@ def _parse_intended_at(value: Any, *, field: str, issues: list[str]) -> datetime
     if not isinstance(value, str) or not _RFC3339_RE.fullmatch(value):
         issues.append(f"{field} must be an RFC 3339 date-time with an explicit offset or Z")
         return None
+    normalized = re.sub(
+        r"\.(\d+)(?=Z|[+-]\d{2}:\d{2}$)",
+        lambda match: "." + (match.group(1) + "000000")[:6],
+        value,
+    )
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
     except ValueError:
         issues.append(f"{field} must be a valid date and time")
         return None
@@ -111,7 +117,7 @@ def _resolve_campaign_path(
         or any(unicodedata.category(character) in {"Cc", "Cs"} for character in source)
         or source.startswith("/")
         or any(segment in {"", ".", ".."} for segment in segments)
-        or not source.casefold().endswith(".json")
+        or not source.endswith(".json")
     ):
         issues.append(
             f"{field} must be a portable relative .json path without empty, dot, or parent segments"
@@ -531,24 +537,30 @@ def _csv_payload(bundle: CampaignPlanBundle, platform: str) -> str:
                 "sequence": item.sequence,
                 "campaign_id": item.bundle.campaign_id,
                 "source_hash": item.bundle.source_hash,
-                "name": item.bundle.name,
+                "name": _csv_safe_text(item.bundle.name),
                 "intended_at_utc": _format_utc(item.intended_at) if item.intended_at else "",
-                "content": draft.content,
+                "content": _csv_safe_text(draft.content),
                 "character_count": draft.character_count,
                 "character_limit": draft.character_limit,
                 "truncated": str(draft.truncated).lower(),
-                "warnings": " | ".join(draft.warnings),
+                "warnings": _csv_safe_text(" | ".join(draft.warnings)),
             }
         )
     return stream.getvalue()
 
 
+def _csv_safe_text(value: str) -> str:
+    """Keep spreadsheet applications from interpreting exported text as a formula."""
+    return f"'{value}" if value.startswith(_CSV_FORMULA_PREFIXES) else value
+
+
+def _used_platforms(bundle: CampaignPlanBundle) -> list[str]:
+    used = {draft.platform for item in bundle.items for draft in item.bundle.drafts}
+    return [platform for platform in SUPPORTED_PLATFORMS if platform in used]
+
+
 def _plan_manifest(bundle: CampaignPlanBundle, generated_at: datetime) -> dict[str, Any]:
-    platforms = [
-        platform
-        for platform in SUPPORTED_PLATFORMS
-        if any(platform == draft.platform for item in bundle.items for draft in item.bundle.drafts)
-    ]
+    platforms = _used_platforms(bundle)
     return {
         "schemaVersion": 1,
         "planId": bundle.plan_id,
@@ -644,13 +656,7 @@ def export_campaign_plan(
     try:
         csv_dir = temporary / "csv"
         csv_dir.mkdir()
-        platforms = [
-            platform
-            for platform in SUPPORTED_PLATFORMS
-            if any(
-                platform == draft.platform for item in bundle.items for draft in item.bundle.drafts
-            )
-        ]
+        platforms = _used_platforms(bundle)
         for platform in platforms:
             (csv_dir / f"{platform}.csv").write_text(
                 _csv_payload(bundle, platform),
@@ -673,8 +679,12 @@ def export_campaign_plan(
         else:
             target_csv = target / "csv"
             target_csv.mkdir(exist_ok=True)
+            written = {source.name for source in csv_dir.iterdir()}
             for source in sorted(csv_dir.iterdir()):
                 os.replace(source, target_csv / source.name)
+            for stale in sorted(target_csv.iterdir()):
+                if stale.name not in written:
+                    stale.unlink()
             csv_dir.rmdir()
             os.replace(temporary / "calendar.ics", target / "calendar.ics")
             os.replace(temporary / "manifest.json", target / "manifest.json")

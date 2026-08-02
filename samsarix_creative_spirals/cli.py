@@ -189,7 +189,7 @@ def _schema_command(args: argparse.Namespace) -> int:
             handle.write(payload)
     except FileExistsError:
         raise ConfigError(f"refusing to overwrite existing file: {path}") from None
-    print(f"Wrote campaign schema to {path}")
+    print(f"Wrote {args.kind} schema to {path}")
     return 0
 
 
@@ -298,7 +298,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_export_parser.set_defaults(handler=_plan_export_command)
 
     schema_parser = subparsers.add_parser(
-        "schema", help="print or write the bundled campaign JSON Schema"
+        "schema", help="print or write a bundled campaign or plan JSON Schema"
     )
     schema_parser.add_argument(
         "--kind", choices=("campaign", "plan"), default="campaign", help="schema to emit"
