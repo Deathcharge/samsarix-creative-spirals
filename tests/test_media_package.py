@@ -4,7 +4,6 @@ import copy
 import hashlib
 import json
 import struct
-import zlib
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +12,8 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
+from media_helpers import png_chunk as _png_chunk
+from media_helpers import png_image as _png
 from samsarix_creative_spirals import (
     CampaignPlanMedia,
     CampaignPlanMediaBinding,
@@ -43,15 +44,6 @@ APPROVED_AT = datetime(2026, 8, 3, 14, 15, tzinfo=timezone.utc)
 GENERATED_AT = datetime(2026, 8, 4, 9, 30, tzinfo=timezone.utc)
 
 
-def _png_chunk(kind: bytes, data: bytes) -> bytes:
-    return (
-        struct.pack(">I", len(data))
-        + kind
-        + data
-        + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
-    )
-
-
 def _jpeg(*, width: int = 3, height: int = 2) -> bytes:
     frame = bytes((8,)) + struct.pack(">HH", height, width) + bytes((1, 1, 0x11, 0))
     scan = bytes((1, 1, 0, 0, 63, 0))
@@ -65,19 +57,6 @@ def _jpeg(*, width: int = 3, height: int = 2) -> bytes:
         + struct.pack(">H", len(scan) + 2)
         + scan
         + b"\x00\xff\xd9"
-    )
-
-
-def _png(*, red: int = 12, width: int = 1, height: int = 1, animated: bool = False) -> bytes:
-    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-    rows = b"\x00" + bytes((red, 34, 56, 255))
-    animation = _png_chunk(b"acTL", struct.pack(">II", 1, 0)) if animated else b""
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + _png_chunk(b"IHDR", header)
-        + animation
-        + _png_chunk(b"IDAT", zlib.compress(rows))
-        + _png_chunk(b"IEND", b"")
     )
 
 

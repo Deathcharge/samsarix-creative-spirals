@@ -5,7 +5,7 @@ permissioned adapter imports campaign drafts into a publisher. It packages the c
 embedded approval record, any approval-bound content policy, exact rendered outputs, and bounded
 integrity metadata in one exclusive directory.
 
-The packet answers four offline questions:
+The packet answers five offline questions:
 
 1. Does the embedded approval still match the current plan and every referenced campaign?
 2. Was the packet generated at or after that approval?

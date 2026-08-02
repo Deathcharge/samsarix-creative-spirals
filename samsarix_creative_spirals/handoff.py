@@ -536,7 +536,7 @@ def _check_packet_directory(
         issues.append(
             HandoffIssue(
                 "artifact-type-invalid",
-                f"{name.title()} entry must be a regular directory.",
+                f"{name} entry must be a regular directory.",
                 name,
             )
         )

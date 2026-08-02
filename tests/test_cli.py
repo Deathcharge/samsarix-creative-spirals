@@ -1,31 +1,13 @@
 from __future__ import annotations
 
 import json
-import struct
-import zlib
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from media_helpers import png_image
 from samsarix_creative_spirals.cli import main
-
-
-def _one_pixel_png() -> bytes:
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        return (
-            struct.pack(">I", len(data))
-            + kind
-            + data
-            + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
-        )
-
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
-        + chunk(b"IDAT", zlib.compress(b"\x00\x0c\x22\x38\xff"))
-        + chunk(b"IEND", b"")
-    )
 
 
 def _write_campaign(path: Path, data: dict[str, Any]) -> None:
@@ -685,7 +667,7 @@ def test_cli_binds_packages_and_verifies_exact_media(
     _write_campaign(campaign, campaign_data)
     image = campaign.parent / "media" / "launch.png"
     image.parent.mkdir()
-    image.write_bytes(_one_pixel_png())
+    image.write_bytes(png_image())
     plan = tmp_path / "plan.json"
     plan.write_text(
         json.dumps(
@@ -752,7 +734,7 @@ def test_cli_binds_packages_and_verifies_exact_media(
     assert main(["plan", "handoff", "verify", str(plan), str(packet), "--json"]) == 0
     assert json.loads(capsys.readouterr().out)["valid"] is True
 
-    image.write_bytes(_one_pixel_png()[:-1] + b"x")
+    image.write_bytes(png_image()[:-1] + b"x")
     assert main(["plan", "approval", "verify", str(plan), str(approval)]) == 1
     assert "PNG" in capsys.readouterr().err
     assert main(["plan", "handoff", "verify", str(plan), str(packet)]) == 0
