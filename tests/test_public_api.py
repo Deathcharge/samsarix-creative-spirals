@@ -64,6 +64,7 @@ def test_packaged_schema_is_available() -> None:
             "properties"
         ]["platforms"]["contains"]["const"]
         for condition in schema["allOf"]
+        if "if" in condition
     }
     assert requested_limit_conditions == {
         "x": "x",
@@ -72,6 +73,23 @@ def test_packaged_schema_is_available() -> None:
         "mastodon": "mastodon",
         "discord": "discord",
     }
+    media_pattern = schema["$defs"]["mediaReference"]["properties"]["path"]["pattern"]
+    assert re.fullmatch(media_pattern, "media/launch-dashboard.PNG")
+    for invalid in (
+        " media/launch.png",
+        "media/launch.png ",
+        "media/ launch.png",
+        "media//launch.png",
+        "media/../launch.png",
+        "media/CON.data.png",
+        "media/Lpt9/launch.png",
+    ):
+        assert not re.fullmatch(media_pattern, invalid)
+    media_conditions = [condition for condition in schema["allOf"] if "if" not in condition]
+    assert len(media_conditions) == 5
+    assert all(
+        condition["properties"]["media"]["maxContains"] == 4 for condition in media_conditions
+    )
 
 
 def test_packaged_plan_schema_is_available() -> None:
@@ -108,3 +126,7 @@ def test_packaged_adapter_schema_is_available() -> None:
     assert schema["properties"]["contract"]["const"] == "samsarix.plan-drafts"
     assert schema["properties"]["schemaVersion"]["const"] == 2
     assert schema["properties"]["items"]["maxItems"] == 100
+    assert schema["$defs"]["draft"]["properties"]["media"]["maxItems"] == 4
+    assert schema["$defs"]["mediaPath"]["pattern"] == (
+        package.load_campaign_schema()["$defs"]["mediaReference"]["properties"]["path"]["pattern"]
+    )

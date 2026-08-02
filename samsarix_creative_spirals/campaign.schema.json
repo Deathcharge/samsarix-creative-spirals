@@ -41,6 +41,51 @@
         "properties": {"platformLimits": {"required": ["discord"]}}
       },
       "then": {"properties": {"platforms": {"contains": {"const": "discord"}}}}
+    },
+    {
+      "properties": {
+        "media": {
+          "contains": {"$ref": "#/$defs/appliesToX"},
+          "minContains": 0,
+          "maxContains": 4
+        }
+      }
+    },
+    {
+      "properties": {
+        "media": {
+          "contains": {"$ref": "#/$defs/appliesToLinkedIn"},
+          "minContains": 0,
+          "maxContains": 4
+        }
+      }
+    },
+    {
+      "properties": {
+        "media": {
+          "contains": {"$ref": "#/$defs/appliesToBluesky"},
+          "minContains": 0,
+          "maxContains": 4
+        }
+      }
+    },
+    {
+      "properties": {
+        "media": {
+          "contains": {"$ref": "#/$defs/appliesToMastodon"},
+          "minContains": 0,
+          "maxContains": 4
+        }
+      }
+    },
+    {
+      "properties": {
+        "media": {
+          "contains": {"$ref": "#/$defs/appliesToDiscord"},
+          "minContains": 0,
+          "maxContains": 4
+        }
+      }
     }
   ],
   "properties": {
@@ -113,6 +158,51 @@
     }
   },
   "$defs": {
+    "appliesToX": {
+      "anyOf": [
+        {"not": {"required": ["platforms"]}},
+        {
+          "required": ["platforms"],
+          "properties": {"platforms": {"contains": {"const": "x"}}}
+        }
+      ]
+    },
+    "appliesToLinkedIn": {
+      "anyOf": [
+        {"not": {"required": ["platforms"]}},
+        {
+          "required": ["platforms"],
+          "properties": {"platforms": {"contains": {"const": "linkedin"}}}
+        }
+      ]
+    },
+    "appliesToBluesky": {
+      "anyOf": [
+        {"not": {"required": ["platforms"]}},
+        {
+          "required": ["platforms"],
+          "properties": {"platforms": {"contains": {"const": "bluesky"}}}
+        }
+      ]
+    },
+    "appliesToMastodon": {
+      "anyOf": [
+        {"not": {"required": ["platforms"]}},
+        {
+          "required": ["platforms"],
+          "properties": {"platforms": {"contains": {"const": "mastodon"}}}
+        }
+      ]
+    },
+    "appliesToDiscord": {
+      "anyOf": [
+        {"not": {"required": ["platforms"]}},
+        {
+          "required": ["platforms"],
+          "properties": {"platforms": {"contains": {"const": "discord"}}}
+        }
+      ]
+    },
     "mediaReference": {
       "type": "object",
       "additionalProperties": false,
@@ -122,7 +212,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 240,
-          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+\\.(?:[jJ][pP][eE]?[gG]|[pP][nN][gG])$"
+          "pattern": "^(?!/)(?!\\s)(?!.*(?:/\\s|\\s(?:/|$)))(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*(?:^|/)(?:[cC][oO][nN]|[pP][rR][nN]|[aA][uU][xX]|[nN][uU][lL]|[cC][oO][mM][1-9]|[lL][pP][tT][1-9])(?:\\.[^/]*)?(?:/|$))[^/\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+(?:/[^/\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+)*\\.(?:[jJ][pP][eE]?[gG]|[pP][nN][gG])$"
         },
         "altText": {
           "type": "string",

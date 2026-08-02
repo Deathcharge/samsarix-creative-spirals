@@ -80,6 +80,7 @@
         },
         "media": {
           "type": "array",
+          "description": "Runtime-validated attachments applicable to this platform; at most four by the campaign contract.",
           "maxItems": 4,
           "items": {"$ref": "#/$defs/mediaAttachment"}
         }
@@ -114,7 +115,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 240,
-      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+\\.(?:[jJ][pP][eE]?[gG]|[pP][nN][gG])$"
+      "pattern": "^(?!/)(?!\\s)(?!.*(?:/\\s|\\s(?:/|$)))(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*(?:^|/)(?:[cC][oO][nN]|[pP][rR][nN]|[aA][uU][xX]|[nN][uU][lL]|[cC][oO][mM][1-9]|[lL][pP][tT][1-9])(?:\\.[^/]*)?(?:/|$))[^/\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+(?:/[^/\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+)*\\.(?:[jJ][pP][eE]?[gG]|[pP][nN][gG])$"
     },
     "altText": {
       "type": "string",

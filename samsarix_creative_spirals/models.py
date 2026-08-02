@@ -20,8 +20,8 @@ PLATFORM_LIMITS = {
     "mastodon": 500,
     "discord": 2000,
 }
-MAX_MEDIA_REFERENCES = len(SUPPORTED_PLATFORMS) * 4
 MAX_MEDIA_PER_PLATFORM = 4
+MAX_MEDIA_REFERENCES = len(SUPPORTED_PLATFORMS) * MAX_MEDIA_PER_PLATFORM
 MAX_MEDIA_PATH_LENGTH = 240
 MAX_ALT_TEXT_LENGTH = 1_000
 SUPPORTED_MEDIA_SUFFIXES = (".jpg", ".jpeg", ".png")
@@ -70,7 +70,7 @@ def _has_any_control(value: str) -> bool:
     return any(unicodedata.category(char) in {"Cc", "Cs"} for char in value)
 
 
-def _portable_media_path(value: Any, *, field: str, issues: list[str]) -> str | None:
+def _portable_media_path(value: object, *, field: str, issues: list[str]) -> str | None:
     if not isinstance(value, str):
         issues.append(f"{field} must be a string")
         return None
@@ -310,7 +310,7 @@ class CampaignConfig:
         media_value = raw.get("media", [])
         media: list[MediaReference] = []
         seen_media_paths: set[str] = set()
-        media_counts = {platform: 0 for platform in SUPPORTED_PLATFORMS}
+        media_counts = dict.fromkeys(SUPPORTED_PLATFORMS, 0)
         if not isinstance(media_value, list):
             issues.append("media must be an array of image references")
         else:

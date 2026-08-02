@@ -79,14 +79,17 @@ applicable `{path, altText}` pairs on each draft. An adapter that chooses to der
 1. resolve the item `source` beneath the trusted plan directory and the media path beneath that
    campaign file's directory;
 2. resolve symbolic links and reject any result outside that campaign directory;
-3. require an ordinary file and impose its own read and upload size limits before reading;
-4. inspect the actual MIME type, dimensions, animation, and provider-supported format rather than
+3. perform a race-safe open relative to a trusted directory handle with no-follow semantics where
+   available; otherwise revalidate the opened handle's identity and containment, then inspect and
+   upload that same opened object instead of validating a path and reopening it later;
+4. require an ordinary file and impose its own read and upload size limits before reading;
+5. inspect the actual MIME type, dimensions, animation, and provider-supported format rather than
    trusting the suffix;
-5. revalidate attachment count, alt-text rules, and all provider/account/instance constraints at
+6. revalidate attachment count, alt-text rules, and all provider/account/instance constraints at
    the moment of draft creation;
-6. show the exact resolved files and destination account to the operator before any external side
+7. show the exact resolved files and destination account to the operator before any external side
    effect; and
-7. keep draft creation, scheduling, publishing, replacement, and deletion behind separate explicit
+8. keep draft creation, scheduling, publishing, replacement, and deletion behind separate explicit
    authorization.
 
 `adapter.json` does not embed image bytes and media files are not copied into the export directory.

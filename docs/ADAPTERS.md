@@ -39,6 +39,9 @@ platform.
 10. Bound every file read, verify ordinary-file status, actual MIME type, size, dimensions,
     animation, provider/account rules, and current attachment limits before upload. A safe suffix
     and valid schema are not proof that a referenced file is safe or supported.
+11. Avoid path-validation/open races: open relative to a trusted directory handle with no-follow
+    semantics when available, or revalidate the opened handle and process that same object rather
+    than reopening a previously checked path.
 
 Unlike the spreadsheet-oriented CSV files, `adapter.json` preserves exact draft text without a
 formula-neutralizing prefix. Do not render its content as HTML or execute it as a template. Treat

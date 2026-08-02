@@ -46,8 +46,8 @@ Media references are not evidence that a file exists, remains beneath a director
 link resolution, has the claimed format, is non-malicious, fits a provider limit, or is authorized
 for upload. The core never reads those files. Any external adapter that does must use a trusted
 source root, resolve links and enforce containment, bound reads, inspect actual content, revalidate
-current provider/account rules, and obtain explicit operator authorization as described in
-`docs/MEDIA.md`.
+current provider/account rules, use a race-safe open or revalidate and process the same opened
+handle, and obtain explicit operator authorization as described in `docs/MEDIA.md`.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 files as potentially sensitive content, review drafts before pasting them into a

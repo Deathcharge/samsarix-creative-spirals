@@ -107,10 +107,11 @@ behavior.
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
-Media paths are metadata relative to the campaign file. Core never reads, checks, copies, or
-uploads them. References participate in campaign hashes, diffs, approvals, manifests, and adapter
-v2 output. See [Portable media references](docs/MEDIA.md) for targeting, path rules, platform
-rationale, and the filesystem/provider checks required of an external adapter.
+Media paths are metadata relative to the campaign file. Core validates that metadata but never
+resolves, reads, inspects, copies, or uploads the referenced files. References participate in
+campaign hashes, diffs, approvals, manifests, and adapter v2 output. See
+[Portable media references](docs/MEDIA.md) for targeting, path rules, platform rationale, and the
+filesystem/provider checks required of an external adapter.
 
 Print the bundled JSON Schema for editor or CI integration, or write it to a new file:
 
