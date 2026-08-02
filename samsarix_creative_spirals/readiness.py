@@ -130,7 +130,9 @@ class CampaignPlanReadiness:
     def meets(self, required_stage: RequiredStage) -> bool:
         """Return whether the report satisfies an explicit automation gate."""
         if required_stage == "quality":
-            return self.quality_passed and self.schedule_ready
+            return self.quality_passed and (
+                self.schedule_ready or self.publication_status in {"in-progress", "complete"}
+            )
         if required_stage == "approval":
             return self.stage in {
                 "approved",

@@ -13,7 +13,7 @@ local record must use careful language:
   posts later deleted from Buffer. Buffer also documents notification publishing where an item can
   move to **Sent** after a reminder is delivered even though a person must still finish publishing
   in the native app: [Sent history](https://support.buffer.com/article/517-understanding-sent-post-metrics-within-buffer-publish)
-  and [notification publishing troubleshooting](https://support.buffer.com/article/935-troubleshooting-video-uploads-in-buffer).
+  and [notification publishing](https://support.buffer.com/article/658-using-notification-publishing).
 - Sprout Social's Publishing Calendar exposes Scheduled, Queued, and Sent states. It can also pull
   successfully published native or third-party messages into the calendar, while some externally
   published activity has no author information:

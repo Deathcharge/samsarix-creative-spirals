@@ -189,7 +189,7 @@ self-contained HTML board. It adds no hosted calendar, account, notification, pu
   troubleshooting makes clear that an item can reach Sent before the operator completes native
   publication:
   <https://support.buffer.com/article/517-understanding-sent-post-metrics-within-buffer-publish>
-  and <https://support.buffer.com/article/935-troubleshooting-video-uploads-in-buffer>.
+  and <https://support.buffer.com/article/658-using-notification-publishing>.
 - Sprout Social exposes Scheduled, Queued, and Sent calendar states and can ingest native or
   third-party published messages, while externally created activity may lack author metadata:
   <https://support.sproutsocial.com/hc/en-us/articles/360000121343-How-do-I-use-the-Publishing-Calendar>

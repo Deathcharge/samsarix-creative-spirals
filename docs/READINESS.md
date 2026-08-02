@@ -100,6 +100,11 @@ before or at handoff. Once a current publication ledger is supplied, past-time f
 visible but do not mask the post-handoff publication stage. Use `--at` in tests and CI so results
 are reproducible.
 
+The automation ladder is monotonic: current publication `in-progress` or `complete` evidence
+satisfies the earlier schedule portion of the `quality` gate, while `qualityPassed` must still be
+true. This prevents a successfully reconciled historical launch from failing only because its
+intended time is now past.
+
 ## Automation contract
 
 Without `--require-stage`, status is informational and returns `0` after valid input and successful

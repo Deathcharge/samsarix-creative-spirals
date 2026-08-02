@@ -245,6 +245,7 @@ def test_readiness_tracks_publication_progress_and_completion(
     assert complete.stage == "publication-complete"
     assert complete.ready is True and complete.meets("publication") is True
     assert complete.schedule_ready is False  # historical schedule no longer masks outcomes
+    assert complete.meets("quality") is True
     assert complete.to_dict()["publicationCounts"]["published"] == 3
     assert stale.stage == "publication-invalid" and stale.ready is False
     Draft202012Validator(load_readiness_schema(), format_checker=FormatChecker()).validate(

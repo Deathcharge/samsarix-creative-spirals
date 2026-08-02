@@ -804,6 +804,26 @@ def test_cli_initializes_verifies_and_gates_publication_ledger(
     status = json.loads(capsys.readouterr().out)
     assert status["stage"] == "publication-complete"
     assert status["publicationCounts"]["published"] == 3
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--handoff",
+                str(packet),
+                "--publication",
+                str(ledger),
+                "--at",
+                "2026-08-11T12:00:00Z",
+                "--require-stage",
+                "quality",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
 
 
 def test_cli_emits_publication_schema(capsys: Any) -> None:

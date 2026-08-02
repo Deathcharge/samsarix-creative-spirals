@@ -211,6 +211,83 @@ def test_publication_parser_rejects_non_string_status_without_crashing(
         CampaignPlanPublication.from_dict(raw)
 
 
+def test_publication_parser_rejects_bounded_urls_and_invalid_record_containers(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+
+    skipped_url = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    skipped_url["records"][0].update(
+        {
+            "status": "skipped",
+            "recordedBy": "Publisher",
+            "occurredAt": "2026-08-04T11:00:00Z",
+            "note": "Deferred.",
+            "url": "https://social.example/posts/1",
+        }
+    )
+    with pytest.raises(ConfigError, match="url is only allowed for published records"):
+        CampaignPlanPublication.from_dict(skipped_url)
+
+    overlong_url = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    overlong_url["records"][0].update(
+        {
+            "status": "published",
+            "recordedBy": "Publisher",
+            "occurredAt": "2026-08-04T11:00:00Z",
+            "url": "https://social.example/" + "a" * 2_000,
+        }
+    )
+    with pytest.raises(ConfigError, match="at most 2000 characters"):
+        CampaignPlanPublication.from_dict(overlong_url)
+
+    whitespace_url = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    whitespace_url["records"][0].update(
+        {
+            "status": "published",
+            "recordedBy": "Publisher",
+            "occurredAt": "2026-08-04T11:00:00Z",
+            "url": "https://social.example/posts/has space",
+        }
+    )
+    with pytest.raises(ConfigError, match="whitespace or control characters"):
+        CampaignPlanPublication.from_dict(whitespace_url)
+
+    control_url = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    control_url["records"][0].update(
+        {
+            "status": "published",
+            "recordedBy": "Publisher",
+            "occurredAt": "2026-08-04T11:00:00Z",
+            "url": "https://social.example/posts/has\u0007control",
+        }
+    )
+    with pytest.raises(ConfigError, match="whitespace or control characters"):
+        CampaignPlanPublication.from_dict(control_url)
+
+    not_an_array = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    not_an_array["records"] = {"unexpected": True}
+    with pytest.raises(ConfigError, match="records must be an array"):
+        CampaignPlanPublication.from_dict(not_an_array)
+
+    non_object = initialize_campaign_plan_publication(
+        bundle, packet, created_at=CREATED_AT
+    ).to_dict()
+    non_object["records"] = ["not-an-object"]
+    with pytest.raises(ConfigError, match=r"records\[0\] must be an object"):
+        CampaignPlanPublication.from_dict(non_object)
+
+
 def test_verify_detects_stale_bindings_matrix_order_and_chronology(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:
