@@ -3,14 +3,15 @@
 Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
-publisher-neutral CSV, and portable calendars.
+publisher-neutral CSV, and portable calendars. Semantic diffs and source-bound local approval
+records make exact changes visible before handoff.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.4 alpha.** Federated-platform drafts, aggregate campaign-plan quality gates, and
-> local export are implemented and tested. Automatic publishing, scheduling, analytics, and AI
-> generation are deliberately not included.
+> Maturity: **0.5 alpha.** Federated-platform drafts, campaign-plan quality gates, semantic review,
+> local approvals, and portable export are implemented and tested. Automatic publishing,
+> scheduling, analytics, and AI generation are deliberately not included.
 
 ## Fastest successful path
 
@@ -103,6 +104,8 @@ Print the bundled JSON Schema for editor or CI integration, or write it to a new
 ```bash
 samsarix-campaign schema
 samsarix-campaign schema --kind plan
+samsarix-campaign schema --kind approval
+samsarix-campaign schema --kind adapter
 samsarix-campaign schema --output campaign.schema.json
 ```
 
@@ -126,6 +129,29 @@ samsarix-campaign check campaign.json --warnings-as-errors
 
 This command performs no writes or network calls. A successful JSON report has
 `"publishable": true`; findings have stable `code`, `severity`, `platform`, and `message` fields.
+
+## Semantic review and local approval
+
+Compare normalized source fields and every generated platform draft before accepting a change:
+
+```bash
+samsarix-campaign diff campaign-before.json campaign.json
+samsarix-campaign diff campaign-before.json campaign.json --json --exit-code
+```
+
+Formatting-only differences that normalize to the same campaign produce no change. `--exit-code`
+returns `4` when semantic changes exist; without it, diff remains an informational command.
+
+After `check` passes, record the exact normalized source hash and quality policy reviewed:
+
+```bash
+samsarix-campaign approval create campaign.json --by "Release reviewer"
+samsarix-campaign approval verify campaign.json campaign.json.approval.json
+```
+
+Changing the campaign invalidates the approval. Existing approval files are never overwritten.
+`approvedBy` is a human-readable label, not an authenticated identity: approval records are useful
+Git review metadata, not digital signatures or authorization tokens.
 
 ## Campaign plans
 
@@ -161,7 +187,11 @@ unless `--warnings-as-errors` is set. Unscheduled items are allowed.
 Plan export writes `manifest.json`, `calendar.ics`, and one UTF-8 CSV per used platform. Scheduled
 items become transparent calendar events; unscheduled items become tasks. CSV timestamps are
 explicit UTC values and the stable columns are publisher-neutral—they are intended for review and
-adapter input, not presented as a drop-in template for every publisher.
+spreadsheet workflows, not presented as a drop-in template for every publisher.
+
+It also writes deterministic `adapter.json`, which preserves exact draft text in a versioned JSON
+contract for separately permissioned importers. See [ADAPTERS.md](docs/ADAPTERS.md) for schema,
+identity, idempotency, authorization, and compatibility rules.
 
 ## CLI reference
 
@@ -173,16 +203,20 @@ samsarix-campaign validate CONFIG [--json]
 samsarix-campaign preview CONFIG [--json]
 samsarix-campaign check CONFIG [--warnings-as-errors] [--json]
 samsarix-campaign export CONFIG [--output DIRECTORY] [--overwrite] [--json]
+samsarix-campaign diff BEFORE AFTER [--json] [--exit-code]
+samsarix-campaign approval create CONFIG --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
+samsarix-campaign approval verify CONFIG APPROVAL [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|plan] [--output PATH]
+samsarix-campaign schema [--kind campaign|plan|approval|adapter] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
 usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
-stderr. Quality reports—including failed reports requested with `--json`—stay on stdout for scripts.
+stderr. Exit `4` means a requested diff detected changes or an approval is stale/invalid. Quality,
+diff, and approval reports—including non-passing JSON reports—stay on stdout for scripts.
 
 ## Python API
 
@@ -231,7 +265,8 @@ console command. The package has no third-party runtime dependencies.
 - `workflow.py` computes deterministic IDs and safely exports review bundles.
 - `quality.py` evaluates deterministic, machine-readable campaign quality gates.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
-- `schema.py` exposes campaign and plan JSON Schemas bundled in the wheel.
+- `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
+- `schema.py` exposes campaign, plan, and approval JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -255,8 +290,11 @@ for trust boundaries and failure behavior.
   composer before publishing; this tool does not claim API conformance.
 - Mastodon limits are instance-configurable; the default is 500 and `platformLimits` records a
   known instance maximum without contacting that instance.
-- Media, per-account capabilities, approvals, network publishing, and analytics are outside the
-  0.4 scope. Calendar files record intent; they do not schedule or publish anything.
+- Local approval labels are not authenticated and approval files are forgeable by anyone who can
+  write them. Use repository permissions, pull-request review, or a separately designed signing
+  system when verified identity is required.
+- Media, per-account capabilities, cryptographic approvals, network publishing, and analytics are
+  outside the 0.5 scope. Calendar files record intent; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
 

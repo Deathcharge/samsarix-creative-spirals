@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 0.5.0 - 2026-08-02
+
+- Added deterministic semantic campaign diffs covering normalized source fields and generated
+  platform drafts, with JSON output and opt-in exit code `4` for automation.
+- Added quality-gated, source-hash-bound local approval records plus current-source verification.
+- Added an approval JSON Schema and typed diff/approval models and functions to the public API.
+- Added deterministic `samsarix.plan-drafts` adapter JSON, a bundled v1 schema, and explicit
+  consumer/idempotency/authorization guidance for separately permissioned importers.
+- Kept approval identity explicitly non-cryptographic and preserved the offline, zero-runtime-
+  dependency boundary.
+
 ## 0.4.0 - 2026-08-01
 
 - Require setuptools 83 or newer for isolated builds and pin development to 83.0.0, closing

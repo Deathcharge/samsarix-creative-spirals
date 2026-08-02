@@ -45,6 +45,14 @@ returns the same schema used by `samsarix-campaign check --json`.
 `CampaignPlanCheck` provide the aggregate quality contract, including a one-based item number and
 optional campaign/platform context. Every model has `to_dict()` for stable JSON output.
 
+### Semantic-review models
+
+`CampaignDiff` contains ordered `CampaignFieldChange` and `CampaignDraftChange` values plus the
+before/after campaign IDs and full source hashes. `CampaignApproval` is source-bound local metadata;
+`ApprovalIssue` and `ApprovalCheck` report whether that metadata still matches current source and
+quality. These immutable models provide `to_dict()` output. Approval labels are not authenticated
+identities or digital signatures.
+
 ### `ConfigError`
 
 Subclasses `ValueError`. `issues` is a tuple of one or more actionable validation messages. File
@@ -87,6 +95,40 @@ for reproducible tests; normal callers should leave it unset.
 
 I/O failures raise the relevant `OSError` subclass.
 
+### `diff_campaigns(before, after) -> CampaignDiff`
+
+Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
+`name`, `title`, `body`, `link`, hashtags, platform order, and platform limits, then compares every
+generated draft in supported-platform order. Equivalent spelling that normalizes to the same
+campaign produces `changed=False`. It performs no file or network I/O.
+
+### `create_campaign_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None) -> CampaignApproval`
+
+Re-runs the selected quality policy and refuses to create an approval if it fails. The result binds
+the reviewer label, UTC time, policy, optional note, campaign ID, and full normalized source hash.
+`approved_at` must be timezone-aware when supplied. The result records review state; it does not
+authenticate `approved_by`.
+
+### `export_campaign_approval(approval, path) -> Path`
+
+Writes one UTF-8 approval JSON file with exclusive-create behavior. Existing files are never
+replaced. Parent directories are created when needed.
+
+### `load_campaign_approval(path) -> CampaignApproval`
+
+Reads a bounded UTF-8 JSON object and rejects duplicate/unknown fields, malformed identity hashes,
+invalid timestamps, unsupported policies, controls, and overlong metadata.
+
+### `verify_campaign_approval(bundle, approval) -> ApprovalCheck`
+
+Requires both full source hash and campaign ID to match, then re-runs the policy stored in the
+approval. `valid` is false with stable issue codes if source changed or quality no longer passes.
+
+### `parse_approval_timestamp(value) -> datetime`
+
+Parses an RFC 3339 timestamp with an explicit known offset and normalizes it to UTC. This is useful
+for non-CLI callers that want the same timestamp contract as `approval create --at`.
+
 ### `load_campaign_schema() -> dict[str, Any]`
 
 Loads a fresh dictionary from the JSON Schema bundled in the installed wheel. It performs no
@@ -118,9 +160,16 @@ Returns an RFC 5545 calendar using UTC date-times, CRLF lines, and UTF-8-safe 75
 Scheduled items are transparent `VEVENT` components; unscheduled items are `VTODO` components.
 `generated_at` must be timezone-aware because it supplies the required `DTSTAMP` values.
 
+### `render_plan_adapter(bundle) -> str`
+
+Returns deterministic UTF-8 JSON text for contract `samsarix.plan-drafts` schema version 1. It
+contains plan/campaign identities, intended UTC times, and exact generated `PlatformDraft` values,
+with no generation timestamp or external side effect.
+
 ### `export_campaign_plan(bundle, output_root="plan-outbox", *, overwrite=False, generated_at=None) -> Path`
 
-Writes a plan manifest, `calendar.ics`, and one UTF-8 CSV per used platform. CSV columns are stable
+Writes a plan manifest, deterministic `adapter.json`, `calendar.ics`, and one UTF-8 CSV per used
+platform. CSV columns are stable
 and publisher-neutral: plan/campaign identity, sequence, normalized intended UTC time, content,
 counts, truncation, and warnings. The same generated-name, explicit-overwrite, symbolic-link, and
 manifest-last safety model applies as campaign export.
@@ -129,6 +178,16 @@ manifest-last safety model applies as campaign export.
 
 Loads a fresh dictionary from the plan schema bundled in the wheel. The CLI equivalent is
 `samsarix-campaign schema --kind plan`.
+
+### `load_approval_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the approval schema bundled in the wheel. The CLI equivalent is
+`samsarix-campaign schema --kind approval`.
+
+### `load_adapter_schema() -> dict[str, Any]`
+
+Loads the versioned `samsarix.plan-drafts` adapter schema. The CLI equivalent is
+`samsarix-campaign schema --kind adapter`; operational consumer rules are in `docs/ADAPTERS.md`.
 
 ## Example
 
@@ -160,6 +219,6 @@ else:
 ## Compatibility policy
 
 The package is pre-1.0. The exported names, JSON `schemaVersion: 1`, manifest shape, and documented
-CLI behavior are the compatibility surface for 0.4.x. Internal helpers and exact prose in warning
+CLI behavior are the compatibility surface for 0.5.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

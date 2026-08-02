@@ -50,19 +50,20 @@ and Discord artifacts, then review a complete sequence with deterministic identi
 quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
-→ validate and preview every platform variant → run deterministic quality gates → explicitly
-export review/interchange bundles → hand them to an approved publishing process.
+→ validate and preview every platform variant → run deterministic quality gates → compare semantic
+changes → record/verify source-bound local approval → explicitly export review/interchange bundles
+→ hand them to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
 boundary with no credentials, network calls, hosted state, or account risk. It can complement any
 publisher without depending on another Samsarix repository or the flagship application.
 
-**Deliberately out of scope at the 0.3 checkpoint:** automatic publishing; social authentication;
-background scheduling; analytics; AI generation; media processing; collaborative approvals;
-account-specific capabilities; a web UI; database/cloud infrastructure; and private Helix
-integrations. Version 0.4 adds bounded local plans and interchange artifacts without adding a
-scheduler, account connection, or network publisher.
+**Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
+analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
+identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
+Helix integrations. Versions 0.4–0.5 add bounded plans, interchange, semantic diffs, and local
+source-bound review metadata without adding a scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -190,10 +191,14 @@ No locally actionable P0 remains.
 
 ### P2 — valuable post-release work
 
-1. Add a `diff` command for comparing two deterministic campaign bundles.
-2. Add media-reference validation without reading or uploading media.
-3. Evaluate optional editor snippets that reference the bundled JSON Schema.
-4. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+1. [x] Add a semantic `diff` command for normalized source and deterministic campaign bundles.
+2. [x] Add explicit source-bound local approval metadata and verification without claiming signer
+   identity.
+3. [x] Publish a versioned deterministic adapter contract, schema, and exact export fixture for
+   separately permissioned draft importers.
+4. Add media-reference validation without reading or uploading media.
+5. Evaluate optional editor snippets that reference the bundled JSON Schema.
+6. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -221,6 +226,10 @@ No locally actionable P0 remains.
   Mastodon instance-specific limits explicitly.
 - [x] Complete final clean-environment install/build/wheel smoke verification.
 - [x] Complete adversarial final review and update final disposition.
+- [x] Add deterministic semantic diffs for normalized source fields and generated drafts.
+- [x] Add quality-gated approval metadata tied to the full campaign source hash.
+- [x] Document that local approval labels are neither authenticated nor cryptographically signed.
+- [x] Add deterministic exact-text adapter JSON, bundled schema, and consumer safety guidance.
 
 ## Release acceptance criteria
 
@@ -363,3 +372,45 @@ Known 0.4 boundaries:
 **0.4 release candidate; all declared technical gates pass.** Initial automated review completed;
 all nine comments were addressed and the follow-up status passed (the service reported its detailed
 re-review was rate limited). Public package publication remains a separate owner-controlled action.
+
+## 0.5 semantic-review release evidence
+
+The first 0.5 slice closes the Git-review loop. `diff` compares normalized campaign fields and
+every generated platform draft in stable order. Its JSON result includes before/after full hashes,
+IDs, field values, generated drafts, and changed draft properties. Formatting-only input changes
+that normalize away do not produce review noise; `--exit-code` opts automation into exit `4` when
+real changes exist.
+
+`approval create` records the exact campaign ID, full source SHA-256, UTC review time, reviewer
+label, quality policy, and optional note only after that policy passes. `approval verify` compares
+current source and re-runs the recorded policy. Existing records are not overwritten. The approval
+schema and every user-facing document state that the label is not authenticated and the file is
+not a signature.
+
+Plan export also writes deterministic `samsarix.plan-drafts` adapter JSON with full plan/campaign
+identity and exact platform drafts. A bundled schema and `docs/ADAPTERS.md` define compatibility,
+safe path resolution, idempotency input, provider revalidation, draft-first behavior, and the
+separate authorization boundary. A committed v1 plan-export fixture is regenerated byte-for-byte
+in the test suite.
+
+Current local verification on Windows/Python 3.11:
+
+| Command | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 21 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | No issues in 20 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 155 passed; 94.29% total coverage. |
+
+Known 0.5 boundaries:
+
+- Approval records provide tamper-evident source matching only when the record itself is protected
+  by the surrounding repository workflow. They provide no signer authentication, authorization,
+  non-repudiation, or defense against a writer replacing both files.
+- Semantic JSON diff includes complete campaign and generated-draft content. Treat its output as
+  sensitive wherever the source is sensitive; the command neither logs nor transmits it itself.
+- A packaged-wheel pilot remains the unreleased 0.5 work. No generic artifact is represented as a
+  direct provider import contract, and no live provider credential was used.
+
+**0.5 coherent feature slice; local quality gates pass.** Packaged-wheel and hosted-CI evidence are
+still required before this milestone can be marked release-candidate or merged.
