@@ -47,6 +47,7 @@ jobs:
           samsarix-campaign schema --kind plan-approval > /tmp/plan-approval.schema.json
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign schema --kind handoff > /tmp/handoff.schema.json
+          samsarix-campaign schema --kind publication > /tmp/publication.schema.json
           samsarix-campaign schema --kind readiness > /tmp/readiness.schema.json
           samsarix-campaign schema --kind content-policy > /tmp/content-policy.schema.json
           samsarix-campaign policy validate examples/content-policy.json --json > /tmp/policy-validation.json
@@ -103,7 +104,25 @@ jobs:
           HANDOFF_PATH=$(find /tmp/samsarix-handoff-outbox -mindepth 1 -maxdepth 1 -type d -print -quit)
           test -f "$HANDOFF_PATH/content-policy.json"
           samsarix-campaign plan handoff verify examples/launch-plan.json "$HANDOFF_PATH" --json
+          samsarix-campaign plan publication init examples/launch-plan.json "$HANDOFF_PATH" --at 2026-08-04T10:00:00Z --output /tmp/plan.publication.json --json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("/tmp/plan.publication.json")
+          publication = json.loads(path.read_text())
+          for index, record in enumerate(publication["records"], start=1):
+              record.update(
+                  status="published",
+                  recordedBy="CI publisher",
+                  occurredAt="2026-08-04T10:30:00Z",
+                  url=f"https://social.example/posts/{index}",
+              )
+          path.write_text(json.dumps(publication))
+          PY
+          samsarix-campaign plan publication verify examples/launch-plan.json "$HANDOFF_PATH" /tmp/plan.publication.json --at 2026-08-05T12:00:00Z --json
           samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --at 2026-08-05T12:00:00Z --require-scheduled --require-stage handoff --html /tmp/launch-readiness.html --json
+          samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --publication /tmp/plan.publication.json --at 2026-08-05T12:00:00Z --require-stage publication --json
           samsarix-campaign plan export examples/launch-plan.json --output /tmp/samsarix-plan-outbox --json
           samsarix-campaign diff examples/campaign.json examples/campaign-follow-up.json --json
           samsarix-campaign approval create examples/campaign.json --policy examples/content-policy.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json

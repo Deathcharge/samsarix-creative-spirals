@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## 0.13.0 - 2026-08-02
+
+- Added exclusive initialization and offline verification of handoff-bound publication ledgers
+  with one canonical record for every generated plan/platform draft.
+- Added strict pending, published, failed, and skipped outcome contracts with bounded operator
+  labels, timestamps, notes, credential-free HTTP(S) URLs, exact coverage, and chronology checks.
+- Added derived `scpub_*` identity, immutable public models/functions, a bundled Draft 2020-12
+  schema, CLI init/verify commands, stable counts/findings, and completion exit code `4`.
+- Extended readiness with optional invalid/in-progress/complete publication stages and an explicit
+  `publication` gate while preserving report shape and behavior when no ledger is supplied.
+- Documented current Buffer and Sprout sent-history behavior and the precise boundary between an
+  operator assertion and provider-verified proof, with no accounts, URL opens, or runtime dependency.
+
 ## 0.12.0 - 2026-08-02
 
 - Added optional source-level `linkTracking` with bounded common query parameters and explicit

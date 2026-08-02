@@ -38,6 +38,13 @@ from .plan_review import (
     verify_campaign_plan_approval,
 )
 from .quality import check_campaign
+from .publication import (
+    PublicationCheck,
+    export_campaign_plan_publication,
+    initialize_campaign_plan_publication,
+    load_campaign_plan_publication,
+    verify_campaign_plan_publication,
+)
 from .readiness import (
     CampaignPlanReadiness,
     build_campaign_plan_readiness,
@@ -61,6 +68,7 @@ from .schema import (
     load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
+    load_publication_schema,
     load_readiness_schema,
 )
 from .templates import starter_campaign
@@ -191,6 +199,23 @@ def _print_handoff_check(result: HandoffCheck) -> None:
         print(f"error:{location} {issue.message}")
 
 
+def _print_publication_check(result: PublicationCheck) -> None:
+    status = "complete" if result.complete else ("in progress" if result.current else "invalid")
+    counts = dict(result.counts)
+    print(f"Publication ledger {status} for {result.plan_id}: {result.publication_id}")
+    print(
+        f"Published: {counts['published']}; skipped: {counts['skipped']}; "
+        f"pending: {counts['pending']}; failed: {counts['failed']}"
+    )
+    for issue in result.issues:
+        location = (
+            f" item {issue.item} [{issue.platform}]"
+            if issue.item is not None and issue.platform is not None
+            else ""
+        )
+        print(f"{issue.severity}:{location} {issue.message}")
+
+
 def _print_plan_readiness(result: CampaignPlanReadiness) -> None:
     print(f"Launch readiness: {result.stage.replace('-', ' ')} for {result.plan_id}")
     if result.content_policy is not None:
@@ -200,6 +225,11 @@ def _print_plan_readiness(result: CampaignPlanReadiness) -> None:
         f"schedule: {'ready' if result.schedule_ready else 'blocked'}; "
         f"approval: {result.approval_status}; handoff: {result.handoff_status}"
     )
+    if result.publication_status != "not-provided":
+        print(
+            f"Publication: {result.publication_status}"
+            + (f" ({result.publication_id})" if result.publication_id else "")
+        )
     for issue in result.issues:
         location = f" item {issue.item}" if issue.item is not None else ""
         path = f" [{issue.path}]" if issue.path else ""
@@ -443,15 +473,61 @@ def _plan_handoff_verify_command(args: argparse.Namespace) -> int:
     return 0 if result.valid else 4
 
 
+def _plan_publication_init_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    packet = load_campaign_plan_handoff(args.handoff)
+    created_at = parse_approval_timestamp(args.created_at) if args.created_at else None
+    publication = initialize_campaign_plan_publication(
+        bundle,
+        packet,
+        created_at=created_at,
+        content_policy=_optional_content_policy(args),
+    )
+    output = Path(args.output) if args.output else Path(f"{args.plan}.publication.json")
+    path = export_campaign_plan_publication(publication, output)
+    if args.json:
+        _json_print(
+            {
+                "path": str(path),
+                "publicationId": publication.publication_id,
+                "publication": publication.to_dict(),
+            }
+        )
+    else:
+        print(f"Initialized publication ledger {publication.publication_id} in {path}")
+        print("Edit each pending record, then run plan publication verify.")
+        print("This is unsigned operator metadata, not platform-verified proof.")
+    return 0
+
+
+def _plan_publication_verify_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    assessed_at = parse_approval_timestamp(args.assessed_at) if args.assessed_at else None
+    result = verify_campaign_plan_publication(
+        bundle,
+        load_campaign_plan_handoff(args.handoff),
+        load_campaign_plan_publication(args.publication),
+        assessed_at=assessed_at,
+        content_policy=_optional_content_policy(args),
+    )
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_publication_check(result)
+    return 0 if result.complete else 4
+
+
 def _plan_status_command(args: argparse.Namespace) -> int:
     bundle = build_campaign_plan(load_campaign_plan(args.plan))
     approval = load_campaign_plan_approval(args.approval) if args.approval else None
     handoff = load_campaign_plan_handoff(args.handoff) if args.handoff else None
+    publication = load_campaign_plan_publication(args.publication) if args.publication else None
     assessed_at = parse_approval_timestamp(args.assessed_at) if args.assessed_at else None
     result = build_campaign_plan_readiness(
         bundle,
         approval=approval,
         handoff=handoff,
+        publication=publication,
         assessed_at=assessed_at,
         warnings_as_errors=args.warnings_as_errors,
         require_scheduled=args.require_scheduled,
@@ -479,6 +555,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "handoff": load_handoff_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
+        "publication": load_publication_schema,
         "readiness": load_readiness_schema,
     }
     schema = schema_loaders[args.kind]()
@@ -666,6 +743,9 @@ def build_parser() -> argparse.ArgumentParser:
     plan_status_parser.add_argument("--approval", help="optional source-bound plan approval JSON")
     plan_status_parser.add_argument("--handoff", help="optional approved handoff packet directory")
     plan_status_parser.add_argument(
+        "--publication", help="optional handoff-bound publication ledger JSON"
+    )
+    plan_status_parser.add_argument(
         "--at", dest="assessed_at", help="explicit RFC 3339 assessment time (default: now)"
     )
     plan_status_parser.add_argument(
@@ -680,7 +760,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_status_parser.add_argument(
         "--require-stage",
-        choices=("quality", "approval", "handoff"),
+        choices=("quality", "approval", "handoff", "publication"),
         help="return a nonzero CI exit code unless this readiness gate is met",
     )
     plan_status_parser.add_argument(
@@ -806,6 +886,48 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_handoff_verify_parser.set_defaults(handler=_plan_handoff_verify_command)
 
+    plan_publication_parser = plan_subparsers.add_parser(
+        "publication", help="initialize or verify operator-attested publication outcomes"
+    )
+    plan_publication_subparsers = plan_publication_parser.add_subparsers(
+        dest="plan_publication_command"
+    )
+    plan_publication_init_parser = plan_publication_subparsers.add_parser(
+        "init", help="create a pending ledger for every draft in an exact verified handoff"
+    )
+    plan_publication_init_parser.add_argument("plan")
+    plan_publication_init_parser.add_argument("handoff")
+    plan_publication_init_parser.add_argument(
+        "--policy", help="exact content policy bound to the packet approval, when present"
+    )
+    plan_publication_init_parser.add_argument(
+        "--at", dest="created_at", help="explicit RFC 3339 ledger creation time (default: now)"
+    )
+    plan_publication_init_parser.add_argument(
+        "--output", help="new ledger file (default: PLAN.publication.json)"
+    )
+    plan_publication_init_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_publication_init_parser.set_defaults(handler=_plan_publication_init_command)
+
+    plan_publication_verify_parser = plan_publication_subparsers.add_parser(
+        "verify", help="verify current bindings, complete coverage, and recorded outcomes"
+    )
+    plan_publication_verify_parser.add_argument("plan")
+    plan_publication_verify_parser.add_argument("handoff")
+    plan_publication_verify_parser.add_argument("publication")
+    plan_publication_verify_parser.add_argument(
+        "--policy", help="exact content policy bound to the packet approval, when present"
+    )
+    plan_publication_verify_parser.add_argument(
+        "--at", dest="assessed_at", help="explicit RFC 3339 assessment time (default: now)"
+    )
+    plan_publication_verify_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_publication_verify_parser.set_defaults(handler=_plan_publication_verify_command)
+
     policy_parser = subparsers.add_parser(
         "policy", help="validate portable local content-policy profiles"
     )
@@ -830,6 +952,7 @@ def build_parser() -> argparse.ArgumentParser:
             "plan",
             "approval",
             "plan-approval",
+            "publication",
             "adapter",
             "handoff",
             "readiness",

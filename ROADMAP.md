@@ -280,6 +280,26 @@ Rollback is a revert of PR #14 or a pin to pre-0.12 main commit `b701c04`. Full 
 disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#012-deterministic-link-tracking-release-evidence).
 
+## Release milestone — 0.13 publication reconciliation
+
+- [x] Initialize one canonical pending record for every exact draft only after current handoff
+  verification.
+- [x] Validate bounded published, failed, skipped, and pending operator outcomes without opening
+  URLs or claiming provider observation.
+- [x] Verify plan/source/handoff bindings, exact draft coverage/order, outcome chronology, and
+  terminal completion with stable JSON, CLI, and exit-code contracts.
+- [x] Integrate optional invalid/in-progress/complete publication evidence into readiness and its
+  explicit CI gate without changing no-ledger report behavior.
+- [x] Add public typed APIs, a bundled schema, adversarial tests, installed-artifact planning, and
+  documentation of the operator-assertion trust boundary.
+- [ ] Complete hosted CI, review, merge, exact artifact hashes, and rollback evidence.
+
+Buffer's Sent history and Sprout Social's Publishing Calendar demonstrate the operational value
+of post-handoff state, while Buffer's notification workflow shows that “Sent” can precede manual
+native publication. Samsarix therefore records an explicit local operator assertion rather than
+fabricating provider verification. Contract details and official sources are in
+[`docs/PUBLICATIONS.md`](docs/PUBLICATIONS.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-publication-v1.schema.json",
+  "title": "Samsarix Creative Spirals plan publication ledger",
+  "description": "Unsigned, operator-attested publication outcomes bound to an exact approved plan handoff. This contract is not platform-verified proof of publication.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "artifactType", "planId", "sourceHash", "handoffId",
+    "handoffHash", "createdAt", "records"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-publication"},
+    "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+    "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "handoffId": {"type": "string", "pattern": "^sch_[0-9a-f]{12}$"},
+    "handoffHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "createdAt": {"$ref": "#/$defs/timestamp"},
+    "records": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 500,
+      "items": {"$ref": "#/$defs/record"}
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "recordedBy": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^(?=.*\\S)[^\\r\\n\\t\\u0000-\\u001F\\u007F]*$"
+    },
+    "note": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F-\\u009F]*$"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "^https?://(?![^/?#]*@)[^\\s\\u0000-\\u001F\\u007F]+$"
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "campaignId", "platform", "status"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 100},
+        "campaignId": {"type": "string", "pattern": "^scs_[0-9a-f]{12}$"},
+        "platform": {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]},
+        "status": {"enum": ["pending", "published", "failed", "skipped"]},
+        "recordedBy": {"$ref": "#/$defs/recordedBy"},
+        "occurredAt": {"$ref": "#/$defs/timestamp"},
+        "url": {"$ref": "#/$defs/url"},
+        "note": {"$ref": "#/$defs/note"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "pending"}}, "required": ["status"]},
+          "then": {
+            "not": {"anyOf": [
+              {"required": ["recordedBy"]}, {"required": ["occurredAt"]},
+              {"required": ["url"]}, {"required": ["note"]}
+            ]}
+          }
+        },
+        {
+          "if": {"properties": {"status": {"const": "published"}}, "required": ["status"]},
+          "then": {"required": ["recordedBy", "occurredAt", "url"]}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["failed", "skipped"]}}, "required": ["status"]},
+          "then": {
+            "required": ["recordedBy", "occurredAt", "note"],
+            "not": {"required": ["url"]}
+          }
+        }
+      ]
+    }
+  }
+}

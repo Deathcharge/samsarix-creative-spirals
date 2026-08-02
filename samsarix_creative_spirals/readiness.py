@@ -20,6 +20,11 @@ from .models import ConfigError
 from .policy import ContentPolicy, ContentPolicyBinding
 from .plan_review import CampaignPlanApproval, verify_campaign_plan_approval
 from .plans import CampaignPlanBundle, PlanIssue, check_campaign_plan
+from .publication import (
+    CampaignPlanPublication,
+    PublicationCheck,
+    verify_campaign_plan_publication,
+)
 
 ReadinessStage = Literal[
     "quality-blocked",
@@ -29,9 +34,13 @@ ReadinessStage = Literal[
     "approved",
     "handoff-invalid",
     "handoff-ready",
+    "publication-invalid",
+    "publication-in-progress",
+    "publication-complete",
 ]
 EvidenceStatus = Literal["not-provided", "valid", "invalid"]
-RequiredStage = Literal["quality", "approval", "handoff"]
+PublicationEvidenceStatus = Literal["not-provided", "invalid", "in-progress", "complete"]
+RequiredStage = Literal["quality", "approval", "handoff", "publication"]
 
 
 def _format_utc(value: datetime) -> str:
@@ -102,6 +111,9 @@ class CampaignPlanReadiness:
     approval: CampaignPlanApproval | None
     handoff_status: EvidenceStatus
     handoff_id: str | None
+    publication_status: PublicationEvidenceStatus
+    publication_id: str | None
+    publication_counts: tuple[tuple[str, int], ...]
     issues: tuple[ReadinessIssue, ...]
     items: tuple[CampaignPlanReadinessItem, ...]
     content_policy: ContentPolicyBinding | None = None
@@ -109,15 +121,30 @@ class CampaignPlanReadiness:
     @property
     def ready(self) -> bool:
         """Return whether the plan has a current, verified handoff packet."""
-        return self.stage == "handoff-ready"
+        return self.stage in {
+            "handoff-ready",
+            "publication-in-progress",
+            "publication-complete",
+        }
 
     def meets(self, required_stage: RequiredStage) -> bool:
         """Return whether the report satisfies an explicit automation gate."""
         if required_stage == "quality":
             return self.quality_passed and self.schedule_ready
         if required_stage == "approval":
-            return self.stage in {"approved", "handoff-ready"}
-        return self.stage == "handoff-ready"
+            return self.stage in {
+                "approved",
+                "handoff-ready",
+                "publication-in-progress",
+                "publication-complete",
+            }
+        if required_stage == "handoff":
+            return self.stage in {
+                "handoff-ready",
+                "publication-in-progress",
+                "publication-complete",
+            }
+        return self.stage == "publication-complete"
 
     def to_dict(self) -> dict[str, Any]:
         result: dict[str, Any] = {
@@ -149,6 +176,10 @@ class CampaignPlanReadiness:
         }
         if self.content_policy is not None:
             result["contentPolicy"] = self.content_policy.to_dict()
+        if self.publication_status != "not-provided":
+            result["publicationStatus"] = self.publication_status
+            result["publicationId"] = self.publication_id
+            result["publicationCounts"] = dict(self.publication_counts)
         return result
 
 
@@ -167,6 +198,16 @@ class _EvidenceAssessment:
     handoff_status: EvidenceStatus
     handoff_valid: bool
     handoff_id: str | None
+    issues: tuple[ReadinessIssue, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _PublicationAssessment:
+    status: PublicationEvidenceStatus
+    current: bool
+    complete: bool
+    publication_id: str | None
+    counts: tuple[tuple[str, int], ...]
     issues: tuple[ReadinessIssue, ...]
 
 
@@ -293,6 +334,64 @@ def _assess_evidence(
     )
 
 
+def _assess_publication(
+    bundle: CampaignPlanBundle,
+    handoff: CampaignPlanHandoffPacket | None,
+    publication: CampaignPlanPublication | None,
+    *,
+    assessed_at: datetime,
+    content_policy: ContentPolicy | None = None,
+) -> _PublicationAssessment:
+    if publication is None:
+        return _PublicationAssessment("not-provided", False, False, None, (), ())
+    if handoff is None:
+        issue = ReadinessIssue(
+            code="publication-handoff-missing",
+            severity="error",
+            message="Publication verification requires the exact handoff packet it references.",
+        )
+        return _PublicationAssessment(
+            "invalid", False, False, publication.publication_id, (), (issue,)
+        )
+
+    check: PublicationCheck = verify_campaign_plan_publication(
+        bundle,
+        handoff,
+        publication,
+        assessed_at=assessed_at,
+        content_policy=content_policy,
+    )
+    status: PublicationEvidenceStatus
+    if not check.current:
+        status = "invalid"
+    elif check.complete:
+        status = "complete"
+    else:
+        status = "in-progress"
+    issues = tuple(
+        ReadinessIssue(
+            code=_readiness_code("publication", issue.code),
+            severity=issue.severity,
+            item=issue.item,
+            path=(
+                f"records/{issue.item}/{issue.platform}"
+                if issue.item is not None and issue.platform is not None
+                else None
+            ),
+            message=issue.message,
+        )
+        for issue in check.issues
+    )
+    return _PublicationAssessment(
+        status,
+        check.current,
+        check.complete,
+        check.publication_id,
+        check.counts,
+        issues,
+    )
+
+
 def _select_stage(
     *,
     quality_passed: bool,
@@ -301,9 +400,18 @@ def _select_stage(
     approval_valid: bool,
     handoff_provided: bool,
     handoff_valid: bool,
+    publication_provided: bool,
+    publication_current: bool,
+    publication_complete: bool,
 ) -> ReadinessStage:
     if not quality_passed:
         return "quality-blocked"
+    if publication_provided:
+        if not handoff_provided or not handoff_valid:
+            return "handoff-invalid" if handoff_provided else "publication-invalid"
+        if not publication_current:
+            return "publication-invalid"
+        return "publication-complete" if publication_complete else "publication-in-progress"
     if not schedule_ready:
         return "schedule-blocked"
     if handoff_provided:
@@ -318,12 +426,13 @@ def build_campaign_plan_readiness(
     *,
     approval: CampaignPlanApproval | None = None,
     handoff: CampaignPlanHandoffPacket | None = None,
+    publication: CampaignPlanPublication | None = None,
     assessed_at: datetime | None = None,
     warnings_as_errors: bool = False,
     require_scheduled: bool = False,
     content_policy: ContentPolicy | None = None,
 ) -> CampaignPlanReadiness:
-    """Assess current quality, schedule, approval, and handoff evidence offline."""
+    """Assess quality, schedule, approval, handoff, and publication evidence offline."""
     timestamp = assessed_at or datetime.now(timezone.utc)
     if timestamp.utcoffset() is None:
         raise ConfigError("assessed_at must include timezone information")
@@ -337,9 +446,17 @@ def build_campaign_plan_readiness(
     )
     schedule = _assess_schedule(bundle, timestamp, require_scheduled=require_scheduled)
     evidence = _assess_evidence(bundle, approval, handoff, content_policy=effective_policy)
+    publication_evidence = _assess_publication(
+        bundle,
+        handoff,
+        publication,
+        assessed_at=timestamp,
+        content_policy=effective_policy,
+    )
     issues = _quality_readiness_issues(quality.issues)
     issues.extend(schedule.issues)
     issues.extend(evidence.issues)
+    issues.extend(publication_evidence.issues)
     stage = _select_stage(
         quality_passed=quality.publishable,
         schedule_ready=schedule.ready,
@@ -347,6 +464,9 @@ def build_campaign_plan_readiness(
         approval_valid=evidence.approval_valid,
         handoff_provided=handoff is not None,
         handoff_valid=evidence.handoff_valid,
+        publication_provided=publication is not None,
+        publication_current=publication_evidence.current,
+        publication_complete=publication_evidence.complete,
     )
 
     item_reports = tuple(
@@ -380,6 +500,9 @@ def build_campaign_plan_readiness(
         approval=evidence.approval,
         handoff_status=evidence.handoff_status,
         handoff_id=evidence.handoff_id,
+        publication_status=publication_evidence.status,
+        publication_id=publication_evidence.publication_id,
+        publication_counts=publication_evidence.counts,
         issues=tuple(issues),
         items=item_reports,
         content_policy=effective_policy.binding if effective_policy is not None else None,
@@ -452,6 +575,11 @@ def render_campaign_plan_readiness_html(
         if report.content_policy
         else "Not applied"
     )
+    publication_detail = (
+        f"{report.publication_status} ({report.publication_id})"
+        if report.publication_id is not None
+        else "Not provided"
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -495,6 +623,7 @@ code {{ overflow-wrap: anywhere; }} li {{ margin: .5rem 0; }}
 {_escape(approval_detail)}</p>
 <p class="fact"><strong>Handoff</strong><br>{_escape(report.handoff_status)}<br>
 {_escape(report.handoff_id or 'Not provided')}</p>
+<p class="fact"><strong>Publication ledger</strong><br>{_escape(publication_detail)}</p>
 </div></section>
 <section><h2>Findings</h2><ul>{issue_rows}</ul></section>
 <section><h2>Schedule</h2><table><thead><tr>

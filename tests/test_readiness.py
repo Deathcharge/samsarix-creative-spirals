@@ -18,6 +18,7 @@ from samsarix_creative_spirals import (
     create_campaign_plan_approval,
     export_campaign_plan_handoff,
     export_campaign_plan_readiness_html,
+    initialize_campaign_plan_publication,
     load_campaign_plan,
     load_campaign_plan_handoff,
     load_readiness_schema,
@@ -172,6 +173,67 @@ def test_readiness_uses_embedded_approval_and_verifies_exact_handoff(
     assert any(issue.code == "approval-handoff-mismatch" for issue in mismatch.issues)
     assert tampered.stage == "handoff-invalid"
     assert any(issue.code.startswith("handoff-artifact-") for issue in tampered.issues)
+
+
+def test_readiness_tracks_publication_progress_and_completion(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle = _bundle(tmp_path, campaign_data)
+    approval = _approval(bundle)
+    packet_path = export_campaign_plan_handoff(
+        bundle,
+        approval,
+        tmp_path / "handoffs",
+        generated_at=datetime(2026, 8, 5, 10, tzinfo=timezone.utc),
+    )
+    packet = load_campaign_plan_handoff(packet_path)
+    publication = initialize_campaign_plan_publication(
+        bundle,
+        packet,
+        created_at=datetime(2026, 8, 5, 11, tzinfo=timezone.utc),
+    )
+    completed = replace(
+        publication,
+        records=tuple(
+            replace(
+                record,
+                status="published",
+                recorded_by="Release operator",
+                occurred_at=datetime(2026, 8, 10, 14, tzinfo=timezone.utc),
+                url=f"https://social.example/{record.platform}/{record.sequence}",
+            )
+            for record in publication.records
+        ),
+    )
+
+    in_progress = build_campaign_plan_readiness(
+        bundle, handoff=packet, publication=publication, assessed_at=ASSESSMENT
+    )
+    complete = build_campaign_plan_readiness(
+        bundle,
+        handoff=packet,
+        publication=completed,
+        assessed_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
+    )
+    stale = build_campaign_plan_readiness(
+        bundle,
+        handoff=packet,
+        publication=replace(completed, source_hash="0" * 64),
+        assessed_at=datetime(2026, 8, 11, tzinfo=timezone.utc),
+    )
+
+    assert in_progress.stage == "publication-in-progress"
+    assert in_progress.ready is True and in_progress.meets("handoff") is True
+    assert in_progress.meets("publication") is False
+    assert in_progress.publication_status == "in-progress"
+    assert complete.stage == "publication-complete"
+    assert complete.ready is True and complete.meets("publication") is True
+    assert complete.schedule_ready is False  # historical schedule no longer masks outcomes
+    assert complete.to_dict()["publicationCounts"]["published"] == 3
+    assert stale.stage == "publication-invalid" and stale.ready is False
+    Draft202012Validator(load_readiness_schema(), format_checker=FormatChecker()).validate(
+        complete.to_dict()
+    )
 
 
 def test_readiness_requires_timezone_aware_assessment(

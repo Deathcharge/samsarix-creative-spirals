@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.12.0"
+    assert package.__version__ == "0.13.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -28,6 +28,7 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanHandoff",
         "CampaignPlanHandoffPacket",
         "CampaignPlanItem",
+        "CampaignPlanPublication",
         "CampaignPlanReadiness",
         "CampaignPlanReadinessItem",
         "ConfigError",
@@ -47,6 +48,9 @@ def test_public_api_is_deliberate() -> None:
         "PlannedCampaign",
         "PlatformContentVariant",
         "PlatformDraft",
+        "PublicationCheck",
+        "PublicationIssue",
+        "PublicationRecord",
         "QualityIssue",
         "ReadinessIssue",
         "build_campaign",
@@ -64,8 +68,10 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_plan",
         "export_campaign_plan_approval",
         "export_campaign_plan_handoff",
+        "export_campaign_plan_publication",
         "export_campaign_plan_readiness_html",
         "evaluate_content_policy",
+        "initialize_campaign_plan_publication",
         "load_adapter_schema",
         "load_approval_schema",
         "load_campaign",
@@ -73,12 +79,14 @@ def test_public_api_is_deliberate() -> None:
         "load_campaign_plan",
         "load_campaign_plan_approval",
         "load_campaign_plan_handoff",
+        "load_campaign_plan_publication",
         "load_campaign_schema",
         "load_content_policy",
         "load_content_policy_schema",
         "load_handoff_schema",
         "load_plan_approval_schema",
         "load_plan_schema",
+        "load_publication_schema",
         "load_readiness_schema",
         "parse_approval_timestamp",
         "render_campaign_plan_readiness_html",
@@ -87,6 +95,7 @@ def test_public_api_is_deliberate() -> None:
         "verify_campaign_approval",
         "verify_campaign_plan_approval",
         "verify_campaign_plan_handoff",
+        "verify_campaign_plan_publication",
     ]
 
 
@@ -270,4 +279,19 @@ def test_packaged_readiness_schema_is_available() -> None:
     Draft202012Validator.check_schema(schema)
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["artifactType"]["const"] == "plan-readiness"
-    assert schema["properties"]["stage"]["enum"][-1] == "handoff-ready"
+    assert schema["properties"]["stage"]["enum"][-1] == "publication-complete"
+
+
+def test_packaged_publication_schema_is_available() -> None:
+    schema = package.load_publication_schema()
+
+    Draft202012Validator.check_schema(schema)
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["artifactType"]["const"] == "plan-publication"
+    assert schema["properties"]["records"]["maxItems"] == 500
+    assert schema["$defs"]["record"]["properties"]["status"]["enum"] == [
+        "pending",
+        "published",
+        "failed",
+        "skipped",
+    ]
