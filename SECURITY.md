@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.12.x` release line is supported. Earlier pre-productization and
+The latest `0.13.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -48,6 +48,9 @@ files selected by the invoking user. The supported workflow:
   bytes, declared sizes and SHA-256 values, regular-file types, and file stability during reads;
 - creates readiness HTML exclusively, escapes all campaign-controlled text, includes no scripts or
   remote resources, and applies restrictive CSP and no-referrer metadata;
+- limits publication ledgers to 500 exact draft records, enforces strict pending/published/failed/
+  skipped field combinations and handoff-relative chronology, and validates bounded credential-free
+  HTTP(S) URLs without resolving or opening them;
 - validates bounded campaign-relative JPEG/PNG path metadata, required alt text, target platforms,
   and case-insensitive uniqueness without resolving or opening a referenced file;
 - writes exact campaign text to deterministic adapter JSON without executing, transmitting, or
@@ -89,6 +92,13 @@ uncoordinated file modification when checked with a trusted verifier, but do not
 reviewer, producer, or repository. Verify immediately before using files from the same directory;
 use protected storage or a separately reviewed signature/attestation system when authenticated
 provenance is required. See `docs/HANDOFFS.md` for the complete threat model.
+
+Publication ledgers are unsigned operator assertions. `recordedBy` is not authenticated, and a
+`published` record or syntactically valid URL does not prove provider acceptance, authorship,
+audience visibility, unchanged content, or continued availability. The verifier performs no DNS
+or HTTP request. Never put credentials, tokens, private provider responses, or unnecessary
+personal data in URLs or notes. Protect the ledger because it can disclose live post URLs,
+operator labels, timing, channel choices, and failure context. See `docs/PUBLICATIONS.md`.
 
 Readiness JSON and HTML are point-in-time observations, not authenticated workflow state or proof
 of publication. HTML reports contain complete draft content, intended times, links, media metadata,

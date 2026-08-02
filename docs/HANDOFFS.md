@@ -49,6 +49,10 @@ Use `--json` for automation. Verification returns `0` only when the packet is cu
 `4` for a well-formed but invalid packet, `1` for malformed input or I/O failure, and `2` for CLI
 usage errors.
 
+After use, the same packet can initialize a separate publication ledger without modifying this
+immutable evidence directory. See [`PUBLICATIONS.md`](PUBLICATIONS.md). The ledger records what an
+operator says happened; it does not turn the handoff into provider-verified proof.
+
 If the plan approval binds a portable content policy, supply its exact file with `--policy POLICY`
 during handoff creation. The packet then embeds normalized `content-policy.json`, declares its
 size and checksum, and uses it automatically during handoff verification and readiness assessment.

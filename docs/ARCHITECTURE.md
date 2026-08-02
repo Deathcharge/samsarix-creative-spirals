@@ -42,7 +42,12 @@ CampaignPlanBundle
             ├── embedded approval.json + optional content-policy.json + handoff.json
             └── exact regenerated plan-export artifacts
     └──► point-in-time readiness JSON / exclusive offline HTML board
-            └── quality + schedule + approval + handoff evidence state
+            └── quality + schedule + approval + handoff + optional publication evidence state
+
+verified handoff + plan-publication.json
+    └──► exact per-draft outcome reconciliation
+            ├── pending / failed ──► incomplete
+            └── published / skipped ──► complete when every draft is terminal
 ```
 
 ## Components
@@ -132,23 +137,31 @@ aggregate quality under an explicit policy, compares intended times with one tim
 assessment time, verifies optional approval/handoff evidence, and assigns one stable stage. The
 pure model emits readiness v1 JSON; an explicit exporter writes a new self-contained, escaped,
 script-free HTML board containing the generated drafts. The report is a snapshot, not persistent
-workflow state or a publication receipt.
+workflow state or a provider-verified publication receipt.
+
+### `publication.py`
+
+Creates a canonical pending sidecar only after exact handoff verification. It validates strict
+operator outcome combinations, derives content identity, and verifies current plan/handoff
+bindings, exact draft coverage/order, chronology, and completion. Published URLs are bounded text:
+the module never opens them, restricts federated hostnames, or claims remote state. Operator
+labels and hashes are unsigned.
 
 ### `schema.py` and bundled JSON Schemas
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
-dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval, handoff,
-readiness, and adapter schemas help editors and generic validators, while runtime models remain
+dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval,
+handoff, publication, readiness, and adapter schemas help editors and generic validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign, diff, approval, handoff, readiness, and nested plan operations. Successful
+Provides the single-campaign, diff, approval, handoff, publication, readiness, and nested plan operations. Successful
 output and valid quality/review reports stay on stdout;
 configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
-quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff results return `4`,
+quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff/incomplete-publication results return `4`,
 and success returns `0`. Readiness is informational unless an explicit stage is required; its
-quality gate uses `3` and its approval/handoff gates use `4`.
+quality gate uses `3` and its approval/handoff/publication gates use `4`.
 
 ## Trust boundaries
 
@@ -165,6 +178,7 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
 | Approved handoff packet | Local directory, metadata, approval/policy evidence, and generated files | Exclusive atomic creation; fixed shape; source, approval, embedded-policy, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
+| Publication ledger | Local outcome JSON, operator labels, times, URLs, and notes | Shared file/nesting bounds; strict state combinations; exact plan/handoff/draft binding; chronology; URL scheme/credential/length checks; no network verification; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
 The package never interprets draft or tracking content as a command, template language, HTML, environment substitution, or filesystem
@@ -188,10 +202,13 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Approved handoffs are immutable-by-convention and refuse replacement. Verification must precede
   downstream use of the same packet; it is an integrity boundary rather than a transaction lock or
   signer-authentication system.
+- Publication ledgers are exclusive at initialization but intentionally edited as outcomes occur.
+  Their derived identity changes with content. Commit or archive meaningful revisions when history
+  matters; the core is not a transactional multi-user store.
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.12 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.13 scope.
 
 ## Dependency and cost model
 

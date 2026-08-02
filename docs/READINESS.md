@@ -2,10 +2,11 @@
 
 `samsarix-campaign plan status` answers one bounded operational question: **what is the current
 launch stage, and what blocks the next gate?** It combines existing plan quality, intended times,
-source-bound approval, and exact handoff verification into one point-in-time local report.
+source-bound approval, exact handoff verification, and optional operator-attested publication
+outcomes into one point-in-time local report.
 
 It does not create a hosted calendar, sync team state, send notifications, connect accounts,
-schedule posts, publish content, or prove that publication occurred.
+schedule posts, publish content, query a post URL, or prove that publication occurred.
 
 ## Why this workflow exists
 
@@ -61,6 +62,19 @@ A policy-bound handoff supplies its embedded normalized policy automatically; an
 then acts as an additional equality check. The JSON and HTML reports show the applied policy
 identity. See [`POLICIES.md`](POLICIES.md).
 
+After handoff use, add its bound publication ledger and require complete reconciliation:
+
+```bash
+samsarix-campaign plan status examples/launch-plan.json \
+  --handoff handoff-outbox/local-first-release-sequence-sch_0123456789ab \
+  --publication launch-plan.publication.json \
+  --require-stage publication \
+  --json
+```
+
+The ledger cannot be assessed without its exact handoff packet. See
+[`PUBLICATIONS.md`](PUBLICATIONS.md) for initialization, record states, and the no-proof boundary.
+
 ## Stages
 
 | Stage | Meaning |
@@ -72,11 +86,24 @@ identity. See [`POLICIES.md`](POLICIES.md).
 | `approved` | Current approval verifies; no handoff was supplied. |
 | `handoff-invalid` | Packet, embedded approval, explicit approval match, or exact artifacts fail verification. |
 | `handoff-ready` | Current quality, time policy, approval, and exact handoff all verify. |
+| `publication-invalid` | Supplied ledger is stale, misbound, chronologically impossible, or lacks its handoff. |
+| `publication-in-progress` | Handoff and ledger bindings verify, but at least one exact draft is pending or failed. |
+| `publication-complete` | Every exact draft is recorded as published or intentionally skipped. |
 
-Only `handoff-ready` sets JSON `ready` to `true`. An unscheduled item sets `scheduleComplete` to
+`handoff-ready`, `publication-in-progress`, and `publication-complete` set JSON `ready` to `true`:
+that boolean means the exact handoff boundary and any supplied ledger binding are current, not
+that publication is complete.
+Only `publication-complete` meets the explicit `publication` gate. An unscheduled item sets `scheduleComplete` to
 `false`; it is a warning under the default optional policy and a blocker with
 `--require-scheduled`. An intended time equal to or earlier than `assessedAt` is always a blocker
-because the local intent needs rescheduling. Use `--at` in tests and CI so results are reproducible.
+before or at handoff. Once a current publication ledger is supplied, past-time findings remain
+visible but do not mask the post-handoff publication stage. Use `--at` in tests and CI so results
+are reproducible.
+
+The automation ladder is monotonic: current publication `in-progress` or `complete` evidence
+satisfies the earlier schedule portion of the `quality` gate, while `qualityPassed` must still be
+true. This prevents a successfully reconciled historical launch from failing only because its
+intended time is now past.
 
 ## Automation contract
 
@@ -85,7 +112,7 @@ I/O. Explicit gates return:
 
 - `0` when the requested stage is met;
 - `3` when `--require-stage quality` is not met;
-- `4` when an approval or handoff requirement is not met;
+- `4` when an approval, handoff, or publication requirement is not met;
 - `1` for malformed input or I/O failure; and
 - `2` for invalid CLI usage.
 
@@ -97,8 +124,9 @@ samsarix-campaign schema --kind readiness
 ```
 
 The report records the assessment time and policies, stable stage and issue codes, evidence
-status, counts, and one item record per campaign. Version 0.11 adds only optional content-policy
-identity and rule context to this v1 JSON shape; existing reports remain valid.
+status, counts, and one item record per campaign. Version 0.13 adds optional
+`publicationStatus`, `publicationId`, and `publicationCounts` only when publication evidence is
+supplied. Reports without it retain their prior v1 shape and stages.
 
 ## Offline HTML and privacy
 
@@ -124,4 +152,6 @@ boundary; cryptographic signatures would require a separate design.
 Handoff verification detects stale source, malformed packet shape, missing or extra files,
 symbolic links, changed sizes/checksums, and bytes that do not match freshly regenerated output.
 Run status immediately before the same packet directory is consumed. The report cannot establish
-reviewer identity, publisher authorization, provider acceptance, delivery, or final publication.
+reviewer or operator identity, publisher authorization, provider acceptance, delivery, remote
+visibility, or continued publication. Publication URLs are treated only as bounded text and are
+never opened.

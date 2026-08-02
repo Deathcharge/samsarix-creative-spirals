@@ -59,6 +59,13 @@ def load_readiness_schema() -> dict[str, Any]:
     return cast(dict[str, Any], payload)
 
 
+def load_publication_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public plan-publication JSON Schema."""
+    resource = files(__package__).joinpath("publication.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
 def load_adapter_schema() -> dict[str, Any]:
     """Return a fresh copy of the public plan-adapter JSON Schema."""
     resource = files(__package__).joinpath("adapter.schema.json")

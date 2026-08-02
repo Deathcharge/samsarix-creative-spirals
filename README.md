@@ -7,13 +7,15 @@ publisher-neutral CSV, and portable calendars. Portable image references, semant
 deterministic link attribution, portable content-policy profiles, and source-bound campaign and
 plan approval records make exact changes and guardrails visible before handoff.
 Approved handoff packets then bind current source, approval metadata, and exact rendered files for
-offline verification immediately before downstream use. A consolidated readiness command and
-offline HTML board show the current quality, schedule, approval, and handoff stage in one place.
+offline verification immediately before downstream use. A handoff-bound publication ledger can
+then reconcile operator-recorded published, failed, skipped, and pending outcomes without opening
+a URL or claiming provider verification. A consolidated readiness command and offline HTML board
+show the current quality, schedule, approval, handoff, and optional publication stage in one place.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.12 alpha.** Deterministic link tracking, portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
+> Maturity: **0.13 alpha.** Publication reconciliation, deterministic link tracking, portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
 > semantic review and local approvals, portable image metadata, approved handoff verification, and
 > launch-readiness reporting are implemented and tested. Automatic
 > publishing,
@@ -152,6 +154,7 @@ samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --kind handoff
 samsarix-campaign schema --kind readiness
+samsarix-campaign schema --kind publication
 samsarix-campaign schema --kind content-policy
 samsarix-campaign schema --output campaign.schema.json
 ```
@@ -289,6 +292,34 @@ The hashes are unsigned integrity checks. They do not authenticate the reviewer 
 are not cryptographic attestations. See [Approved handoff packets](docs/HANDOFFS.md) for the packet
 contract, CLI/adapter workflow, threat model, and retention guidance.
 
+## Publication reconciliation
+
+After a verified handoff is used by a person or separately authorized publisher, initialize one
+sidecar record for every generated plan/platform draft:
+
+```bash
+samsarix-campaign plan publication init \
+  examples/launch-plan.json \
+  handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
+  --output launch-plan.publication.json
+```
+
+Edit each `pending` record to `published`, `failed`, or `skipped`, adding the required operator,
+time, URL, or note fields. Then verify exact coverage and current bindings:
+
+```bash
+samsarix-campaign plan publication verify \
+  examples/launch-plan.json \
+  handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
+  launch-plan.publication.json
+```
+
+Completion means every exact draft is recorded as `published` or intentionally `skipped`.
+Operator labels are unauthenticated, URLs are never opened, and neither a URL nor a `published`
+status proves remote delivery, visibility, authorship, or continued availability. See
+[Publication ledgers](docs/PUBLICATIONS.md) for the JSON contract, current workflow evidence,
+failure/retry semantics, CI gate, and trust boundary.
+
 ## Launch readiness
 
 Get a single point-in-time status after quality checks, approval, or handoff creation:
@@ -302,7 +333,8 @@ samsarix-campaign plan status examples/launch-plan.json \
 ```
 
 The stable stages distinguish quality and schedule blockers, readiness for approval, stale/current
-approval, and invalid/current handoff evidence. `--at RFC3339` makes a time-aware report
+approval, invalid/current handoff evidence, and optional publication progress/completion.
+`--at RFC3339` makes a time-aware report
 reproducible; intended times that are due or past require rescheduling. Unscheduled items remain
 visible and become blockers only with `--require-scheduled`.
 
@@ -329,20 +361,23 @@ samsarix-campaign policy validate POLICY [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--json]
-samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff] [--html PATH] [--json]
+samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--publication PATH] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff|publication] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--policy POLICY] [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
+samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
+samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|publication|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
 usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
 stderr. Exit `4` means a requested diff detected changes, an approval is stale/invalid, or a
-handoff is not current and intact, or a requested approval/handoff readiness stage is unmet.
+handoff is not current and intact, a publication ledger is incomplete/invalid, or a requested
+approval/handoff/publication readiness stage is unmet.
 `plan status --require-stage quality` uses `3` when its quality/schedule gate is unmet. Without a
 required stage, status is informational. Quality, diff, approval, handoff, and readiness
 reports—including non-passing JSON reports—stay on stdout for scripts.
@@ -397,8 +432,9 @@ console command. The package has no third-party runtime dependencies.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
+- `publication.py` initializes and verifies handoff-bound operator outcome ledgers.
 - `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
-- `schema.py` exposes campaign, plan, approval, handoff, readiness, and adapter JSON Schemas bundled in the wheel.
+- `schema.py` exposes campaign, plan, approval, handoff, publication, readiness, and adapter JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -428,8 +464,10 @@ for trust boundaries and failure behavior.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
+- Publication records are unsigned operator assertions. Their URLs are bounded and never opened;
+  they do not prove provider acceptance, remote visibility, authorship, or continued availability.
 - Media-file processing, per-account capabilities and mention resolution, cryptographic approvals,
-  hosted collaboration, network publishing, click collection, and analytics reporting are outside the 0.12 scope. Calendar and readiness files record
+  hosted collaboration, network publishing, click collection, and analytics reporting are outside the 0.13 scope. Calendar, readiness, and publication files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

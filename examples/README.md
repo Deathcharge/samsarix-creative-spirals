@@ -97,7 +97,27 @@ artifacts. Pass the printed directory to `plan handoff verify` immediately befor
 The packet hashes provide unsigned integrity checks, not authenticated provenance or permission to
 publish; see `docs/HANDOFFS.md`.
 
-`plan status` consolidates quality, intended-time, approval, and optional handoff state. Pass the
+After that packet is used, generate a publication ledger from the real packet path rather than
+copying a static example with stale identities:
+
+```bash
+samsarix-campaign plan publication init \
+  examples/launch-plan.json \
+  handoff-outbox/LOCAL-FIRST-RELEASE-SEQUENCE-SCH_ID \
+  --output launch-plan.publication.json
+samsarix-campaign plan publication verify \
+  examples/launch-plan.json \
+  handoff-outbox/LOCAL-FIRST-RELEASE-SEQUENCE-SCH_ID \
+  launch-plan.publication.json
+```
+
+Initialization creates one pending record per exact platform draft. Edit outcomes according to
+`docs/PUBLICATIONS.md`; the verifier returns `4` until every record is published or intentionally
+skipped. A static completed ledger is deliberately not bundled because it would be falsely bound
+to an unrelated handoff.
+
+`plan status` consolidates quality, intended-time, approval, optional handoff, and optional
+publication state. Pass the
 created packet with `--handoff`, add `--require-stage handoff` for a CI gate, or add
 `--html launch-readiness.html` for a self-contained offline board. The HTML includes the full
 drafts; see `docs/READINESS.md` for timing, privacy, and trust-boundary details.

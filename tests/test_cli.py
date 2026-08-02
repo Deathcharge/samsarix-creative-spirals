@@ -651,6 +651,187 @@ def test_cli_emits_handoff_schema(capsys: Any) -> None:
     assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
 
 
+def test_cli_initializes_verifies_and_gates_publication_ledger(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    approval = tmp_path / "plan.approval.json"
+    ledger = tmp_path / "publication.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Publication release",
+                "requiredPlatforms": ["x", "linkedin", "discord"],
+                "items": [
+                    {
+                        "campaign": "campaign.json",
+                        "intendedAt": "2026-08-10T13:00:00Z",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(plan),
+                "--by",
+                "Launch reviewer",
+                "--at",
+                "2026-08-03T14:15:00Z",
+                "--output",
+                str(approval),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert (
+        main(
+            [
+                "plan",
+                "handoff",
+                "create",
+                str(plan),
+                str(approval),
+                "--at",
+                "2026-08-04T09:30:00Z",
+                "--output",
+                str(tmp_path / "handoffs"),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    packet = Path(json.loads(capsys.readouterr().out)["path"])
+
+    assert (
+        main(
+            [
+                "plan",
+                "publication",
+                "init",
+                str(plan),
+                str(packet),
+                "--at",
+                "2026-08-04T10:00:00Z",
+                "--output",
+                str(ledger),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    initialized = json.loads(capsys.readouterr().out)
+    assert initialized["publicationId"].startswith("scpub_")
+    assert len(initialized["publication"]["records"]) == 3
+
+    assert (
+        main(
+            [
+                "plan",
+                "publication",
+                "verify",
+                str(plan),
+                str(packet),
+                str(ledger),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--json",
+            ]
+        )
+        == 4
+    )
+    pending = json.loads(capsys.readouterr().out)
+    assert pending["current"] is True and pending["complete"] is False
+
+    payload = json.loads(ledger.read_text(encoding="utf-8"))
+    for index, record in enumerate(payload["records"]):
+        record.update(
+            {
+                "status": "published",
+                "recordedBy": "Release operator",
+                "occurredAt": "2026-08-10T14:00:00Z",
+                "url": f"https://social.example/post/{index + 1}",
+            }
+        )
+    ledger.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert (
+        main(
+            [
+                "plan",
+                "publication",
+                "verify",
+                str(plan),
+                str(packet),
+                str(ledger),
+                "--at",
+                "2026-08-11T12:00:00Z",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["complete"] is True
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--handoff",
+                str(packet),
+                "--publication",
+                str(ledger),
+                "--at",
+                "2026-08-11T12:00:00Z",
+                "--require-stage",
+                "publication",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    status = json.loads(capsys.readouterr().out)
+    assert status["stage"] == "publication-complete"
+    assert status["publicationCounts"]["published"] == 3
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--handoff",
+                str(packet),
+                "--publication",
+                str(ledger),
+                "--at",
+                "2026-08-11T12:00:00Z",
+                "--require-stage",
+                "quality",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+
+def test_cli_emits_publication_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "publication"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["artifactType"]["const"] == "plan-publication"
+
+
 def test_cli_content_policy_validation_check_and_bound_approval(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

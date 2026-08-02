@@ -102,9 +102,20 @@ no person or system.
 
 `CampaignPlanReadiness` is the point-in-time aggregate status. It records the stable stage,
 assessment and policy fields, quality/schedule booleans, approval and handoff evidence status,
-ordered `ReadinessIssue` findings, and `CampaignPlanReadinessItem` summaries. `ready` is true only
-for `handoff-ready`; `meets("quality" | "approval" | "handoff")` evaluates an explicit automation
+ordered `ReadinessIssue` findings, and `CampaignPlanReadinessItem` summaries. `ready` is true for a
+current verified handoff unless supplied publication evidence is invalid, including
+publication-in-progress/complete stages;
+`meets("quality" | "approval" | "handoff" | "publication")` evaluates an explicit automation
 gate. These models are immutable and have stable `to_dict()` output conforming to readiness v1.
+
+### Publication-ledger models
+
+`CampaignPlanPublication` is the strict unsigned plan-publication v1 sidecar. It binds current plan
+and handoff identities, a UTC creation time, and ordered `PublicationRecord` outcomes.
+`PublicationCheck` distinguishes structurally current coverage from workflow completion and
+includes per-status counts plus stable `PublicationIssue` findings. `publication_hash` and the
+derived `scpub_*` `publication_id` cover canonical ledger content. Operator labels and URLs are
+untrusted metadata, not authenticated identity or provider proof.
 
 ### `ConfigError`
 
@@ -290,13 +301,41 @@ packet shape, on-disk metadata, and every regenerated artifact size and SHA-256.
 symbolic links, non-regular files, missing/extra files, and files that change while read. `valid`
 does not claim signer identity or authenticated provenance.
 
-### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False, content_policy=None) -> CampaignPlanReadiness`
+### `initialize_campaign_plan_publication(bundle, packet, *, created_at=None, content_policy=None) -> CampaignPlanPublication`
+
+Verifies the exact current handoff, requires a timezone-aware creation time at or after handoff
+generation, and creates one canonical `pending` record per generated `(sequence, platform)` draft.
+It performs no file write or network call.
+
+### `export_campaign_plan_publication(publication, path) -> Path`
+
+Writes one UTF-8 ledger with exclusive-create behavior. Existing operator evidence is never
+replaced; parent directories are created as needed.
+
+### `load_campaign_plan_publication(path) -> CampaignPlanPublication`
+
+Loads a bounded UTF-8 JSON object and enforces strict fields, record/status combinations,
+timestamps, labels, notes, URLs, and duplicate record identity. Published URLs must be absolute
+HTTP(S), credential-free, and at most 2,000 characters; they are not opened.
+
+### `verify_campaign_plan_publication(bundle, packet, publication, *, assessed_at=None, content_policy=None) -> PublicationCheck`
+
+Re-verifies the exact handoff, plan/source/handoff bindings, canonical draft matrix/order, ledger
+creation time, and every outcome time. `current` means those integrity checks pass. `complete`
+additionally requires every record to be `published` or `skipped`; pending and failed outcomes
+remain current but incomplete. The function performs no DNS or HTTP request and does not prove
+remote publication.
+
+### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, publication=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False, content_policy=None) -> CampaignPlanReadiness`
 
 Combines the current aggregate quality result, schedule state at a timezone-aware assessment time,
-optional plan approval, and optional exact handoff verification. A handoff supplies its embedded
+optional plan approval, optional exact handoff verification, and optional bound publication
+ledger. A handoff supplies its embedded
 approval and policy when explicit values are absent; explicit values must match packet evidence.
 Past or due intended times block readiness. Missing times block only under
-`require_scheduled=True`. No files are written and no network calls are made.
+`require_scheduled=True`. Current publication evidence adds invalid/in-progress/complete stages;
+past intended times remain findings but do not mask post-handoff reconciliation. No files are
+written and no network calls are made.
 
 ### `render_campaign_plan_readiness_html(report, bundle) -> str`
 
@@ -367,6 +406,12 @@ Loads the plan-readiness v1 report schema. The CLI equivalent is
 `samsarix-campaign schema --kind readiness`; stage, timing, CI, and trust-boundary rules are in
 `docs/READINESS.md`.
 
+### `load_publication_schema() -> dict[str, Any]`
+
+Loads the plan-publication v1 authoring schema. The CLI equivalent is
+`samsarix-campaign schema --kind publication`; outcome and trust-boundary rules are in
+`docs/PUBLICATIONS.md`.
+
 ## Example
 
 ```python
@@ -396,10 +441,13 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan/approval/handoff/readiness JSON
+The package is pre-1.0. The exported names, campaign/plan/approval/handoff/publication/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.12.x. Campaign schema v1 gains optional `linkTracking`; no downstream
-artifact schema changes. Sources without tracking retain their prior normalized source and output.
+compatibility surface for 0.13.x. Publication v1 is a new optional sidecar. Readiness v1 gains new
+stages and optional publication fields only when the sidecar is supplied; existing calls and
+reports without it retain their prior output.
+Campaign schema v1's optional `linkTracking` remains unchanged; sources without tracking retain
+their prior normalized source and output.
 Content-policy schema v1 and the optional approval/readiness policy fields introduced in 0.11
 remain unchanged. Internal
 helpers and exact prose in warning

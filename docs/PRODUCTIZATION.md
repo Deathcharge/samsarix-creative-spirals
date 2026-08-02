@@ -52,7 +52,8 @@ quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
 → validate and preview every platform variant → run deterministic quality gates → compare campaign
 or complete-plan semantic changes → record/verify source-bound local approval → create and verify
-an exact approved handoff packet → hand it to an approved publishing process.
+an exact approved handoff packet → hand it to an approved publishing process → reconcile each
+operator-recorded platform outcome against that exact handoff.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
@@ -62,7 +63,7 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.12 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.13 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
 link attribution without adding a scheduler, account connection, analytics collector, or network
@@ -180,7 +181,24 @@ adding credentials, a scheduler, or a false signing claim.
 The resulting 0.9 slice is a point-in-time, offline readiness report: current quality, future or
 complete schedule policy, approval, and handoff evidence become one stable stage plus an optional
 self-contained HTML board. It adds no hosted calendar, account, notification, publisher action, or
-claim that intent equals publication.
+  claim that intent equals publication.
+
+### 0.13 publication-reconciliation follow-up
+
+- Buffer retains a Sent history with authors, times, and metrics, but its notification publishing
+  troubleshooting makes clear that an item can reach Sent before the operator completes native
+  publication:
+  <https://support.buffer.com/article/517-understanding-sent-post-metrics-within-buffer-publish>
+  and <https://support.buffer.com/article/658-using-notification-publishing>.
+- Sprout Social exposes Scheduled, Queued, and Sent calendar states and can ingest native or
+  third-party published messages, while externally created activity may lack author metadata:
+  <https://support.sproutsocial.com/hc/en-us/articles/360000121343-How-do-I-use-the-Publishing-Calendar>
+  and <https://support.sproutsocial.com/hc/en-us/articles/38373940164877-Troubleshooting-Sprout-Social-Publishing-Calendar-Issues>.
+
+The resulting slice is a handoff-bound local publication ledger. It closes the prior lifecycle gap
+without pretending that operator-entered status or a URL is network-verified evidence. Exact
+draft coverage, chronology, and state combinations are deterministic; provider acceptance and
+continued remote visibility remain outside the product boundary.
 
 ## Untouched baseline results
 
@@ -239,8 +257,10 @@ No locally actionable P0 remains.
 6. [x] Add an exclusive approved handoff packet that binds current source, approval metadata, and
    exact regenerated artifacts without claiming authenticated provenance.
 7. [x] Add consolidated point-in-time launch readiness and an offline HTML review board.
-8. Evaluate optional editor snippets that reference the bundled JSON Schema.
-9. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+8. [x] Add exact handoff-bound publication reconciliation without provider credentials or proof
+   claims.
+9. Evaluate optional editor snippets that reference the bundled JSON Schema.
+10. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -280,6 +300,8 @@ No locally actionable P0 remains.
   automatic publishing.
 - [x] Add time-aware launch-readiness stages, CI gates, JSON Schema, and an escaped offline HTML
   board without hosted workflow state.
+- [x] Add strict operator publication outcomes bound to current plan, handoff, exact draft matrix,
+  and chronology, with typed APIs, schema, CLI, readiness gate, and no URL access.
 
 ## Release acceptance criteria
 
@@ -322,6 +344,9 @@ No locally actionable P0 remains.
 - Approval and handoff hashes are unsigned. A writer who controls all source/evidence files can
   replace them consistently; authenticated provenance requires protected external controls or a
   separately reviewed signing/attestation layer.
+- Publication labels, status, notes, and URLs are also unsigned assertions. Verification proves
+  only internal binding and chronology under the trusted local verifier; it cannot establish
+  provider acceptance, authorship, visibility, unchanged content, or continued availability.
 
 ## Final verification results
 
@@ -998,3 +1023,85 @@ Compatibility and rollback:
 - Before publication, roll back by reverting merge commit `a052e12` or pinning pre-0.12 main commit
   `b701c04c8ce1c48241449a5a1fb8caf6d04524c6`. After owner publication, use normal version
   pinning and a corrective release; do not replace published artifacts silently.
+
+## 0.13 publication-reconciliation release evidence
+
+### Research and product decision
+
+Buffer and Sprout both retain post-handoff calendar/history state, but Buffer's notification flow
+demonstrates that a connected product's “Sent” state may still precede native publication. The
+honest local-first wedge is therefore an explicit operator assertion, not an inferred receipt.
+Primary sources and exact product implications are recorded in
+[`PUBLICATIONS.md`](PUBLICATIONS.md).
+
+Publication data is a sidecar rather than campaign source: it describes events after approved
+handoff and must not change the reviewed plan or rendered draft identity. It binds the full current
+plan/source and exact handoff ID/hash, covers every canonical `(sequence, platform)` draft, and
+derives its own identity from canonical content. Published/skipped are terminal; pending/failed
+remain actionable.
+
+### Bounded contract and implementation
+
+Implemented: immutable publication/record/check/issue models; strict runtime and Draft 2020-12
+validation; exclusive verified-handoff initialization; exact matrix/order, binding, chronology,
+and completion verification; bounded credential-free URLs that are never opened; human and JSON
+CLI output; stable exit code `4`; optional readiness fields/stages/gate; public schema and API;
+adversarial tests; and author, architecture, security, compatibility, and workflow documentation.
+
+The ledger is capped at 500 records (the existing 100-plan-item by five-platform envelope), notes
+at 500 characters, operator labels at 120, and URLs at 2,000. Terminal outcome times must fall at
+or after handoff generation and no later than assessment. Federated URLs are not host-allowlisted.
+No runtime dependency, credential, network request, provider account, database, queue, telemetry,
+or recurring operating cost was added.
+
+### Release verification and disposition
+
+Implementation and all review fixes converge at exact commit
+`63ea1ff85df5d3bc33fcb599dd585c44016bd458`. This evidence section is a subsequent documentation
+change, so artifact hashes identify that exact reviewed code tree rather than a self-referential
+source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 33 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 32 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 338 passed; 93.70% total coverage and 89% publication-module coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and example compiled. |
+| Draft 2020-12 metaschema validation | 0 | All nine bundled schemas validated. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.13.0 sdist and then its universal wheel from exact head `63ea1ff`. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.13.0, plan `scp_d8a68cdb1054`, handoff `sch_13f6dc1ec82b`, ten published outcomes, publication `scpub_740156792fc2`, `publication-complete`, and both publication/quality gates passed outside the checkout after intended times. |
+| Hosted GitHub Actions | 0 | [Push run 30743663983](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743663983) and [PR run 30743665258](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743665258) each passed the complete Python 3.10/3.13 matrix at exact head `63ea1ff`. |
+| `git diff --check` | 0 | No whitespace errors; reviewed-head worktree was clean. |
+
+Isolated artifact digests from exact commit `63ea1ff`:
+
+- `samsarix_creative_spirals-0.13.0-py3-none-any.whl` — SHA-256
+  `d40ed9d9551c0f6e2929f86fb9bc2345c83becfeb6a320cba31bcc3a02981e32`.
+- `samsarix_creative_spirals-0.13.0.tar.gz` — SHA-256
+  `a391c11f3aeb9e885dc7ce5e6f9c90ce4973fb99333e548226454d5da9eca37d`.
+
+[PR #15](https://github.com/Deathcharge/samsarix-creative-spirals/pull/15) received three
+CodeRabbit inline findings. All were validated and addressed: the exact Buffer source was
+corrected; post-publication readiness gates became monotonic without bypassing content quality;
+and malformed URL/state/container branches gained direct regression coverage. All three threads
+are resolved. Incremental automated re-review was rate-limited, while complete local and hosted
+gates passed on the resulting head.
+
+Release disposition: **release candidate with one owner-controlled distribution gate**. The
+reviewed source and isolated wheel support the declared reconciliation journey with no known
+locally actionable P0 or P1 defect. Public PyPI publication has not been performed and remains an
+explicit owner action. External-user adoption evidence likewise remains unavailable; competitor
+workflow evidence demonstrates the problem category, not product-market fit.
+
+Compatibility and rollback:
+
+- Publication schema v1 is a new optional sidecar; campaign, plan, approval, handoff, adapter,
+  manifest, and content-policy contracts are unchanged.
+- Readiness v1 gains three stage values and optional publication fields only when a ledger is
+  supplied. Existing no-ledger calls retain their previous shape, stages, and gate behavior.
+- Runtime remains standard-library-only with no URL open, credential, publisher, scheduler,
+  database, telemetry, provider query, or external operating cost.
+- Before merge, roll back by abandoning PR #15 or pinning base commit
+  `452e466a0dce87dc7b38d41997a30d7599b145f1`. After merge, revert the merge commit or use normal
+  version pinning and a corrective release; do not replace published artifacts silently.

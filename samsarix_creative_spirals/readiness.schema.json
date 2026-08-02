@@ -2,9 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/plan-readiness-v1.schema.json",
   "title": "Samsarix Creative Spirals plan readiness report",
-  "description": "Point-in-time local quality, optional content policy, schedule, approval, and handoff readiness for one campaign plan.",
+  "description": "Point-in-time local quality, optional content policy, schedule, approval, handoff, and operator-attested publication readiness for one campaign plan.",
   "type": "object",
   "additionalProperties": false,
+  "dependentRequired": {
+    "publicationStatus": ["publicationId", "publicationCounts"],
+    "publicationId": ["publicationStatus", "publicationCounts"],
+    "publicationCounts": ["publicationStatus", "publicationId"]
+  },
   "required": [
     "schemaVersion", "artifactType", "assessedAt", "planId", "sourceHash", "name",
     "stage", "ready", "qualityPolicy", "schedulePolicy", "qualityPassed",
@@ -21,7 +26,8 @@
     "stage": {
       "enum": [
         "quality-blocked", "schedule-blocked", "ready-for-approval", "approval-invalid",
-        "approved", "handoff-invalid", "handoff-ready"
+        "approved", "handoff-invalid", "handoff-ready", "publication-invalid",
+        "publication-in-progress", "publication-complete"
       ]
     },
     "ready": {"type": "boolean"},
@@ -44,6 +50,25 @@
         {"type": "null"},
         {"type": "string", "pattern": "^sch_[0-9a-f]{12}$"}
       ]
+    },
+    "publicationStatus": {
+      "enum": ["invalid", "in-progress", "complete"]
+    },
+    "publicationId": {
+      "type": "string",
+      "pattern": "^scpub_[0-9a-f]{12}$"
+    },
+    "publicationCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "pending", "published", "failed", "skipped"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 1, "maximum": 500},
+        "pending": {"type": "integer", "minimum": 0, "maximum": 500},
+        "published": {"type": "integer", "minimum": 0, "maximum": 500},
+        "failed": {"type": "integer", "minimum": 0, "maximum": 500},
+        "skipped": {"type": "integer", "minimum": 0, "maximum": 500}
+      }
     },
     "counts": {
       "type": "object",
