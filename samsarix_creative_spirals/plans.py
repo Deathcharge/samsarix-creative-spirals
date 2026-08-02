@@ -567,6 +567,7 @@ def _plan_manifest(bundle: CampaignPlanBundle, generated_at: datetime) -> dict[s
         "sourceHash": bundle.source_hash,
         "name": bundle.name,
         "generatedAt": _format_utc(generated_at),
+        "adapter": "adapter.json",
         "calendar": "calendar.ics",
         "platformCsv": {platform: f"csv/{platform}.csv" for platform in platforms},
         "items": [
@@ -581,6 +582,29 @@ def _plan_manifest(bundle: CampaignPlanBundle, generated_at: datetime) -> dict[s
             for item in bundle.items
         ],
     }
+
+
+def render_plan_adapter(bundle: CampaignPlanBundle) -> str:
+    """Render the deterministic v1 publisher-adapter interchange payload."""
+    payload = {
+        "schemaVersion": 1,
+        "contract": "samsarix.plan-drafts",
+        "planId": bundle.plan_id,
+        "sourceHash": bundle.source_hash,
+        "name": bundle.name,
+        "items": [
+            {
+                "sequence": item.sequence,
+                "source": item.source,
+                "campaignId": item.bundle.campaign_id,
+                "sourceHash": item.bundle.source_hash,
+                "intendedAt": _format_utc(item.intended_at) if item.intended_at else None,
+                "drafts": [draft.to_dict() for draft in item.bundle.drafts],
+            }
+            for item in bundle.items
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
 def _clear_plan_temp(path: Path) -> None:
@@ -601,11 +625,11 @@ def _clear_plan_temp(path: Path) -> None:
 
 
 def _validate_existing_plan_target(target: Path) -> None:
-    allowed = {"calendar.ics", "manifest.json", "csv"}
+    allowed = {"adapter.json", "calendar.ics", "manifest.json", "csv"}
     unexpected = [entry for entry in target.iterdir() if entry.name not in allowed]
     if unexpected:
         raise OSError(f"refusing to overwrite bundle with unexpected entry: {unexpected[0]}")
-    for filename in ("calendar.ics", "manifest.json"):
+    for filename in ("adapter.json", "calendar.ics", "manifest.json"):
         artifact = target / filename
         if (artifact.exists() or artifact.is_symlink()) and (
             artifact.is_symlink() or not artifact.is_file()
@@ -668,6 +692,11 @@ def export_campaign_plan(
             encoding="utf-8",
             newline="",
         )
+        (temporary / "adapter.json").write_text(
+            render_plan_adapter(bundle),
+            encoding="utf-8",
+            newline="\n",
+        )
         (temporary / "manifest.json").write_text(
             json.dumps(_plan_manifest(bundle, stamp), ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
@@ -687,6 +716,7 @@ def export_campaign_plan(
                     stale.unlink()
             csv_dir.rmdir()
             os.replace(temporary / "calendar.ics", target / "calendar.ics")
+            os.replace(temporary / "adapter.json", target / "adapter.json")
             os.replace(temporary / "manifest.json", target / "manifest.json")
             temporary.rmdir()
     finally:

@@ -43,9 +43,14 @@ jobs:
           samsarix-campaign --version
           samsarix-campaign schema > /tmp/campaign.schema.json
           samsarix-campaign schema --kind plan > /tmp/plan.schema.json
+          samsarix-campaign schema --kind approval > /tmp/approval.schema.json
+          samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign check examples/campaign.json --json
           samsarix-campaign preview examples/campaign.json
           samsarix-campaign plan validate examples/launch-plan.json --json
           samsarix-campaign plan check examples/launch-plan.json --json
           samsarix-campaign plan preview examples/launch-plan.json --json
           samsarix-campaign plan export examples/launch-plan.json --output /tmp/samsarix-plan-outbox --json
+          samsarix-campaign diff examples/campaign.json examples/campaign-follow-up.json --json
+          samsarix-campaign approval create examples/campaign.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json
+          samsarix-campaign approval verify examples/campaign.json /tmp/campaign.approval.json --json

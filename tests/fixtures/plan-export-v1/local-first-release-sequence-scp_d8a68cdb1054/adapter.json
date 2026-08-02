@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "contract": "samsarix.plan-drafts",
+  "planId": "scp_d8a68cdb1054",
+  "sourceHash": "d8a68cdb1054700b7e6571298df7724610bf352ca55b5e233432144aa8cc0ed1",
+  "name": "Local-first release sequence",
+  "items": [
+    {
+      "sequence": 1,
+      "source": "campaign.json",
+      "campaignId": "scs_1a768ee9b10a",
+      "sourceHash": "1a768ee9b10a3bc82b267b7bc1e98c4e43089c147d89aff463151fba680b4d78",
+      "intendedAt": "2026-08-10T13:00:00Z",
+      "drafts": [
+        {
+          "platform": "x",
+          "content": "Samsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.\n\nhttps://example.com/local-first\n\n#localfirst #contentops",
+          "characterCount": 192,
+          "originalCharacterCount": 192,
+          "characterLimit": 280,
+          "truncated": false,
+          "warnings": [
+            "Title is omitted from the x draft."
+          ]
+        },
+        {
+          "platform": "linkedin",
+          "content": "One draft, five reviewable outputs\n\nSamsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.\n\nhttps://example.com/local-first\n\n#localfirst #contentops",
+          "characterCount": 236,
+          "originalCharacterCount": 236,
+          "characterLimit": 3000,
+          "truncated": false,
+          "warnings": []
+        },
+        {
+          "platform": "bluesky",
+          "content": "Samsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.\n\nhttps://example.com/local-first\n\n#localfirst #contentops",
+          "characterCount": 200,
+          "originalCharacterCount": 200,
+          "characterLimit": 300,
+          "truncated": false,
+          "warnings": [
+            "Title is omitted from the bluesky draft."
+          ]
+        },
+        {
+          "platform": "mastodon",
+          "content": "One draft, five reviewable outputs\n\nSamsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.\n\nhttps://example.com/local-first\n\n#localfirst #contentops",
+          "characterCount": 228,
+          "originalCharacterCount": 228,
+          "characterLimit": 500,
+          "truncated": false,
+          "warnings": []
+        },
+        {
+          "platform": "discord",
+          "content": "**One draft, five reviewable outputs**\n\nSamsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.\n\nhttps://example.com/local-first\n\n#localfirst #contentops",
+          "characterCount": 240,
+          "originalCharacterCount": 240,
+          "characterLimit": 2000,
+          "truncated": false,
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "sequence": 2,
+      "source": "campaign-follow-up.json",
+      "campaignId": "scs_927dbf0d25d8",
+      "sourceHash": "927dbf0d25d897e79f3f5df4492817ef5a358f60c9d93476ad14b363d63d2de9",
+      "intendedAt": "2026-08-12T13:00:00Z",
+      "drafts": [
+        {
+          "platform": "x",
+          "content": "Follow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.\n\nhttps://github.com/Deathcharge/samsarix-creative-spirals#readme\n\n#localfirst #contentops",
+          "characterCount": 192,
+          "originalCharacterCount": 192,
+          "characterLimit": 280,
+          "truncated": false,
+          "warnings": [
+            "Title is omitted from the x draft."
+          ]
+        },
+        {
+          "platform": "linkedin",
+          "content": "See the review workflow in practice\n\nFollow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.\n\nhttps://github.com/Deathcharge/samsarix-creative-spirals#readme\n\n#localfirst #contentops",
+          "characterCount": 269,
+          "originalCharacterCount": 269,
+          "characterLimit": 3000,
+          "truncated": false,
+          "warnings": []
+        },
+        {
+          "platform": "bluesky",
+          "content": "Follow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.\n\nhttps://github.com/Deathcharge/samsarix-creative-spirals#readme\n\n#localfirst #contentops",
+          "characterCount": 232,
+          "originalCharacterCount": 232,
+          "characterLimit": 300,
+          "truncated": false,
+          "warnings": [
+            "Title is omitted from the bluesky draft."
+          ]
+        },
+        {
+          "platform": "mastodon",
+          "content": "See the review workflow in practice\n\nFollow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.\n\nhttps://github.com/Deathcharge/samsarix-creative-spirals#readme\n\n#localfirst #contentops",
+          "characterCount": 229,
+          "originalCharacterCount": 229,
+          "characterLimit": 500,
+          "truncated": false,
+          "warnings": []
+        },
+        {
+          "platform": "discord",
+          "content": "**See the review workflow in practice**\n\nFollow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.\n\nhttps://github.com/Deathcharge/samsarix-creative-spirals#readme\n\n#localfirst #contentops",
+          "characterCount": 273,
+          "originalCharacterCount": 273,
+          "characterLimit": 2000,
+          "truncated": false,
+          "warnings": []
+        }
+      ]
+    }
+  ]
+}

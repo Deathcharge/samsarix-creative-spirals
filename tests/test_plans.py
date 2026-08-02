@@ -15,6 +15,7 @@ from samsarix_creative_spirals import (
     check_campaign_plan,
     export_campaign_plan,
     load_campaign_plan,
+    render_plan_adapter,
     render_plan_calendar,
 )
 
@@ -382,6 +383,10 @@ def test_plan_export_writes_manifest_calendar_and_platform_csv(
     manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["planId"] == bundle.plan_id
     assert manifest["generatedAt"] == "2026-08-01T12:00:00Z"
+    assert manifest["adapter"] == "adapter.json"
+    adapter = json.loads((target / "adapter.json").read_text(encoding="utf-8"))
+    assert adapter["contract"] == "samsarix.plan-drafts"
+    assert adapter["items"][0]["drafts"][0]["content"] == (bundle.items[0].bundle.drafts[0].content)
     assert (target / "calendar.ics").read_bytes().endswith(b"\r\n")
     with (target / "csv" / "x.csv").open(encoding="utf-8", newline="") as csv_file:
         rows = list(csv.DictReader(csv_file))
@@ -400,6 +405,54 @@ def test_plan_export_writes_manifest_calendar_and_platform_csv(
     )
     updated_manifest = json.loads((overwritten / "manifest.json").read_text(encoding="utf-8"))
     assert updated_manifest["generatedAt"] == "2026-08-02T12:00:00Z"
+
+
+def test_plan_adapter_is_deterministic_and_preserves_unscheduled_items(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    path = _write_plan(
+        tmp_path,
+        campaign_data,
+        items=[{"campaign": "campaigns/release.json"}],
+    )
+    bundle = build_campaign_plan(load_campaign_plan(path))
+
+    first = render_plan_adapter(bundle)
+    second = render_plan_adapter(bundle)
+
+    assert first == second
+    payload = json.loads(first)
+    assert payload["planId"] == bundle.plan_id
+    assert payload["items"][0]["intendedAt"] is None
+    assert payload["items"][0]["drafts"][0]["platform"] == "x"
+
+
+def test_plan_export_matches_versioned_adapter_fixture(tmp_path: Path) -> None:
+    repository = Path(__file__).resolve().parents[1]
+    fixture = (
+        repository
+        / "tests"
+        / "fixtures"
+        / "plan-export-v1"
+        / "local-first-release-sequence-scp_d8a68cdb1054"
+    )
+    bundle = build_campaign_plan(load_campaign_plan(repository / "examples" / "launch-plan.json"))
+
+    generated = export_campaign_plan(
+        bundle,
+        tmp_path,
+        generated_at=datetime(2026, 8, 2, 12, 30, tzinfo=timezone.utc),
+    )
+
+    expected_files = sorted(
+        path.relative_to(fixture) for path in fixture.rglob("*") if path.is_file()
+    )
+    generated_files = sorted(
+        path.relative_to(generated) for path in generated.rglob("*") if path.is_file()
+    )
+    assert generated_files == expected_files
+    for relative in expected_files:
+        assert (generated / relative).read_bytes() == (fixture / relative).read_bytes()
 
 
 def test_plan_export_neutralizes_spreadsheet_formula_prefixes(

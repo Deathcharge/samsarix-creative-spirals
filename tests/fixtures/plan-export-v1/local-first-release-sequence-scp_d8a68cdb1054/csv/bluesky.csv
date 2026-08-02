@@ -1,0 +1,11 @@
+plan_id,sequence,campaign_id,source_hash,name,intended_at_utc,content,character_count,character_limit,truncated,warnings
+scp_d8a68cdb1054,1,scs_1a768ee9b10a,1a768ee9b10a3bc82b267b7bc1e98c4e43089c147d89aff463151fba680b4d78,Local-first campaign,2026-08-10T13:00:00Z,"Samsarix Creative Spirals turns an approved source draft into platform-aware files without connecting an account or sending data to a service.
+
+https://example.com/local-first
+
+#localfirst #contentops",200,300,false,Title is omitted from the bluesky draft.
+scp_d8a68cdb1054,2,scs_927dbf0d25d8,927dbf0d25d897e79f3f5df4492817ef5a358f60c9d93476ad14b363d63d2de9,Local-first campaign follow-up,2026-08-12T13:00:00Z,"Follow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.
+
+https://github.com/Deathcharge/samsarix-creative-spirals#readme
+
+#localfirst #contentops",232,300,false,Title is omitted from the bluesky draft.

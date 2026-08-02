@@ -22,7 +22,22 @@ from .plans import (
     load_campaign_plan,
 )
 from .quality import check_campaign
-from .schema import load_campaign_schema, load_plan_schema
+from .review import (
+    ApprovalCheck,
+    CampaignDiff,
+    create_campaign_approval,
+    diff_campaigns,
+    export_campaign_approval,
+    load_campaign_approval,
+    parse_approval_timestamp,
+    verify_campaign_approval,
+)
+from .schema import (
+    load_adapter_schema,
+    load_approval_schema,
+    load_campaign_schema,
+    load_plan_schema,
+)
 from .templates import starter_campaign
 from .workflow import build_campaign, export_campaign, load_campaign
 
@@ -69,6 +84,38 @@ def _print_plan_check(result: CampaignPlanCheck) -> None:
     for issue in result.issues:
         platform = f" [{issue.platform}]" if issue.platform else ""
         print(f"{issue.severity}: item {issue.item}{platform} {issue.message}")
+
+
+def _display_diff_value(value: object) -> str:
+    rendered = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    if len(rendered) <= 180:
+        return rendered
+    return f"{rendered[:177]}... ({len(rendered)} characters)"
+
+
+def _print_diff(result: CampaignDiff) -> None:
+    if not result.changed:
+        print(f"No semantic changes ({result.before_campaign_id})")
+        return
+    print(f"Campaign changed: {result.before_campaign_id} -> {result.after_campaign_id}")
+    for field_change in result.fields:
+        print(
+            f"field {field_change.field}: {_display_diff_value(field_change.before)} -> "
+            f"{_display_diff_value(field_change.after)}"
+        )
+    for draft_change in result.drafts:
+        fields = ", ".join(draft_change.fields)
+        print(f"draft {draft_change.platform}: {draft_change.change} ({fields})")
+
+
+def _print_approval_check(result: ApprovalCheck) -> None:
+    status = "valid" if result.valid else "invalid"
+    print(
+        f"Approval {status} for {result.campaign_id}: "
+        f"{result.approval.approved_by} at {result.approval.to_dict()['approvedAt']}"
+    )
+    for issue in result.issues:
+        print(f"error: {issue.message}")
 
 
 def _init_command(args: argparse.Namespace) -> int:
@@ -130,6 +177,45 @@ def _export_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _diff_command(args: argparse.Namespace) -> int:
+    result = diff_campaigns(load_campaign(args.before), load_campaign(args.after))
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_diff(result)
+    return 4 if args.exit_code and result.changed else 0
+
+
+def _approval_create_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign(load_campaign(args.config))
+    approved_at = parse_approval_timestamp(args.approved_at) if args.approved_at else None
+    approval = create_campaign_approval(
+        bundle,
+        approved_by=args.approved_by,
+        approved_at=approved_at,
+        warnings_as_errors=args.warnings_as_errors,
+        note=args.note,
+    )
+    output = Path(args.output) if args.output else Path(f"{args.config}.approval.json")
+    path = export_campaign_approval(approval, output)
+    if args.json:
+        _json_print({"path": str(path), "approval": approval.to_dict()})
+    else:
+        print(f"Recorded local approval for {bundle.campaign_id} in {path}")
+        print("This record is source-bound review metadata, not a digital signature.")
+    return 0
+
+
+def _approval_verify_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign(load_campaign(args.config))
+    result = verify_campaign_approval(bundle, load_campaign_approval(args.approval))
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_approval_check(result)
+    return 0 if result.valid else 4
+
+
 def _plan_validate_command(args: argparse.Namespace) -> int:
     bundle = build_campaign_plan(load_campaign_plan(args.plan))
     if args.json:
@@ -176,7 +262,13 @@ def _plan_export_command(args: argparse.Namespace) -> int:
 
 
 def _schema_command(args: argparse.Namespace) -> int:
-    schema = load_plan_schema() if args.kind == "plan" else load_campaign_schema()
+    schema_loaders = {
+        "adapter": load_adapter_schema,
+        "approval": load_approval_schema,
+        "campaign": load_campaign_schema,
+        "plan": load_plan_schema,
+    }
+    schema = schema_loaders[args.kind]()
     if args.output is None:
         _json_print(schema)
         return 0
@@ -243,6 +335,57 @@ def build_parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--json", action="store_true", help="emit machine-readable output")
     export_parser.set_defaults(handler=_export_command)
 
+    diff_parser = subparsers.add_parser(
+        "diff", help="compare normalized campaign source and generated drafts"
+    )
+    diff_parser.add_argument("before")
+    diff_parser.add_argument("after")
+    diff_parser.add_argument("--json", action="store_true", help="emit machine-readable output")
+    diff_parser.add_argument(
+        "--exit-code",
+        action="store_true",
+        help="return exit code 4 when semantic changes are present",
+    )
+    diff_parser.set_defaults(handler=_diff_command)
+
+    approval_parser = subparsers.add_parser(
+        "approval", help="create or verify source-bound local approval metadata"
+    )
+    approval_subparsers = approval_parser.add_subparsers(dest="approval_command")
+    approval_create_parser = approval_subparsers.add_parser(
+        "create", help="record approval after the selected quality policy passes"
+    )
+    approval_create_parser.add_argument("config")
+    approval_create_parser.add_argument(
+        "--by", dest="approved_by", required=True, help="human-readable reviewer label"
+    )
+    approval_create_parser.add_argument(
+        "--at", dest="approved_at", help="explicit RFC 3339 approval time (default: now)"
+    )
+    approval_create_parser.add_argument("--note", help="optional review note (maximum 500 chars)")
+    approval_create_parser.add_argument(
+        "--warnings-as-errors",
+        action="store_true",
+        help="require a warning-free campaign and record that stricter policy",
+    )
+    approval_create_parser.add_argument(
+        "--output", help="new approval file (default: CONFIG.approval.json)"
+    )
+    approval_create_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    approval_create_parser.set_defaults(handler=_approval_create_command)
+
+    approval_verify_parser = approval_subparsers.add_parser(
+        "verify", help="verify an approval against current source and its quality policy"
+    )
+    approval_verify_parser.add_argument("config")
+    approval_verify_parser.add_argument("approval")
+    approval_verify_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    approval_verify_parser.set_defaults(handler=_approval_verify_command)
+
     plan_parser = subparsers.add_parser(
         "plan", help="validate, preview, check, or export a multi-campaign plan"
     )
@@ -298,10 +441,13 @@ def build_parser() -> argparse.ArgumentParser:
     plan_export_parser.set_defaults(handler=_plan_export_command)
 
     schema_parser = subparsers.add_parser(
-        "schema", help="print or write a bundled campaign or plan JSON Schema"
+        "schema", help="print or write a bundled authoring or adapter JSON Schema"
     )
     schema_parser.add_argument(
-        "--kind", choices=("campaign", "plan"), default="campaign", help="schema to emit"
+        "--kind",
+        choices=("campaign", "plan", "approval", "adapter"),
+        default="campaign",
+        help="schema to emit",
     )
     schema_parser.add_argument("--output", help="write to a new file instead of standard output")
     schema_parser.set_defaults(handler=_schema_command)
