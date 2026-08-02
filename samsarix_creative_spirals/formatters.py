@@ -233,4 +233,5 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
         character_limit=limit,
         truncated=truncated,
         warnings=tuple(warnings),
+        media=tuple(reference for reference in config.media if reference.applies_to(platform)),
     )

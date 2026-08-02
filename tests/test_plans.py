@@ -385,6 +385,7 @@ def test_plan_export_writes_manifest_calendar_and_platform_csv(
     assert manifest["generatedAt"] == "2026-08-01T12:00:00Z"
     assert manifest["adapter"] == "adapter.json"
     adapter = json.loads((target / "adapter.json").read_text(encoding="utf-8"))
+    assert adapter["schemaVersion"] == 2
     assert adapter["contract"] == "samsarix.plan-drafts"
     assert adapter["items"][0]["drafts"][0]["content"] == (bundle.items[0].bundle.drafts[0].content)
     assert (target / "calendar.ics").read_bytes().endswith(b"\r\n")
@@ -423,8 +424,33 @@ def test_plan_adapter_is_deterministic_and_preserves_unscheduled_items(
     assert first == second
     payload = json.loads(first)
     assert payload["planId"] == bundle.plan_id
+    assert payload["schemaVersion"] == 2
     assert payload["items"][0]["intendedAt"] is None
     assert payload["items"][0]["drafts"][0]["platform"] == "x"
+
+
+def test_plan_adapter_maps_media_to_only_applicable_drafts(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    campaign_data["media"] = [
+        {"path": "media/shared.png", "altText": "Shared launch visual"},
+        {
+            "path": "media/linkedin.jpg",
+            "altText": "LinkedIn launch visual",
+            "platforms": ["linkedin"],
+        },
+    ]
+    bundle = build_campaign_plan(load_campaign_plan(_write_plan(tmp_path, campaign_data)))
+
+    item = json.loads(render_plan_adapter(bundle))["items"][0]
+    drafts = {draft["platform"]: draft for draft in item["drafts"]}
+
+    assert item["media"][1]["platforms"] == ["linkedin"]
+    assert [media["path"] for media in drafts["x"]["media"]] == ["media/shared.png"]
+    assert [media["path"] for media in drafts["linkedin"]["media"]] == [
+        "media/shared.png",
+        "media/linkedin.jpg",
+    ]
 
 
 def test_plan_export_matches_versioned_adapter_fixture(tmp_path: Path) -> None:
@@ -433,7 +459,7 @@ def test_plan_export_matches_versioned_adapter_fixture(tmp_path: Path) -> None:
         repository
         / "tests"
         / "fixtures"
-        / "plan-export-v1"
+        / "plan-export-v2"
         / "local-first-release-sequence-scp_d8a68cdb1054"
     )
     bundle = build_campaign_plan(load_campaign_plan(repository / "examples" / "launch-plan.json"))

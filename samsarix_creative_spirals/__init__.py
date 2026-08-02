@@ -8,6 +8,7 @@ from .models import (
     CampaignCheck,
     CampaignConfig,
     ConfigError,
+    MediaReference,
     PlatformDraft,
     QualityIssue,
 )
@@ -48,7 +49,7 @@ from .schema import (
 )
 from .workflow import build_campaign, export_campaign, load_campaign
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "ApprovalCheck",
@@ -65,6 +66,7 @@ __all__ = [
     "CampaignPlanCheck",
     "CampaignPlanItem",
     "ConfigError",
+    "MediaReference",
     "PlanIssue",
     "PlannedCampaign",
     "PlatformDraft",

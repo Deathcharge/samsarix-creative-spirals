@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "contract": "samsarix.plan-drafts",
   "planId": "scp_d8a68cdb1054",
   "sourceHash": "d8a68cdb1054700b7e6571298df7724610bf352ca55b5e233432144aa8cc0ed1",
@@ -11,6 +11,7 @@
       "campaignId": "scs_1a768ee9b10a",
       "sourceHash": "1a768ee9b10a3bc82b267b7bc1e98c4e43089c147d89aff463151fba680b4d78",
       "intendedAt": "2026-08-10T13:00:00Z",
+      "media": [],
       "drafts": [
         {
           "platform": "x",
@@ -21,7 +22,8 @@
           "truncated": false,
           "warnings": [
             "Title is omitted from the x draft."
-          ]
+          ],
+          "media": []
         },
         {
           "platform": "linkedin",
@@ -30,7 +32,8 @@
           "originalCharacterCount": 236,
           "characterLimit": 3000,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         },
         {
           "platform": "bluesky",
@@ -41,7 +44,8 @@
           "truncated": false,
           "warnings": [
             "Title is omitted from the bluesky draft."
-          ]
+          ],
+          "media": []
         },
         {
           "platform": "mastodon",
@@ -50,7 +54,8 @@
           "originalCharacterCount": 228,
           "characterLimit": 500,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         },
         {
           "platform": "discord",
@@ -59,7 +64,8 @@
           "originalCharacterCount": 240,
           "characterLimit": 2000,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         }
       ]
     },
@@ -69,6 +75,7 @@
       "campaignId": "scs_927dbf0d25d8",
       "sourceHash": "927dbf0d25d897e79f3f5df4492817ef5a358f60c9d93476ad14b363d63d2de9",
       "intendedAt": "2026-08-12T13:00:00Z",
+      "media": [],
       "drafts": [
         {
           "platform": "x",
@@ -79,7 +86,8 @@
           "truncated": false,
           "warnings": [
             "Title is omitted from the x draft."
-          ]
+          ],
+          "media": []
         },
         {
           "platform": "linkedin",
@@ -88,7 +96,8 @@
           "originalCharacterCount": 269,
           "characterLimit": 3000,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         },
         {
           "platform": "bluesky",
@@ -99,7 +108,8 @@
           "truncated": false,
           "warnings": [
             "Title is omitted from the bluesky draft."
-          ]
+          ],
+          "media": []
         },
         {
           "platform": "mastodon",
@@ -108,7 +118,8 @@
           "originalCharacterCount": 229,
           "characterLimit": 500,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         },
         {
           "platform": "discord",
@@ -117,7 +128,8 @@
           "originalCharacterCount": 273,
           "characterLimit": 2000,
           "truncated": false,
-          "warnings": []
+          "warnings": [],
+          "media": []
         }
       ]
     }

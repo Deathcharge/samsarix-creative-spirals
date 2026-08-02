@@ -103,6 +103,42 @@
         "mastodon": {"type": "integer", "minimum": 1, "maximum": 100000},
         "discord": {"type": "integer", "minimum": 1, "maximum": 2000}
       }
+    },
+    "media": {
+      "type": "array",
+      "description": "Portable static-image metadata. Core validates these references but never opens, copies, or uploads the files.",
+      "maxItems": 20,
+      "items": {"$ref": "#/$defs/mediaReference"},
+      "default": []
+    }
+  },
+  "$defs": {
+    "mediaReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "altText"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[^\\\\:<>\"|?*\\u0000-\\u001F\\u007F-\\u009F]+\\.(?:[jJ][pP][eE]?[gG]|[pP][nN][gG])$"
+        },
+        "altText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        },
+        "platforms": {
+          "type": "array",
+          "description": "Optional non-empty subset of campaign platforms; omission means every requested platform.",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]}
+        }
+      }
     }
   }
 }

@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from samsarix_creative_spirals import CampaignConfig, ConfigError
+from samsarix_creative_spirals import CampaignConfig, ConfigError, MediaReference
 
 
 def test_campaign_normalizes_input(campaign_data: dict[str, Any]) -> None:
@@ -142,3 +142,124 @@ def test_campaign_rejects_non_string_platform_limit_key(campaign_data: dict[str,
 
     with pytest.raises(ConfigError, match="keys must be platform strings"):
         CampaignConfig.from_dict(campaign_data)
+
+
+def test_media_references_are_normalized_without_reading_files(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["media"] = [
+        {
+            "path": "media/hero.PNG",
+            "altText": "  Cafe\u0301 launch dashboard  ",
+        },
+        {
+            "path": "media/linkedin.jpg",
+            "altText": "Product workflow diagram",
+            "platforms": ["DISCORD", "x"],
+        },
+    ]
+
+    config = CampaignConfig.from_dict(campaign_data)
+
+    assert config.media == (
+        MediaReference(
+            "media/hero.PNG",
+            "Café launch dashboard",
+            ("x", "linkedin", "discord"),
+        ),
+        MediaReference(
+            "media/linkedin.jpg",
+            "Product workflow diagram",
+            ("x", "discord"),
+        ),
+    )
+    assert config.to_dict()["media"] == [reference.to_dict() for reference in config.media]
+
+
+@pytest.mark.parametrize(
+    ("media", "message"),
+    [
+        ("media/hero.png", "media must be an array"),
+        (["media/hero.png"], r"media\[0\] must be an object"),
+        ([{"path": 42, "altText": "Description"}], "path must be a string"),
+        ([{"path": "../hero.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "/hero.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "media\\hero.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "media/CON.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "media/CON.data.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "media/.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": "media/hero.webp", "altText": "Description"}], "must end in"),
+        ([{"path": "media/hero.png", "altText": 42}], "altText must be a string"),
+        ([{"path": "media/hero.png", "altText": ""}], "altText must not be empty"),
+        ([{"path": "media/hero.png", "altText": "line\nbreak"}], "single line"),
+        ([{"path": "media/hero.png", "altText": "x" * 1_001}], "at most 1000"),
+        (
+            [{"path": "media/hero.png", "altText": "Description", "platforms": []}],
+            "at least one platform",
+        ),
+        (
+            [{"path": "media/hero.png", "altText": "Description", "platforms": "x"}],
+            "non-empty array",
+        ),
+        (
+            [{"path": "media/hero.png", "altText": "Description", "platforms": ["mastodon"]}],
+            "not requested by the campaign",
+        ),
+        (
+            [{"path": "media/hero.png", "altText": "Description", "platforms": ["x", "x"]}],
+            "duplicates x",
+        ),
+        (
+            [{"path": "media/hero.png", "altText": "Description", "credit": "Samsarix"}],
+            "unknown field.*credit",
+        ),
+    ],
+)
+def test_campaign_rejects_invalid_media(
+    campaign_data: dict[str, Any], media: object, message: str
+) -> None:
+    campaign_data["media"] = media
+
+    with pytest.raises(ConfigError, match=message):
+        CampaignConfig.from_dict(campaign_data)
+
+
+def test_campaign_rejects_duplicate_and_excess_media(campaign_data: dict[str, Any]) -> None:
+    campaign_data["media"] = [
+        {"path": "media/HERO.png", "altText": "First"},
+        {"path": "media/hero.PNG", "altText": "Second"},
+    ]
+    with pytest.raises(ConfigError, match="duplicates an earlier media path"):
+        CampaignConfig.from_dict(campaign_data)
+
+    campaign_data["media"] = [
+        {"path": f"media/image-{index}.png", "altText": f"Image {index}", "platforms": ["x"]}
+        for index in range(5)
+    ]
+    with pytest.raises(ConfigError, match="more than 4 images for x"):
+        CampaignConfig.from_dict(campaign_data)
+
+    campaign_data["media"] = [
+        {"path": f"media/image-{index}.png", "altText": f"Image {index}"} for index in range(21)
+    ]
+    with pytest.raises(ConfigError, match="at most 20 references"):
+        CampaignConfig.from_dict(campaign_data)
+
+
+def test_campaign_accepts_four_platform_specific_images_per_platform(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["platforms"] = ["x", "linkedin", "bluesky", "mastodon", "discord"]
+    campaign_data["media"] = [
+        {
+            "path": f"media/{platform}-{index}.jpg",
+            "altText": f"{platform} visual {index}",
+            "platforms": [platform],
+        }
+        for platform in campaign_data["platforms"]
+        for index in range(4)
+    ]
+
+    config = CampaignConfig.from_dict(campaign_data)
+
+    assert len(config.media) == 20

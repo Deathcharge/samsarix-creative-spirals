@@ -61,6 +61,25 @@ def test_semantic_diff_reports_source_and_generated_changes(
     assert payload["drafts"][0]["fields"]
 
 
+def test_semantic_diff_reports_platform_targeted_media_changes(
+    campaign_data: dict[str, Any],
+) -> None:
+    revised = dict(campaign_data)
+    revised["media"] = [
+        {
+            "path": "media/launch.png",
+            "altText": "Launch review dashboard",
+            "platforms": ["linkedin"],
+        }
+    ]
+
+    result = diff_campaigns(campaign_data, revised)
+
+    assert [change.field for change in result.fields] == ["media"]
+    assert [change.platform for change in result.drafts] == ["linkedin"]
+    assert result.drafts[0].fields == ("media",)
+
+
 def test_create_export_load_and_verify_approval(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:
@@ -94,6 +113,19 @@ def test_approval_becomes_invalid_when_campaign_changes(campaign_data: dict[str,
     revised = build_campaign(campaign_data)
 
     result = verify_campaign_approval(revised, approval)
+
+    assert result.valid is False
+    assert [issue.code for issue in result.issues] == ["source-changed", "campaign-id-changed"]
+
+
+def test_approval_becomes_invalid_when_media_metadata_changes(
+    campaign_data: dict[str, Any],
+) -> None:
+    original = build_campaign(campaign_data)
+    approval = create_campaign_approval(original, approved_by="Reviewer")
+    campaign_data["media"] = [{"path": "media/launch.png", "altText": "Launch review dashboard"}]
+
+    result = verify_campaign_approval(build_campaign(campaign_data), approval)
 
     assert result.valid is False
     assert [issue.code for issue in result.issues] == ["source-changed", "campaign-id-changed"]

@@ -17,7 +17,16 @@ from .models import CampaignBundle, CampaignConfig, ConfigError, SUPPORTED_PLATF
 from .quality import check_campaign
 from .workflow import _load_json_object, build_campaign
 
-_DIFF_FIELDS = ("name", "title", "body", "link", "hashtags", "platforms", "platformLimits")
+_DIFF_FIELDS = (
+    "name",
+    "title",
+    "body",
+    "link",
+    "hashtags",
+    "platforms",
+    "platformLimits",
+    "media",
+)
 _DRAFT_FIELDS = (
     "content",
     "characterCount",
@@ -25,6 +34,7 @@ _DRAFT_FIELDS = (
     "characterLimit",
     "truncated",
     "warnings",
+    "media",
 )
 _APPROVAL_KEYS = {
     "schemaVersion",
@@ -100,6 +110,7 @@ def _semantic_config(config: CampaignConfig) -> dict[str, Any]:
         "hashtags": list(config.hashtags),
         "platforms": list(config.platforms),
         "platformLimits": dict(config.platform_limits),
+        "media": [reference.to_dict() for reference in config.media],
     }
 
 

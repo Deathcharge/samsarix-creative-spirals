@@ -578,6 +578,7 @@ def _plan_manifest(bundle: CampaignPlanBundle, generated_at: datetime) -> dict[s
                 "sourceHash": item.bundle.source_hash,
                 "intendedAt": _format_utc(item.intended_at) if item.intended_at else None,
                 "platforms": [draft.platform for draft in item.bundle.drafts],
+                "media": [reference.to_dict() for reference in item.bundle.media],
             }
             for item in bundle.items
         ],
@@ -585,9 +586,9 @@ def _plan_manifest(bundle: CampaignPlanBundle, generated_at: datetime) -> dict[s
 
 
 def render_plan_adapter(bundle: CampaignPlanBundle) -> str:
-    """Render the deterministic v1 publisher-adapter interchange payload."""
+    """Render the deterministic v2 publisher-adapter interchange payload."""
     payload = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "contract": "samsarix.plan-drafts",
         "planId": bundle.plan_id,
         "sourceHash": bundle.source_hash,
@@ -599,6 +600,7 @@ def render_plan_adapter(bundle: CampaignPlanBundle) -> str:
                 "campaignId": item.bundle.campaign_id,
                 "sourceHash": item.bundle.source_hash,
                 "intendedAt": _format_utc(item.intended_at) if item.intended_at else None,
+                "media": [reference.to_dict() for reference in item.bundle.media],
                 "drafts": [draft.to_dict() for draft in item.bundle.drafts],
             }
             for item in bundle.items
