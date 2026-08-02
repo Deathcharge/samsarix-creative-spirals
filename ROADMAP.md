@@ -322,7 +322,7 @@ digest, review disposition, compatibility notes, and limitations are in
   and checksums through approval, handoff, readiness, publication, CLI, and public library paths.
 - [x] Add a bundled media-package schema, adversarial and end-to-end tests, installed-wheel CI
   journey, current official provider evidence, and explicit structural-validation limitations.
-- [ ] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
+- [x] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
   final rollback evidence.
 
 The canonical Bluesky image Lexicon sets the strictest common byte ceiling at 2,000,000 bytes;
@@ -335,8 +335,11 @@ Reviewed technical evidence at `0cd4d57`: 372 tests at 93.57% coverage, clean fo
 strict typing, compilation, and ten schema checks; an external Python 3.11 installed-wheel journey
 reached `publication-complete` with media package `scm_25320c1662b1`; wheel SHA-256
 `d6425c5319dc1b823d708e6f51016272901ac048f7f7efdd7cc5ceb4148eb2ea`; sdist SHA-256
-`7e5a146e11d2931d65eba770b5f11ba143e6196c4f88a2422239ec45c7c74d7b`. Final hosted reruns and merge
-evidence remain open.
+`7e5a146e11d2931d65eba770b5f11ba143e6196c4f88a2422239ec45c7c74d7b`; reviewed push/PR runs
+`30746628682` and `30746629976`; merge commit `917a2b8`; and post-merge run `30746689501` all passed.
+Rollback is a revert of PR #16's merge or a pin to pre-0.14 main commit `89b5f94`. Full review
+disposition, sdist-derived journey identities, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#014-approval-bound-exact-media-release-evidence).
 
 ## Deliberate exclusions
 

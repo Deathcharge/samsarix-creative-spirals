@@ -1154,8 +1154,11 @@ transform. Packet hashes remain unsigned.
 ### Verification and release disposition
 
 Implementation, accepted review fixes, and packaged evidence converge at exact code commit
-`0cd4d57a06b4498e288f8d51033a58d89ece95a6`. Final hosted reruns, merge identity, post-merge CI,
-and final rollback evidence remain pending until the release branch completes review.
+`0cd4d57a06b4498e288f8d51033a58d89ece95a6`. Evidence-bearing PR head
+`145ca5deea209db3741088d6e2277aa3708c107b` merged to `main` as
+`917a2b816c02cae241505b0af53d97a006fc46d4`. This section's final merge record is a subsequent
+documentation change, so artifact hashes identify the exact reviewed code tree rather than a
+self-referential source archive.
 
 | Verification | Exit | Actual result |
 | --- | ---: | --- |
@@ -1168,6 +1171,8 @@ and final rollback evidence remain pending until the release branch completes re
 | Sdist-derived universal-wheel build | 0 | Built the 0.14.0 sdist and then its universal wheel from exact code head `0cd4d57`. |
 | Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.14.0, all ten schemas, plan `scp_9ae2b6c67094`, media package `scm_25320c1662b1`, one exact image, ten handoff artifacts, handoff `sch_2bf154434450`, five published outcomes, publication `scpub_87e41e3247eb`, `publication-complete`, and `pip check` passed outside the checkout. |
 | Hosted GitHub Actions before review fixes | 0 | [Push run 30746032018](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746032018) and [PR run 30746043402](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746043402) each passed the complete Python 3.10/3.13 matrix at pre-review branch head `1e60339`. |
+| Hosted GitHub Actions after review fixes | 0 | [Push run 30746628682](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746628682) and [PR run 30746629976](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746629976) each passed the complete Python 3.10/3.13 matrix at reviewed branch head `145ca5d`. |
+| Post-merge GitHub Actions | 0 | [Main run 30746689501](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746689501) passed both complete matrices at merge commit `917a2b8`. |
 | `git diff --check` | 0 | No whitespace errors at the reviewed code commit. |
 
 Isolated artifact digests from exact code commit `0cd4d57`:
@@ -1181,13 +1186,13 @@ Isolated artifact digests from exact code commit `0cd4d57`:
 comments. Three were validated and addressed: the handoff question count and legacy lowercase
 `csv` diagnostic were corrected, and duplicate PNG test construction moved to one parameterized
 helper. The claimed public `__all__` mismatch was rejected because the complete exact-list
-assertion in `tests/test_public_api.py` already matches runtime and passes. Fresh hosted checks on
-the reviewed branch head remain pending.
+assertion in `tests/test_public_api.py` already matches runtime and passes. The three valid threads
+auto-resolved. Incremental automated re-review was rate-limited, while complete local gates and
+both reviewed-head hosted matrices passed.
 
-Release disposition: **reviewed release candidate pending final hosted reruns**. The exact local source and sdist-derived
+Release disposition: **merged release candidate with one owner-controlled distribution gate**. The exact local source and sdist-derived
 wheel support the declared approval-to-publication journey with no known locally actionable P0 or
-P1 defect. This becomes a merged release candidate only after the reviewed hosted matrices pass.
-Public PyPI publication has not been performed and remains an explicit owner action. External-user
+P1 defect. Public PyPI publication has not been performed and remains an explicit owner action. External-user
 adoption evidence likewise remains unavailable; provider workflow evidence demonstrates the
 operational gap and conservative envelope, not product-market fit.
 
@@ -1197,6 +1202,7 @@ copy stays synchronized; and metadata-only calls emit their prior shapes. The ne
 schema and public names join the pre-1.0 surface. PyPI publication and external adoption validation
 remain owner-controlled gates.
 
-Before merge, roll back by abandoning or reverting the release branch and pinning main commit
-`89b5f94f97e859097f68ac7559a2a254c940cae2`. The exact merge commit and post-merge corrective
-path will replace this provisional wording after hosted review.
+Before public package publication, roll back by reverting merge commit
+`917a2b816c02cae241505b0af53d97a006fc46d4` or pinning pre-0.14 main commit
+`89b5f94f97e859097f68ac7559a2a254c940cae2`. After publication, use normal version pinning and a
+corrective release; do not replace published artifacts silently.
