@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## 0.6.0 - 2026-08-02
+
+- Added portable, platform-targeted JPEG/PNG references with required alt text, strict path rules,
+  bounded collections, and a conservative four-images-per-platform envelope.
+- Kept media paths as metadata only: core does not resolve, read, inspect, copy, or upload files.
+- Included media in deterministic campaign/plan identity, semantic diffs, approval invalidation,
+  campaign manifests, plan manifests, and exact per-platform draft output.
+- Advanced `samsarix.plan-drafts` to schema version 2 with normalized item media and applicable
+  draft attachments, a v2 conformance fixture, and explicit adapter migration/safety guidance.
+- Added platform-evidence documentation and adversarial coverage for path traversal, Windows
+  reserved names, duplicate paths, invalid targets, alt text, and per-platform limits.
+
 ## 0.5.0 - 2026-08-02
 
 - Added deterministic semantic campaign diffs covering normalized source fields and generated

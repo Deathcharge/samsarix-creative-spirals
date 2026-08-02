@@ -32,6 +32,23 @@ samsarix-campaign check campaign.json
 Edit `campaign.json`, then run `preview` and `check` again. Both are side-effect free: they read the
 file and write only to stdout/stderr. `check` exits with `3` when any draft was truncated.
 
+To carry reviewed image choices alongside the text, add portable metadata without giving the core
+permission to open or upload the file:
+
+```json
+"media": [
+  {
+    "path": "media/launch.png",
+    "altText": "Campaign review dashboard showing five platform drafts"
+  }
+]
+```
+
+The path is relative to the campaign JSON. JPEG and PNG are supported, alt text is required, and a
+campaign may target no more than four images to one platform. Add a `platforms` array inside a
+reference when a visual applies only to selected campaign platforms. Full rules and adapter safety
+requirements are in [MEDIA.md](MEDIA.md).
+
 ## 3. Validate for automation
 
 ```bash
@@ -91,7 +108,8 @@ samsarix-campaign export campaign.json --output outbox
 ```
 
 The resulting folder contains one Markdown file per requested platform and `manifest.json` with the source
-hash, limits, truncation state, warnings, and UTC export time. The tool does not publish anything;
+hash, limits, media metadata, truncation state, warnings, and UTC export time. Referenced image
+bytes are not copied into the bundle. The tool does not publish anything;
 copy the reviewed content into the destination platform or pass the files to a separate approved
 integration.
 

@@ -9,8 +9,15 @@ change without notice.
 
 `CampaignConfig.from_dict(mapping)` validates and normalizes a JSON-compatible mapping. It returns
 an immutable dataclass with `schema_version`, `name`, `body`, `platforms`, `title`, `link`,
-`hashtags`, and normalized `platform_limits`. `limit_for(platform)` returns an explicit override or
+`hashtags`, normalized `platform_limits`, and `media`. `limit_for(platform)` returns an explicit override or
 the supported default. `to_dict()` returns the normalized JSON shape.
+
+### `MediaReference`
+
+An immutable portable image reference with `path`, required `alt_text`, and normalized target
+`platforms`. `applies_to(platform)` reports draft applicability. `to_dict()` emits source-level
+metadata; `to_attachment_dict()` emits the exact `{path, altText}` shape carried by one draft. Core
+does not dereference the path.
 
 ### `PlatformDraft`
 
@@ -23,11 +30,12 @@ An immutable result for one platform:
 - `character_limit`
 - `truncated`
 - `warnings`
+- `media`
 
 ### `CampaignBundle`
 
-An immutable collection with deterministic `campaign_id`, full SHA-256 `source_hash`, `name`, and
-ordered `drafts`. `to_dict()` produces machine-readable preview output.
+An immutable collection with deterministic `campaign_id`, full SHA-256 `source_hash`, `name`,
+normalized `media`, and ordered `drafts`. `to_dict()` produces machine-readable preview output.
 
 ### `QualityIssue`
 
@@ -70,8 +78,9 @@ performed.
 ### `build_campaign(config) -> CampaignBundle`
 
 Accepts a `CampaignConfig` or plain dictionary. It normalizes the source, hashes canonical JSON,
-and formats each requested platform. Repeated calls with equal normalized input return equal
-bundles. It performs no file or network I/O.
+and formats each requested platform. Media metadata is selected into applicable drafts but no
+referenced path is opened. Repeated calls with equal normalized input return equal bundles. It
+performs no file or network I/O.
 
 Supported platform defaults are X (280 weighted characters), LinkedIn (3,000 UTF-16 code units),
 Bluesky (300 graphemes and 3,000 UTF-8 bytes), Mastodon (500 characters with 23-character URL
@@ -98,7 +107,7 @@ I/O failures raise the relevant `OSError` subclass.
 ### `diff_campaigns(before, after) -> CampaignDiff`
 
 Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
-`name`, `title`, `body`, `link`, hashtags, platform order, and platform limits, then compares every
+`name`, `title`, `body`, `link`, hashtags, platform order, platform limits, and media, then compares every
 generated draft in supported-platform order. Equivalent spelling that normalizes to the same
 campaign produces `changed=False`. It performs no file or network I/O.
 
@@ -162,9 +171,9 @@ Scheduled items are transparent `VEVENT` components; unscheduled items are `VTOD
 
 ### `render_plan_adapter(bundle) -> str`
 
-Returns deterministic UTF-8 JSON text for contract `samsarix.plan-drafts` schema version 1. It
-contains plan/campaign identities, intended UTC times, and exact generated `PlatformDraft` values,
-with no generation timestamp or external side effect.
+Returns deterministic UTF-8 JSON text for contract `samsarix.plan-drafts` schema version 2. It
+contains plan/campaign identities, intended UTC times, normalized media references, and exact
+generated `PlatformDraft` values, with no generation timestamp or external side effect.
 
 ### `export_campaign_plan(bundle, output_root="plan-outbox", *, overwrite=False, generated_at=None) -> Path`
 
@@ -218,7 +227,8 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, JSON `schemaVersion: 1`, manifest shape, and documented
-CLI behavior are the compatibility surface for 0.5.x. Internal helpers and exact prose in warning
+The package is pre-1.0. The exported names, campaign/plan JSON `schemaVersion: 1`, adapter
+`schemaVersion: 2`, manifest shape, and documented CLI behavior are the compatibility surface for
+0.6.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

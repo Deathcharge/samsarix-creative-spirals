@@ -8,7 +8,7 @@ scheduler, background process, persistence service, analytics, or dependency on 
 repository.
 
 ```text
-campaign.json
+campaign.json + optional media path metadata
     │ bounded UTF-8 read + strict validation
     ▼
 CampaignConfig
@@ -44,7 +44,8 @@ CampaignPlanBundle
 
 Owns the schema and validation contract. It normalizes line endings and Unicode, rejects unknown
 fields, bounds all collections and large text, restricts links to HTTP(S), and prevents embedded
-URL credentials. Models are immutable to keep one build internally consistent.
+URL credentials. Portable media paths and alt text are validated as metadata without touching the
+filesystem. Models are immutable to keep one build internally consistent.
 
 ### `formatters.py`
 
@@ -75,7 +76,8 @@ plan identity includes each normalized campaign configuration, so a referenced c
 changes the plan ID. Aggregate checks report missing required channels, duplicate or out-of-order
 times, and every campaign finding. Export writes a commit-last manifest, neutral CSV files, and an
 RFC 5545 calendar with UTF-8-safe 75-octet folding and CRLF line endings. Its deterministic
-`adapter.json` preserves exact drafts for consumers of the versioned publisher-neutral contract.
+`adapter.json` preserves exact drafts and applicable media references for consumers of the
+versioned publisher-neutral contract.
 
 ### `review.py`
 
@@ -105,12 +107,16 @@ returns `0`.
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
 | Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
 | Campaign fields | Text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, allowlists, hard platform ceilings. |
+| Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds, no core dereference. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
-path. It never reads environment variables or logs draft content automatically.
+path. Media references are explicitly path metadata but core never resolves or opens them. It
+never reads environment variables or logs draft content automatically. A separately permissioned
+adapter that dereferences media crosses a new trust boundary and must enforce the containment,
+symlink, file-type, size, MIME, provider, and authorization controls in `docs/MEDIA.md`.
 
 ## Reliability and recovery
 
@@ -125,7 +131,7 @@ path. It never reads environment variables or logs draft content automatically.
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
   record intent but trigger no background work.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.5 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.6 scope.
 
 ## Dependency and cost model
 

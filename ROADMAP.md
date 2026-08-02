@@ -1,6 +1,6 @@
 # Samsarix Creative Spirals roadmap
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 ## Product position
 
@@ -92,6 +92,20 @@ Implementation decisions:
 - [x] Run an internal end-to-end scenario using the exact packaged wheel and record technical
   failures and fixes.
 - [ ] Run an external user pilot and record adoption signals that cannot be inferred from tests.
+
+## Completed milestone — 0.6 portable media handoff
+
+- Add bounded JPEG/PNG path metadata and required alt text without reading or uploading media.
+- Support campaign-wide and platform-targeted visuals while enforcing at most four images for any
+  one platform.
+- Include media changes in deterministic identity, semantic review, approval invalidation,
+  manifests, and publisher-adapter handoff.
+- Advance the exact adapter contract to v2 and document migration plus the filesystem/provider
+  validation required when a separately permissioned adapter dereferences a path.
+
+Official platform evidence and the conservative common-envelope decision are recorded in
+[`docs/MEDIA.md`](docs/MEDIA.md). External pilot evidence remains the active product-validation
+gap; it is not inferred from automated tests.
 
 ## Deliberate exclusions
 

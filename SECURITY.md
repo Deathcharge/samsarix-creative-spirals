@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.5.x` release line is supported. Earlier pre-productization and
+The latest `0.6.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -37,8 +37,17 @@ files selected by the invoking user. The supported workflow:
   spreadsheet applications treat them as text;
 - binds local approval metadata to the normalized campaign SHA-256 and re-runs its recorded quality
   policy during verification;
+- validates bounded campaign-relative JPEG/PNG path metadata, required alt text, target platforms,
+  and case-insensitive uniqueness without resolving or opening a referenced file;
 - writes exact campaign text to deterministic adapter JSON without executing, transmitting, or
   automatically logging that content.
+
+Media references are not evidence that a file exists, remains beneath a directory after symbolic
+link resolution, has the claimed format, is non-malicious, fits a provider limit, or is authorized
+for upload. The core never reads those files. Any external adapter that does must use a trusted
+source root, resolve links and enforce containment, bound reads, inspect actual content, revalidate
+current provider/account rules, and obtain explicit operator authorization as described in
+`docs/MEDIA.md`.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 files as potentially sensitive content, review drafts before pasting them into a

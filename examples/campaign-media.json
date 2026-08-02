@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "name": "Accessible media launch",
+  "title": "Review the words and visuals together",
+  "body": "This campaign carries portable image metadata through every local review artifact without opening or uploading the referenced files.",
+  "link": "https://example.com/media-launch",
+  "hashtags": [
+    "accessibility",
+    "contentops"
+  ],
+  "platforms": [
+    "x",
+    "linkedin",
+    "bluesky",
+    "mastodon",
+    "discord"
+  ],
+  "media": [
+    {
+      "path": "media/launch-dashboard.png",
+      "altText": "Campaign review dashboard showing five platform drafts"
+    },
+    {
+      "path": "media/linkedin-workflow.jpg",
+      "altText": "Detailed source review and approval workflow",
+      "platforms": [
+        "linkedin"
+      ]
+    }
+  ]
+}
