@@ -282,13 +282,12 @@ class CampaignPlanApproval:
         if policy not in {"errors-only", "warnings-as-errors"}:
             issues.append("qualityPolicy must be errors-only or warnings-as-errors")
 
-        note_value = raw.get("note")
         note: str | None
-        if note_value is None:
+        if "note" not in raw:
             note = None
         else:
             note = _normalized_text(
-                note_value,
+                raw["note"],
                 field="note",
                 maximum=500,
                 multiline=True,

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator, FormatChecker
 
 from samsarix_creative_spirals import (
     CampaignPlanApproval,
@@ -16,6 +17,7 @@ from samsarix_creative_spirals import (
     export_campaign_plan_approval,
     load_campaign_plan,
     load_campaign_plan_approval,
+    load_plan_approval_schema,
     verify_campaign_plan_approval,
 )
 
@@ -182,6 +184,12 @@ def test_create_export_load_and_verify_plan_approval(
     assert loaded.to_dict()["approvedAt"] == "2026-08-03T14:15:00Z"
     assert result.valid is True
     assert result.to_dict()["issues"] == []
+    payload = approval.to_dict()
+    Draft202012Validator(
+        load_plan_approval_schema(),
+        format_checker=FormatChecker(),
+    ).validate(payload)
+    assert CampaignPlanApproval.from_dict(payload) == approval
 
     with pytest.raises(ConfigError, match="refusing to overwrite"):
         export_campaign_plan_approval(approval, path)
@@ -231,12 +239,14 @@ def test_plan_approval_enforces_selected_quality_policy(
 ) -> None:
     bundle = build_campaign_plan(load_campaign_plan(_write_plan(tmp_path, campaign_data)))
 
-    with pytest.raises(ConfigError, match="selected quality policy"):
+    with pytest.raises(ConfigError) as strict:
         create_campaign_plan_approval(
             bundle,
             approved_by="Strict reviewer",
             warnings_as_errors=True,
         )
+    assert "selected quality policy" in str(strict.value)
+    assert "item 1: Title is omitted from the x draft." in str(strict.value)
 
     failing = dict(campaign_data)
     failing["body"] = "long content " * 1_000
@@ -277,6 +287,29 @@ def test_load_plan_approval_rejects_unknown_and_invalid_fields(tmp_path: Path) -
     assert "approvedAt must be" in message
     assert "qualityPolicy must be" in message
     assert "note must not be empty" in message
+
+
+def test_plan_approval_schema_and_runtime_reject_divergent_optional_values() -> None:
+    approval = CampaignPlanApproval(
+        plan_id="scp_0123456789ab",
+        source_hash="0" * 64,
+        approved_by="Reviewer",
+        approved_at=datetime(2026, 8, 3, tzinfo=timezone.utc),
+    ).to_dict()
+    validator = Draft202012Validator(
+        load_plan_approval_schema(),
+        format_checker=FormatChecker(),
+    )
+
+    whitespace_reviewer = {**approval, "approvedBy": " "}
+    assert validator.is_valid(whitespace_reviewer) is False
+    with pytest.raises(ConfigError, match="approvedBy must not be empty"):
+        CampaignPlanApproval.from_dict(whitespace_reviewer)
+
+    null_note = {**approval, "note": None}
+    assert validator.is_valid(null_note) is False
+    with pytest.raises(ConfigError, match="note must be a string"):
+        CampaignPlanApproval.from_dict(null_note)
 
 
 def test_plan_approval_rejects_naive_time_and_invalid_reviewer(

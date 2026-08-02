@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
   plan plus every referenced campaign.
 - Added typed plan-review models/functions, nested CLI commands, and a dedicated bundled
   plan-approval v1 JSON Schema while preserving campaign approval v1 compatibility.
+- Aligned campaign and plan approval runtime validation with their schemas for whitespace-only
+  reviewers and explicit null notes, with generated-record Draft 2020-12 conformance tests.
 - Documented positional reorder semantics, CI exit behavior, stale-state invalidation, current
   competitive workflow evidence, and the non-cryptographic trust boundary.
 
