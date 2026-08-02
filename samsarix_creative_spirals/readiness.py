@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import html
+import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -146,16 +147,161 @@ class CampaignPlanReadiness:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class _ScheduleAssessment:
+    complete: bool
+    ready: bool
+    issues: tuple[ReadinessIssue, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _EvidenceAssessment:
+    approval: CampaignPlanApproval | None
+    approval_status: EvidenceStatus
+    approval_valid: bool
+    handoff_status: EvidenceStatus
+    handoff_valid: bool
+    handoff_id: str | None
+    issues: tuple[ReadinessIssue, ...]
+
+
+def _readiness_code(prefix: str, upstream_code: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", upstream_code.casefold()).strip("-")
+    bounded = f"{prefix}-{normalized or 'unknown'}"[:100]
+    return bounded.rstrip("-")
+
+
 def _quality_readiness_issues(quality_issues: tuple[PlanIssue, ...]) -> list[ReadinessIssue]:
     return [
         ReadinessIssue(
-            code=f"quality-{issue.code}",
+            code=_readiness_code("quality", issue.code),
             severity=issue.severity,
             item=issue.item,
             message=issue.message,
         )
         for issue in quality_issues
     ]
+
+
+def _assess_schedule(
+    bundle: CampaignPlanBundle,
+    timestamp: datetime,
+    *,
+    require_scheduled: bool,
+) -> _ScheduleAssessment:
+    issues: list[ReadinessIssue] = []
+    complete = all(item.intended_at is not None for item in bundle.items)
+    blocked = False
+    for item in bundle.items:
+        if item.intended_at is None:
+            issues.append(
+                ReadinessIssue(
+                    code="schedule-missing",
+                    severity="error" if require_scheduled else "warning",
+                    item=item.sequence,
+                    message=(
+                        "Item has no intended time."
+                        + (" A complete schedule is required." if require_scheduled else "")
+                    ),
+                )
+            )
+            blocked = blocked or require_scheduled
+        elif item.intended_at <= timestamp:
+            blocked = True
+            issues.append(
+                ReadinessIssue(
+                    code="schedule-past",
+                    severity="error",
+                    item=item.sequence,
+                    message="Intended time has passed or is due now; reschedule before launch.",
+                )
+            )
+    return _ScheduleAssessment(complete=complete, ready=not blocked, issues=tuple(issues))
+
+
+def _assess_evidence(
+    bundle: CampaignPlanBundle,
+    approval: CampaignPlanApproval | None,
+    handoff: CampaignPlanHandoffPacket | None,
+) -> _EvidenceAssessment:
+    issues: list[ReadinessIssue] = []
+    selected_approval = approval
+    handoff_id = handoff.handoff.handoff_id if handoff is not None else None
+    mismatch = False
+    if handoff is not None and approval is None:
+        selected_approval = handoff.approval
+    elif handoff is not None and approval is not None:
+        mismatch = approval.to_dict() != handoff.approval.to_dict()
+        if mismatch:
+            issues.append(
+                ReadinessIssue(
+                    code="approval-handoff-mismatch",
+                    severity="error",
+                    message=(
+                        "Provided approval does not match the approval embedded in the handoff."
+                    ),
+                )
+            )
+
+    approval_valid = False
+    approval_status: EvidenceStatus = "not-provided"
+    if selected_approval is not None:
+        approval_check = verify_campaign_plan_approval(bundle, selected_approval)
+        approval_valid = approval_check.valid and not mismatch
+        approval_status = "valid" if approval_valid else "invalid"
+        issues.extend(
+            ReadinessIssue(
+                code=_readiness_code("approval", approval_issue.code),
+                severity="error",
+                message=approval_issue.message,
+            )
+            for approval_issue in approval_check.issues
+        )
+
+    handoff_valid = False
+    handoff_status: EvidenceStatus = "not-provided"
+    if handoff is not None:
+        handoff_check = verify_campaign_plan_handoff(bundle, handoff)
+        handoff_valid = handoff_check.valid and approval_valid and not mismatch
+        handoff_status = "valid" if handoff_valid else "invalid"
+        issues.extend(
+            ReadinessIssue(
+                code=_readiness_code("handoff", handoff_issue.code),
+                severity="error",
+                path=handoff_issue.path,
+                message=handoff_issue.message,
+            )
+            for handoff_issue in handoff_check.issues
+        )
+    return _EvidenceAssessment(
+        approval=selected_approval,
+        approval_status=approval_status,
+        approval_valid=approval_valid,
+        handoff_status=handoff_status,
+        handoff_valid=handoff_valid,
+        handoff_id=handoff_id,
+        issues=tuple(issues),
+    )
+
+
+def _select_stage(
+    *,
+    quality_passed: bool,
+    schedule_ready: bool,
+    approval_provided: bool,
+    approval_valid: bool,
+    handoff_provided: bool,
+    handoff_valid: bool,
+) -> ReadinessStage:
+    if not quality_passed:
+        return "quality-blocked"
+    if not schedule_ready:
+        return "schedule-blocked"
+    if handoff_provided:
+        return "handoff-ready" if handoff_valid else "handoff-invalid"
+    if approval_provided:
+        return "approved" if approval_valid else "approval-invalid"
+    return "ready-for-approval"
 
 
 def build_campaign_plan_readiness(
@@ -174,95 +320,19 @@ def build_campaign_plan_readiness(
     timestamp = timestamp.astimezone(timezone.utc)
 
     quality = check_campaign_plan(bundle, warnings_as_errors=warnings_as_errors)
+    schedule = _assess_schedule(bundle, timestamp, require_scheduled=require_scheduled)
+    evidence = _assess_evidence(bundle, approval, handoff)
     issues = _quality_readiness_issues(quality.issues)
-    schedule_complete = all(item.intended_at is not None for item in bundle.items)
-    schedule_blocked = False
-    for item in bundle.items:
-        if item.intended_at is None:
-            issues.append(
-                ReadinessIssue(
-                    code="schedule-missing",
-                    severity="error" if require_scheduled else "warning",
-                    item=item.sequence,
-                    message=(
-                        "Item has no intended time."
-                        + (" A complete schedule is required." if require_scheduled else "")
-                    ),
-                )
-            )
-            schedule_blocked = schedule_blocked or require_scheduled
-        elif item.intended_at <= timestamp:
-            schedule_blocked = True
-            issues.append(
-                ReadinessIssue(
-                    code="schedule-past",
-                    severity="error",
-                    item=item.sequence,
-                    message="Intended time has passed or is due now; reschedule before launch.",
-                )
-            )
-    schedule_ready = not schedule_blocked
-
-    selected_approval = approval
-    approval_status: EvidenceStatus = "not-provided"
-    handoff_status: EvidenceStatus = "not-provided"
-    handoff_id: str | None = None
-    evidence_mismatch = False
-    if handoff is not None:
-        handoff_id = handoff.handoff.handoff_id
-        if approval is None:
-            selected_approval = handoff.approval
-        elif approval.to_dict() != handoff.approval.to_dict():
-            evidence_mismatch = True
-            issues.append(
-                ReadinessIssue(
-                    code="approval-handoff-mismatch",
-                    severity="error",
-                    message=(
-                        "Provided approval does not match the approval embedded in the handoff."
-                    ),
-                )
-            )
-
-    approval_valid = False
-    if selected_approval is not None:
-        approval_check = verify_campaign_plan_approval(bundle, selected_approval)
-        approval_valid = approval_check.valid and not evidence_mismatch
-        approval_status = "valid" if approval_valid else "invalid"
-        for approval_issue in approval_check.issues:
-            issues.append(
-                ReadinessIssue(
-                    code=f"approval-{approval_issue.code}",
-                    severity="error",
-                    message=approval_issue.message,
-                )
-            )
-
-    handoff_valid = False
-    if handoff is not None:
-        handoff_check = verify_campaign_plan_handoff(bundle, handoff)
-        handoff_valid = handoff_check.valid and approval_valid and not evidence_mismatch
-        handoff_status = "valid" if handoff_valid else "invalid"
-        for handoff_issue in handoff_check.issues:
-            issues.append(
-                ReadinessIssue(
-                    code=f"handoff-{handoff_issue.code}",
-                    severity="error",
-                    path=handoff_issue.path,
-                    message=handoff_issue.message,
-                )
-            )
-
-    if not quality.publishable:
-        stage: ReadinessStage = "quality-blocked"
-    elif not schedule_ready:
-        stage = "schedule-blocked"
-    elif handoff is not None:
-        stage = "handoff-ready" if handoff_valid else "handoff-invalid"
-    elif selected_approval is not None:
-        stage = "approved" if approval_valid else "approval-invalid"
-    else:
-        stage = "ready-for-approval"
+    issues.extend(schedule.issues)
+    issues.extend(evidence.issues)
+    stage = _select_stage(
+        quality_passed=quality.publishable,
+        schedule_ready=schedule.ready,
+        approval_provided=evidence.approval is not None,
+        approval_valid=evidence.approval_valid,
+        handoff_provided=handoff is not None,
+        handoff_valid=evidence.handoff_valid,
+    )
 
     item_reports = tuple(
         CampaignPlanReadinessItem(
@@ -289,12 +359,12 @@ def build_campaign_plan_readiness(
         quality_policy="warnings-as-errors" if warnings_as_errors else "errors-only",
         schedule_policy="required" if require_scheduled else "optional",
         quality_passed=quality.publishable,
-        schedule_complete=schedule_complete,
-        schedule_ready=schedule_ready,
-        approval_status=approval_status,
-        approval=selected_approval,
-        handoff_status=handoff_status,
-        handoff_id=handoff_id,
+        schedule_complete=schedule.complete,
+        schedule_ready=schedule.ready,
+        approval_status=evidence.approval_status,
+        approval=evidence.approval,
+        handoff_status=evidence.handoff_status,
+        handoff_id=evidence.handoff_id,
         issues=tuple(issues),
         items=item_reports,
     )

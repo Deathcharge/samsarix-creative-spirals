@@ -71,7 +71,7 @@
     "timestamp": {
       "type": "string",
       "format": "date-time",
-      "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
     },
     "evidenceStatus": {"enum": ["not-provided", "valid", "invalid"]},
     "approval": {
@@ -89,7 +89,11 @@
           "maxLength": 120,
           "pattern": "^(?=.*\\S)[^\\r\\n\\t\\u0000-\\u001F\\u007F]*$"
         },
-        "approvedAt": {"$ref": "#/$defs/timestamp"},
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
         "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
         "note": {"type": "string", "minLength": 1, "maxLength": 500}
       }

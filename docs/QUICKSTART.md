@@ -203,6 +203,7 @@ offline board:
 samsarix-campaign plan status \
   examples/launch-plan.json \
   --handoff handoff-outbox/local-first-release-sequence-sch_<handoff-id> \
+  --at 2026-08-05T12:00:00Z \
   --require-scheduled \
   --require-stage handoff \
   --html launch-readiness.html \

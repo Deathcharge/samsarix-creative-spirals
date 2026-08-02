@@ -216,6 +216,24 @@ def test_cli_plan_status_supports_evidence_html_and_ci_gates(
         main(
             [
                 "plan",
+                "status",
+                str(plan),
+                "--approval",
+                str(approval),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-stage",
+                "approval",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["stage"] == "approved"
+    assert (
+        main(
+            [
+                "plan",
                 "handoff",
                 "create",
                 str(plan),

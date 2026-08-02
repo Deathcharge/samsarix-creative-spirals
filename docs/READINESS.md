@@ -49,7 +49,7 @@ Verify the approval embedded in an exact handoff and write a self-contained stat
 
 ```bash
 samsarix-campaign plan status examples/launch-plan.json \
-  --handoff handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
+  --handoff handoff-outbox/local-first-release-sequence-sch_0123456789ab \
   --require-stage handoff \
   --html launch-readiness.html
 ```

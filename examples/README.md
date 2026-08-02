@@ -48,7 +48,7 @@ samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json 
 samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
 samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan handoff create examples/launch-plan.json examples/launch-plan.json.approval.json --output handoff-outbox
-samsarix-campaign plan status examples/launch-plan.json --approval examples/launch-plan.json.approval.json --require-stage approval --json
+samsarix-campaign plan status examples/launch-plan.json --approval examples/launch-plan.json.approval.json --at 2026-08-05T12:00:00Z --require-stage approval --json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 

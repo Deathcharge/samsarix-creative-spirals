@@ -10,6 +10,8 @@ import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 from samsarix_creative_spirals import (
+    CampaignPlanApproval,
+    CampaignPlanBundle,
     ConfigError,
     build_campaign_plan,
     build_campaign_plan_readiness,
@@ -19,6 +21,7 @@ from samsarix_creative_spirals import (
     load_campaign_plan,
     load_campaign_plan_handoff,
     load_readiness_schema,
+    load_plan_approval_schema,
     render_campaign_plan_readiness_html,
 )
 
@@ -36,7 +39,7 @@ def _bundle(
     campaign_data: dict[str, Any],
     *,
     intended_at: str | None = "2026-08-10T13:00:00Z",
-) -> Any:
+) -> CampaignPlanBundle:
     _write_json(root / "campaign.json", campaign_data)
     item: dict[str, Any] = {"campaign": "campaign.json"}
     if intended_at is not None:
@@ -54,7 +57,7 @@ def _bundle(
     return build_campaign_plan(load_campaign_plan(plan))
 
 
-def _approval(bundle: Any) -> Any:
+def _approval(bundle: CampaignPlanBundle) -> CampaignPlanApproval:
     return create_campaign_plan_approval(
         bundle,
         approved_by="Launch reviewer",
@@ -162,6 +165,9 @@ def test_readiness_uses_embedded_approval_and_verifies_exact_handoff(
 
     assert ready.stage == "handoff-ready" and ready.ready is True
     assert ready.approval_status == "valid" and ready.handoff_status == "valid"
+    Draft202012Validator(load_readiness_schema(), format_checker=FormatChecker()).validate(
+        ready.to_dict()
+    )
     assert mismatch.stage == "handoff-invalid"
     assert any(issue.code == "approval-handoff-mismatch" for issue in mismatch.issues)
     assert tampered.stage == "handoff-invalid"
@@ -211,3 +217,13 @@ def test_readiness_schema_is_a_valid_packaged_contract() -> None:
     Draft202012Validator.check_schema(schema)
     assert schema["properties"]["artifactType"]["const"] == "plan-readiness"
     assert "handoff-ready" in schema["properties"]["stage"]["enum"]
+
+
+def test_embedded_approval_schema_stays_synchronized() -> None:
+    readiness_approval = load_readiness_schema()["$defs"]["approval"]
+    plan_approval = load_plan_approval_schema()
+
+    assert readiness_approval == {
+        key: plan_approval[key]
+        for key in ("type", "additionalProperties", "required", "properties")
+    }
