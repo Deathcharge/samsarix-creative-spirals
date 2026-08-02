@@ -6,11 +6,17 @@ import samsarix_creative_spirals as package
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.4.0"
+    assert package.__version__ == "0.5.0"
     assert package.__all__ == [
+        "ApprovalCheck",
+        "ApprovalIssue",
+        "CampaignApproval",
         "CampaignBundle",
         "CampaignCheck",
         "CampaignConfig",
+        "CampaignDiff",
+        "CampaignDraftChange",
+        "CampaignFieldChange",
         "CampaignPlan",
         "CampaignPlanBundle",
         "CampaignPlanCheck",
@@ -24,13 +30,22 @@ def test_public_api_is_deliberate() -> None:
         "build_campaign_plan",
         "check_campaign",
         "check_campaign_plan",
+        "create_campaign_approval",
+        "diff_campaigns",
         "export_campaign",
+        "export_campaign_approval",
         "export_campaign_plan",
+        "load_adapter_schema",
+        "load_approval_schema",
+        "load_campaign",
+        "load_campaign_approval",
         "load_campaign_plan",
         "load_campaign_schema",
-        "load_campaign",
         "load_plan_schema",
+        "parse_approval_timestamp",
+        "render_plan_adapter",
         "render_plan_calendar",
+        "verify_campaign_approval",
     ]
 
 
@@ -64,6 +79,28 @@ def test_packaged_plan_schema_is_available() -> None:
     assert schema["properties"]["items"]["items"]["properties"]["intendedAt"]["format"] == (
         "date-time"
     )
+    intended_pattern = schema["properties"]["items"]["items"]["properties"]["intendedAt"]["pattern"]
+    assert re.fullmatch(intended_pattern, "2026-08-02T12:30:00Z")
+    assert not re.fullmatch(intended_pattern, "2026-08-02T12:30:00-00:00")
     campaign_pattern = schema["properties"]["items"]["items"]["properties"]["campaign"]["pattern"]
     assert re.fullmatch(campaign_pattern, "campaigns/release.json")
     assert not re.fullmatch(campaign_pattern, "campaigns/release.JSON")
+
+
+def test_packaged_approval_schema_is_available() -> None:
+    schema = package.load_approval_schema()
+
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["artifactType"]["const"] == "campaign"
+    assert schema["properties"]["qualityPolicy"]["enum"] == [
+        "errors-only",
+        "warnings-as-errors",
+    ]
+
+
+def test_packaged_adapter_schema_is_available() -> None:
+    schema = package.load_adapter_schema()
+
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["contract"]["const"] == "samsarix.plan-drafts"
+    assert schema["properties"]["items"]["maxItems"] == 100

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "planId": "scp_d8a68cdb1054",
+  "sourceHash": "d8a68cdb1054700b7e6571298df7724610bf352ca55b5e233432144aa8cc0ed1",
+  "name": "Local-first release sequence",
+  "generatedAt": "2026-08-02T12:30:00Z",
+  "adapter": "adapter.json",
+  "calendar": "calendar.ics",
+  "platformCsv": {
+    "x": "csv/x.csv",
+    "linkedin": "csv/linkedin.csv",
+    "bluesky": "csv/bluesky.csv",
+    "mastodon": "csv/mastodon.csv",
+    "discord": "csv/discord.csv"
+  },
+  "items": [
+    {
+      "sequence": 1,
+      "source": "campaign.json",
+      "campaignId": "scs_1a768ee9b10a",
+      "sourceHash": "1a768ee9b10a3bc82b267b7bc1e98c4e43089c147d89aff463151fba680b4d78",
+      "intendedAt": "2026-08-10T13:00:00Z",
+      "platforms": [
+        "x",
+        "linkedin",
+        "bluesky",
+        "mastodon",
+        "discord"
+      ]
+    },
+    {
+      "sequence": 2,
+      "source": "campaign-follow-up.json",
+      "campaignId": "scs_927dbf0d25d8",
+      "sourceHash": "927dbf0d25d897e79f3f5df4492817ef5a358f60c9d93476ad14b363d63d2de9",
+      "intendedAt": "2026-08-12T13:00:00Z",
+      "platforms": [
+        "x",
+        "linkedin",
+        "bluesky",
+        "mastodon",
+        "discord"
+      ]
+    }
+  ]
+}

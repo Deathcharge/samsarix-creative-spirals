@@ -63,7 +63,28 @@ samsarix-campaign schema
 samsarix-campaign schema --output campaign.schema.json
 ```
 
-## 4. Export the approved drafts
+## 4. Compare and record local approval
+
+Review a proposed campaign against the previously accepted file:
+
+```bash
+samsarix-campaign diff campaign-before.json campaign.json
+samsarix-campaign diff campaign-before.json campaign.json --json --exit-code
+```
+
+The second form returns exit `4` when semantic fields or generated drafts changed. After the
+quality gate and human review pass, create and verify source-bound metadata:
+
+```bash
+samsarix-campaign approval create campaign.json --by "Release reviewer"
+samsarix-campaign approval verify campaign.json campaign.json.approval.json
+```
+
+Any normalized source change makes verification return `4`. The reviewer label is not
+authenticated, so keep the record in a repository with appropriate write/review controls when
+identity matters.
+
+## 5. Export the approved drafts
 
 ```bash
 samsarix-campaign export campaign.json --output outbox
@@ -81,7 +102,7 @@ replacement is explicit:
 samsarix-campaign export campaign.json --output outbox --overwrite
 ```
 
-## 5. Review and export a complete campaign plan
+## 6. Review and export a complete campaign plan
 
 The included plan references two standalone campaign files and declares the channels every item
 must cover:
@@ -102,6 +123,7 @@ The exported directory contains:
 plan-outbox/
 └── local-first-release-sequence-scp_<content-id>/
     ├── manifest.json
+    ├── adapter.json
     ├── calendar.ics
     └── csv/
         ├── x.csv
@@ -112,8 +134,11 @@ plan-outbox/
 ```
 
 The calendar is an interchange artifact, not a scheduler. CSV files use stable Samsarix columns
-and explicit UTC timestamps for review or adapter input; publisher-specific imports may require a
-separate transformation.
+and explicit UTC timestamps for review and spreadsheet workflows; publisher-specific imports may
+require a separate transformation.
+Use `adapter.json` for programmatic importers that need exact draft text; its bundled contract is
+available with `samsarix-campaign schema --kind adapter`. The core package does not authenticate or
+publish on an adapter's behalf.
 
 ## Troubleshooting
 
@@ -126,5 +151,7 @@ separate transformation.
   metadata, or use an accurate `platformLimits.mastodon` value for the intended instance.
 - `resolves outside the plan directory`: move the campaign JSON beneath the plan directory and use
   a portable relative path without `..` or a symbolic-link escape.
+- `Approval invalid`: diff the approved and current source, repeat human review, then create a new
+  approval file; existing records are intentionally not overwritten.
 - `samsarix-campaign: command not found`: activate the environment where the package was installed,
   or run `python -m samsarix_creative_spirals` with the same arguments.

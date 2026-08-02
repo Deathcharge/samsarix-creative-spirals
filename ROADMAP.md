@@ -82,13 +82,16 @@ Implementation decisions:
 - Plans are capped at 100 items, matching the current paid Buffer bulk-upload ceiling while keeping
   local validation and review bounded.
 
-## Planned milestone — 0.5 review and interoperability
+## Active milestone — 0.5 review and interoperability
 
-- Add semantic campaign/config diff output for reviewers and automation.
-- Add explicit local approval metadata tied to a source hash, without claiming cryptographic
+- [x] Add semantic campaign/config diff output for reviewers and automation.
+- [x] Add explicit local approval metadata tied to a source hash, without claiming cryptographic
   identity until a signing model is designed and reviewed.
-- Publish versioned adapter contracts and fixtures for third-party draft importers.
-- Run a small pilot using the exact packaged wheel and record observed failures and adoption signals.
+- [x] Publish a versioned deterministic adapter contract, schema, and exact export fixture for
+  third-party draft importers.
+- [x] Run an internal end-to-end scenario using the exact packaged wheel and record technical
+  failures and fixes.
+- [ ] Run an external user pilot and record adoption signals that cannot be inferred from tests.
 
 ## Deliberate exclusions
 

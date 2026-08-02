@@ -1,0 +1,24 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Samsarix LLC//Creative Spirals//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:Local-first release sequence
+BEGIN:VEVENT
+UID:scp_d8a68cdb1054-1-scs_1a768ee9b10a@samsarix.com
+DTSTAMP:20260802T123000Z
+DTSTART:20260810T130000Z
+SUMMARY:Local-first campaign
+DESCRIPTION:Campaign ID: scs_1a768ee9b10a\nPlatforms: x\, linkedin\, bluesk
+ y\, mastodon\, discord
+TRANSP:TRANSPARENT
+END:VEVENT
+BEGIN:VEVENT
+UID:scp_d8a68cdb1054-2-scs_927dbf0d25d8@samsarix.com
+DTSTAMP:20260802T123000Z
+DTSTART:20260812T130000Z
+SUMMARY:Local-first campaign follow-up
+DESCRIPTION:Campaign ID: scs_927dbf0d25d8\nPlatforms: x\, linkedin\, bluesk
+ y\, mastodon\, discord
+TRANSP:TRANSPARENT
+END:VEVENT
+END:VCALENDAR

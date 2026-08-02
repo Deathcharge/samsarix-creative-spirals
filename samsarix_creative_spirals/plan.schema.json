@@ -45,7 +45,7 @@
           "intendedAt": {
             "type": "string",
             "format": "date-time",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
+            "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$",
             "description": "Optional RFC 3339 time with an explicit UTC offset or Z."
           }
         }

@@ -12,6 +12,20 @@ from .models import (
     QualityIssue,
 )
 from .quality import check_campaign
+from .review import (
+    ApprovalCheck,
+    ApprovalIssue,
+    CampaignApproval,
+    CampaignDiff,
+    CampaignDraftChange,
+    CampaignFieldChange,
+    create_campaign_approval,
+    diff_campaigns,
+    export_campaign_approval,
+    load_campaign_approval,
+    parse_approval_timestamp,
+    verify_campaign_approval,
+)
 from .plans import (
     CampaignPlan,
     CampaignPlanBundle,
@@ -23,17 +37,29 @@ from .plans import (
     check_campaign_plan,
     export_campaign_plan,
     load_campaign_plan,
+    render_plan_adapter,
     render_plan_calendar,
 )
-from .schema import load_campaign_schema, load_plan_schema
+from .schema import (
+    load_adapter_schema,
+    load_approval_schema,
+    load_campaign_schema,
+    load_plan_schema,
+)
 from .workflow import build_campaign, export_campaign, load_campaign
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
+    "ApprovalCheck",
+    "ApprovalIssue",
+    "CampaignApproval",
     "CampaignBundle",
     "CampaignCheck",
     "CampaignConfig",
+    "CampaignDiff",
+    "CampaignDraftChange",
+    "CampaignFieldChange",
     "CampaignPlan",
     "CampaignPlanBundle",
     "CampaignPlanCheck",
@@ -47,11 +73,20 @@ __all__ = [
     "build_campaign_plan",
     "check_campaign",
     "check_campaign_plan",
+    "create_campaign_approval",
+    "diff_campaigns",
     "export_campaign",
+    "export_campaign_approval",
     "export_campaign_plan",
+    "load_adapter_schema",
+    "load_approval_schema",
+    "load_campaign",
+    "load_campaign_approval",
     "load_campaign_plan",
     "load_campaign_schema",
-    "load_campaign",
     "load_plan_schema",
+    "parse_approval_timestamp",
+    "render_plan_adapter",
     "render_plan_calendar",
+    "verify_campaign_approval",
 ]

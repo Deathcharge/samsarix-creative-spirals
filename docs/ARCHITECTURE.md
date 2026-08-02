@@ -17,7 +17,8 @@ CampaignConfig
     │ platform formatting and limit checks
     ▼
 CampaignBundle
-    ├──────────────► deterministic quality report
+    ├──────────────► deterministic quality report / semantic diff
+    ├──────────────► source-bound local approval verification
     │ explicit export only
     ▼
 generated bundle directory
@@ -34,7 +35,7 @@ plan.json ──confined relative paths──► CampaignConfig (1..100)
     ▼
 CampaignPlanBundle
     ├──► aggregate quality report
-    └──► manifest.json + calendar.ics + per-platform CSV
+    └──► manifest.json + adapter.json + calendar.ics + per-platform CSV
 ```
 
 ## Components
@@ -73,20 +74,29 @@ References must remain beneath the plan directory even after symbolic-link resol
 plan identity includes each normalized campaign configuration, so a referenced content change
 changes the plan ID. Aggregate checks report missing required channels, duplicate or out-of-order
 times, and every campaign finding. Export writes a commit-last manifest, neutral CSV files, and an
-RFC 5545 calendar with UTF-8-safe 75-octet folding and CRLF line endings.
+RFC 5545 calendar with UTF-8-safe 75-octet folding and CRLF line endings. Its deterministic
+`adapter.json` preserves exact drafts for consumers of the versioned publisher-neutral contract.
 
-### `schema.py`, `campaign.schema.json`, and `plan.schema.json`
+### `review.py`
+
+Compares normalized campaign fields and generated platform drafts in stable order. Local approval
+creation first runs the selected quality policy, then records the exact full source hash. Approval
+verification compares current identity and re-runs that stored policy. Reviewer labels and files
+are intentionally non-cryptographic; repository access control remains outside the package.
+
+### `schema.py` and bundled JSON Schemas
 
 Package the authoring contract with the wheel and return a fresh decoded dictionary to library
-callers. The schema helps editors and generic validators, while `CampaignConfig` remains the
-authoritative runtime validator and provides more actionable error messages.
+callers. Campaign, plan, and approval schemas help editors and generic validators, while runtime
+models remain authoritative and provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign commands plus nested `plan validate`, `plan preview`, `plan check`,
-and `plan export` operations. Successful output and valid quality reports stay on stdout;
+Provides the single-campaign, diff, approval, and nested plan operations. Successful output and
+valid quality/review reports stay on stdout;
 configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
-quality-gate failures return `3`, and success returns `0`.
+quality-gate failures return `3`, semantic-change/stale-approval results return `4`, and success
+returns `0`.
 
 ## Trust boundaries
 
@@ -97,6 +107,7 @@ quality-gate failures return `3`, and success returns `0`.
 | Campaign fields | Text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, allowlists, hard platform ceilings. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
+| Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
 path. It never reads environment variables or logs draft content automatically.
@@ -114,7 +125,7 @@ path. It never reads environment variables or logs draft content automatically.
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
   record intent but trigger no background work.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.4 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.5 scope.
 
 ## Dependency and cost model
 

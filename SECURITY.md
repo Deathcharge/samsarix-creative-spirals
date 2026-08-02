@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.4.x` release line is supported. Earlier pre-productization and
+The latest `0.5.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -34,10 +34,19 @@ files selected by the invoking user. The supported workflow:
 - generates output names instead of trusting configuration as a filesystem path;
 - refuses implicit replacement of existing bundles and symbolic-link targets;
 - prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
-  spreadsheet applications treat them as text.
+  spreadsheet applications treat them as text;
+- binds local approval metadata to the normalized campaign SHA-256 and re-runs its recorded quality
+  policy during verification;
+- writes exact campaign text to deterministic adapter JSON without executing, transmitting, or
+  automatically logging that content.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 files as potentially sensitive content, review drafts before pasting them into a
 platform, and do not commit private drafts or secrets.
 Consumers that require byte-for-byte source content should use the manifest and campaign source
 rather than stripping the CSV protection.
+
+Approval records do not prove reviewer identity. `approvedBy` is untrusted text, the files are not
+signed, and anyone with filesystem write access can replace campaign and approval data. Use Git
+permissions and protected review workflows, or a separately reviewed signing system, when
+authenticated authorization or non-repudiation is required.
