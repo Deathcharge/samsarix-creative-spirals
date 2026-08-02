@@ -30,7 +30,7 @@ def _reject_duplicate_json_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def _ensure_bounded_json_nesting(text: str) -> None:
+def _ensure_bounded_json_nesting(text: str, *, kind: str = "campaign") -> None:
     """Reject deeply nested containers before parser behavior can vary by Python version."""
     depth = 0
     in_string = False
@@ -49,40 +49,45 @@ def _ensure_bounded_json_nesting(text: str) -> None:
         elif character in "[{":
             depth += 1
             if depth > MAX_JSON_NESTING:
-                raise ConfigError("campaign JSON nesting is too deep")
+                raise ConfigError(f"{kind} JSON nesting is too deep")
         elif character in "]}":
             depth -= 1
 
 
-def load_campaign(path: str | Path) -> CampaignConfig:
-    """Load a UTF-8 JSON campaign file with bounded input size."""
+def _load_json_object(path: str | Path, *, kind: str) -> dict[str, Any]:
+    """Load one bounded UTF-8 JSON object with kind-specific diagnostics."""
     config_path = Path(path)
     if config_path.exists() and not config_path.is_file():
-        raise ConfigError("campaign path must be a file")
+        raise ConfigError(f"{kind} path must be a file")
     try:
-        with config_path.open("rb") as campaign_file:
-            encoded = campaign_file.read(MAX_CONFIG_BYTES + 1)
+        with config_path.open("rb") as source_file:
+            encoded = source_file.read(MAX_CONFIG_BYTES + 1)
     except OSError as error:
-        raise ConfigError(f"cannot read campaign file: {error}") from error
+        raise ConfigError(f"cannot read {kind} file: {error}") from error
     if len(encoded) > MAX_CONFIG_BYTES:
-        raise ConfigError(f"campaign file exceeds the {MAX_CONFIG_BYTES}-byte limit")
+        raise ConfigError(f"{kind} file exceeds the {MAX_CONFIG_BYTES}-byte limit")
 
     try:
         text = encoded.decode("utf-8-sig")
     except UnicodeError as error:
-        raise ConfigError(f"cannot read campaign file as UTF-8: {error}") from error
-    _ensure_bounded_json_nesting(text)
+        raise ConfigError(f"cannot read {kind} file as UTF-8: {error}") from error
+    _ensure_bounded_json_nesting(text, kind=kind)
     try:
         raw = json.loads(text, object_pairs_hook=_reject_duplicate_json_keys)
     except json.JSONDecodeError as error:
         raise ConfigError(
-            f"invalid JSON at line {error.lineno}, column {error.colno}: {error.msg}"
+            f"invalid {kind} JSON at line {error.lineno}, column {error.colno}: {error.msg}"
         ) from error
     except RecursionError as error:
-        raise ConfigError("campaign JSON nesting is too deep") from error
+        raise ConfigError(f"{kind} JSON nesting is too deep") from error
     if not isinstance(raw, dict):
-        raise ConfigError("campaign configuration must be a JSON object")
-    return CampaignConfig.from_dict(raw)
+        raise ConfigError(f"{kind} configuration must be a JSON object")
+    return raw
+
+
+def load_campaign(path: str | Path) -> CampaignConfig:
+    """Load a UTF-8 JSON campaign file with bounded input size."""
+    return CampaignConfig.from_dict(_load_json_object(path, kind="campaign"))
 
 
 def _canonical_source(config: CampaignConfig) -> bytes:
@@ -157,7 +162,7 @@ def export_campaign(
     exported_at: datetime | None = None,
 ) -> Path:
     """Persist a bundle beneath a generated safe path and return that path."""
-    root = Path(output_root).resolve()
+    root = Path(os.path.abspath(output_root))
     if root.exists() and root.is_symlink():
         raise OSError(f"refusing to export through a symbolic-link directory: {root}")
     root.mkdir(parents=True, exist_ok=True)

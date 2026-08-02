@@ -27,7 +27,7 @@ def test_load_reports_json_location(tmp_path: Path) -> None:
     config_path = tmp_path / "broken.json"
     config_path.write_text('{"schemaVersion":', encoding="utf-8")
 
-    with pytest.raises(ConfigError, match=r"line 1, column"):
+    with pytest.raises(ConfigError, match=r"invalid campaign JSON at line 1, column"):
         load_campaign(config_path)
 
 

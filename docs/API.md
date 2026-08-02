@@ -38,6 +38,13 @@ One stable quality finding with `code`, `severity`, `platform`, and human-readab
 An immutable quality result with `campaign_id`, `publishable`, and ordered `issues`. `to_dict()`
 returns the same schema used by `samsarix-campaign check --json`.
 
+### Campaign-plan models
+
+`CampaignPlan` is the validated source sequence and contains immutable `CampaignPlanItem` values.
+`CampaignPlanBundle` contains deterministic `PlannedCampaign` builds. `PlanIssue` and
+`CampaignPlanCheck` provide the aggregate quality contract, including a one-based item number and
+optional campaign/platform context. Every model has `to_dict()` for stable JSON output.
+
 ### `ConfigError`
 
 Subclasses `ValueError`. `issues` is a tuple of one or more actionable validation messages. File
@@ -86,6 +93,43 @@ Loads a fresh dictionary from the JSON Schema bundled in the installed wheel. It
 network access and is useful for editor, form, or CI integration. The CLI exposes the same artifact
 through `samsarix-campaign schema`.
 
+### `load_campaign_plan(path) -> CampaignPlan`
+
+Reads a bounded UTF-8 plan, resolves its campaign references beneath the plan directory, and loads
+each campaign through the same validator as `load_campaign`. Plans contain 1–100 items. Campaign
+paths are forward-slash relative `.json` paths without drive, root, empty, dot, or parent segments;
+resolved symbolic-link escapes are rejected. `intendedAt` values require an explicit offset or `Z`
+and normalize to UTC.
+
+### `build_campaign_plan(plan) -> CampaignPlanBundle`
+
+Builds every item in source order. The deterministic plan hash covers the normalized plan,
+reference names, normalized UTC times, and every referenced normalized campaign configuration.
+
+### `check_campaign_plan(bundle, *, warnings_as_errors=False) -> CampaignPlanCheck`
+
+Runs every campaign check, fails on missing `requiredPlatforms`, and reports duplicate or
+out-of-order intended times. Timing/order findings are warnings by default and errors when
+`warnings_as_errors=True`.
+
+### `render_plan_calendar(bundle, *, generated_at) -> str`
+
+Returns an RFC 5545 calendar using UTC date-times, CRLF lines, and UTF-8-safe 75-octet folding.
+Scheduled items are transparent `VEVENT` components; unscheduled items are `VTODO` components.
+`generated_at` must be timezone-aware because it supplies the required `DTSTAMP` values.
+
+### `export_campaign_plan(bundle, output_root="plan-outbox", *, overwrite=False, generated_at=None) -> Path`
+
+Writes a plan manifest, `calendar.ics`, and one UTF-8 CSV per used platform. CSV columns are stable
+and publisher-neutral: plan/campaign identity, sequence, normalized intended UTC time, content,
+counts, truncation, and warnings. The same generated-name, explicit-overwrite, symbolic-link, and
+manifest-last safety model applies as campaign export.
+
+### `load_plan_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the plan schema bundled in the wheel. The CLI equivalent is
+`samsarix-campaign schema --kind plan`.
+
 ## Example
 
 ```python
@@ -116,6 +160,6 @@ else:
 ## Compatibility policy
 
 The package is pre-1.0. The exported names, JSON `schemaVersion: 1`, manifest shape, and documented
-CLI behavior are the compatibility surface for 0.3.x. Internal helpers and exact prose in warning
+CLI behavior are the compatibility surface for 0.4.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

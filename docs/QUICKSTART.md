@@ -81,6 +81,40 @@ replacement is explicit:
 samsarix-campaign export campaign.json --output outbox --overwrite
 ```
 
+## 5. Review and export a complete campaign plan
+
+The included plan references two standalone campaign files and declares the channels every item
+must cover:
+
+```bash
+samsarix-campaign plan validate examples/launch-plan.json --json
+samsarix-campaign plan preview examples/launch-plan.json
+samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
+```
+
+Plan paths use forward slashes, remain relative to the plan file, and cannot escape its directory.
+`intendedAt` is optional; when present it must be RFC 3339 with an explicit offset or `Z`.
+
+The exported directory contains:
+
+```text
+plan-outbox/
+└── local-first-release-sequence-scp_<content-id>/
+    ├── manifest.json
+    ├── calendar.ics
+    └── csv/
+        ├── x.csv
+        ├── linkedin.csv
+        ├── bluesky.csv
+        ├── mastodon.csv
+        └── discord.csv
+```
+
+The calendar is an interchange artifact, not a scheduler. CSV files use stable Samsarix columns
+and explicit UTC timestamps for review or adapter input; publisher-specific imports may require a
+separate transformation.
+
 ## Troubleshooting
 
 - `unknown field(s)`: fix the spelling or remove unsupported keys.
@@ -90,5 +124,7 @@ samsarix-campaign export campaign.json --output outbox --overwrite
   root, or explicitly pass `--overwrite`.
 - `Quality check failed`: inspect the listed platform findings; shorten the source, reduce suffix
   metadata, or use an accurate `platformLimits.mastodon` value for the intended instance.
+- `resolves outside the plan directory`: move the campaign JSON beneath the plan directory and use
+  a portable relative path without `..` or a symbolic-link escape.
 - `samsarix-campaign: command not found`: activate the environment where the package was installed,
   or run `python -m samsarix_creative_spirals` with the same arguments.

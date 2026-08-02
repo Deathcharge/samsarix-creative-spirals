@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "name": "Local-first campaign follow-up",
+  "title": "See the review workflow in practice",
+  "body": "Follow the quickstart to validate a campaign plan, inspect every bounded draft, and hand portable artifacts to an approved publishing process.",
+  "link": "https://github.com/Deathcharge/samsarix-creative-spirals#readme",
+  "hashtags": ["localfirst", "contentops"],
+  "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"]
+}

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "Local-first release sequence",
+  "requiredPlatforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+  "items": [
+    {
+      "campaign": "campaign.json",
+      "intendedAt": "2026-08-10T13:00:00Z"
+    },
+    {
+      "campaign": "campaign-follow-up.json",
+      "intendedAt": "2026-08-12T13:00:00Z"
+    }
+  ]
+}

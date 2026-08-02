@@ -2,10 +2,20 @@
 
 All notable changes to this project are documented here.
 
-## Unreleased
+## 0.4.0 - 2026-08-01
 
 - Require setuptools 83 or newer for isolated builds and pin development to 83.0.0, closing
   GHSA-h35f-9h28-mq5c in the source-distribution toolchain.
+- Added bounded campaign plans with confined relative campaign references and explicit-offset
+  intended publication times normalized to UTC.
+- Added aggregate plan validation, preview, and quality checks for missing channels, duplicate or
+  out-of-order times, and every underlying campaign finding.
+- Added safe plan export with a manifest, one publisher-neutral CSV per platform, and an RFC 5545
+  calendar containing scheduled events and unscheduled tasks.
+- Hardened CSV export against spreadsheet formulas, removed stale platform files during explicit
+  overwrite, and normalized RFC 3339 fractional seconds consistently across supported runtimes.
+- Added the packaged plan JSON Schema and typed plan models/functions to the public Python API.
+- Fixed output-root symbolic-link detection by preserving the selected path before inspection.
 
 ## 0.3.0 - 2026-08-01
 

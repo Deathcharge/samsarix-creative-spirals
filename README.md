@@ -1,15 +1,16 @@
 # Samsarix Creative Spirals
 
-Samsarix Creative Spirals is a local-first CLI and typed Python library that turns one approved
-source draft into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign input,
-applies platform-aware limits, reports every truncation, and exports a deterministic review bundle.
+Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
+drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
+input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
+publisher-neutral CSV, and portable calendars.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.3 alpha.** Federated-platform preview, quality gates, and local export are implemented
-> and tested. Automatic
-> publishing, scheduling, analytics, and AI generation are deliberately not included.
+> Maturity: **0.4 alpha.** Federated-platform drafts, aggregate campaign-plan quality gates, and
+> local export are implemented and tested. Automatic publishing, scheduling, analytics, and AI
+> generation are deliberately not included.
 
 ## Fastest successful path
 
@@ -101,6 +102,7 @@ Print the bundled JSON Schema for editor or CI integration, or write it to a new
 
 ```bash
 samsarix-campaign schema
+samsarix-campaign schema --kind plan
 samsarix-campaign schema --output campaign.schema.json
 ```
 
@@ -125,6 +127,42 @@ samsarix-campaign check campaign.json --warnings-as-errors
 This command performs no writes or network calls. A successful JSON report has
 `"publishable": true`; findings have stable `code`, `severity`, `platform`, and `message` fields.
 
+## Campaign plans
+
+A plan keeps a launch sequence reviewable in Git while reusing standalone campaign files. Campaign
+paths are portable, relative to the plan, and confined beneath its directory. Intended times must
+include `Z` or an explicit offset and are normalized to UTC.
+
+```json
+{
+  "schemaVersion": 1,
+  "name": "Release sequence",
+  "requiredPlatforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+  "items": [
+    {"campaign": "campaign.json", "intendedAt": "2026-08-10T13:00:00Z"},
+    {"campaign": "campaign-follow-up.json"}
+  ]
+}
+```
+
+Validate every reference, preview the sequence, run the aggregate gate, then export:
+
+```bash
+samsarix-campaign plan validate examples/launch-plan.json
+samsarix-campaign plan preview examples/launch-plan.json
+samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
+```
+
+The plan gate reports missing required channels and campaign-level truncation as errors. Duplicate
+times, out-of-order scheduled items, and ordinary review warnings are visible but non-blocking
+unless `--warnings-as-errors` is set. Unscheduled items are allowed.
+
+Plan export writes `manifest.json`, `calendar.ics`, and one UTF-8 CSV per used platform. Scheduled
+items become transparent calendar events; unscheduled items become tasks. CSV timestamps are
+explicit UTC values and the stable columns are publisher-neutral—they are intended for review and
+adapter input, not presented as a drop-in template for every publisher.
+
 ## CLI reference
 
 ```text
@@ -135,7 +173,11 @@ samsarix-campaign validate CONFIG [--json]
 samsarix-campaign preview CONFIG [--json]
 samsarix-campaign check CONFIG [--warnings-as-errors] [--json]
 samsarix-campaign export CONFIG [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--output PATH]
+samsarix-campaign plan validate PLAN [--json]
+samsarix-campaign plan preview PLAN [--json]
+samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
+samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
+samsarix-campaign schema [--kind campaign|plan] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
@@ -188,12 +230,13 @@ console command. The package has no third-party runtime dependencies.
 - `formatters.py` creates bounded platform drafts without network access.
 - `workflow.py` computes deterministic IDs and safely exports review bundles.
 - `quality.py` evaluates deterministic, machine-readable campaign quality gates.
-- `schema.py` exposes the campaign JSON Schema bundled in the wheel.
+- `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
+- `schema.py` exposes campaign and plan JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
-`build_campaign` and `check_campaign` have no file or network side effects. Only `load_campaign`, `init`, `schema
---output`, and `export_campaign` touch disk. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for trust
-boundaries and failure behavior.
+Build and check functions have no file or network side effects. Load, explicit schema output, and
+export functions touch disk; none contact a platform. See [ARCHITECTURE.md](docs/ARCHITECTURE.md)
+for trust boundaries and failure behavior.
 
 ## Security, privacy, cost, and limitations
 
@@ -202,6 +245,8 @@ boundaries and failure behavior.
 - Input files are capped at 1 MB and content fields are bounded. Duplicate or excessively nested
   JSON, unknown fields, control characters, unsafe URL schemes, URL credentials, duplicate
   platforms, and invalid hashtags are rejected.
+- Plans contain at most 100 items. Referenced campaign paths cannot be absolute, traverse parents,
+  use platform-specific separators, or escape through symbolic links.
 - Export paths are generated from a sanitized name plus a content hash. Existing bundles are not
   overwritten without explicit opt-in, and symbolic-link bundle targets are rejected.
 - Discord broadcast mentions are surfaced as warnings. This tool never posts them.
@@ -210,8 +255,8 @@ boundaries and failure behavior.
   composer before publishing; this tool does not claim API conformance.
 - Mastodon limits are instance-configurable; the default is 500 and `platformLimits` records a
   known instance maximum without contacting that instance.
-- Media, per-account capabilities, calendars, approvals, network publishing, and analytics are
-  outside the 0.3 scope.
+- Media, per-account capabilities, approvals, network publishing, and analytics are outside the
+  0.4 scope. Calendar files record intent; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
 

@@ -25,3 +25,15 @@ python examples/library_usage.py
 ```
 
 This script writes an `outbox/` directory. It does not use the network or publish content.
+
+`launch-plan.json` references `campaign.json` and `campaign-follow-up.json` as one release sequence:
+
+```bash
+samsarix-campaign plan validate examples/launch-plan.json
+samsarix-campaign plan preview examples/launch-plan.json
+samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
+```
+
+The plan export contains a manifest, an RFC 5545 calendar, and one publisher-neutral CSV for each
+used platform. It records intended UTC times but never schedules or publishes a post.

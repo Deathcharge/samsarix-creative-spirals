@@ -44,7 +44,7 @@ portable artifacts to any approved publishing process.
    copied manually or consumed later by separately permissioned Buffer, Typefully, Postiz, or
    custom adapters.
 
-## Active milestone — 0.3 federated quality gates
+## Completed milestone — 0.3 federated quality gates
 
 - Add Bluesky output using the official 300-grapheme/3,000-byte text constraints.
 - Add Mastodon output with its documented 500-character default.
@@ -63,12 +63,24 @@ Official platform evidence:
   status limits: <https://docs.joinmastodon.org/user/posting/> and
   <https://docs.joinmastodon.org/entities/Instance/>.
 
-## Planned milestone — 0.4 campaign plans
+## Completed milestone — 0.4 campaign plans
 
 - Define a bounded multi-campaign plan schema with optional intended publication times.
 - Validate and preview a complete launch sequence in one command.
 - Export per-platform CSV plus a portable calendar artifact without scheduling or publishing.
 - Report duplicate times, missing channels, ordering mistakes, and per-item quality failures.
+
+Implementation decisions:
+
+- Plans reference reusable, standalone campaign files through portable paths confined beneath the
+  plan directory; they do not embed or depend on another repository.
+- Intended times require an explicit offset and normalize to UTC. They express human intent only;
+  there is no clock, queue, scheduler, or publisher.
+- CSV uses a stable Samsarix interchange contract rather than claiming universal publisher import
+  compatibility. RFC 5545 calendar export uses transparent events for scheduled items and tasks for
+  unscheduled items: <https://www.rfc-editor.org/rfc/rfc5545>.
+- Plans are capped at 100 items, matching the current paid Buffer bulk-upload ceiling while keeping
+  local validation and review bounded.
 
 ## Planned milestone — 0.5 review and interoperability
 

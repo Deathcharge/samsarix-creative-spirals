@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.3.x` release line is supported. Earlier pre-productization and
+The latest `0.4.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -18,8 +18,8 @@ time SLA.
 
 ## Security and privacy boundary
 
-Samsarix Creative Spirals reads local UTF-8 JSON and writes local Markdown and
-JSON files selected by the invoking user. The supported workflow:
+Samsarix Creative Spirals reads local UTF-8 JSON and writes local Markdown, JSON, CSV, and iCalendar
+files selected by the invoking user. The supported workflow:
 
 - performs no network requests, subprocess execution, dynamic imports, telemetry,
   account access, or remote publishing;
@@ -29,9 +29,15 @@ JSON files selected by the invoking user. The supported workflow:
 - constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
   documented instance-specific maximum;
 - evaluates quality gates deterministically without writing files or contacting platforms;
+- confines plan campaign references beneath the plan directory and rejects absolute, parent,
+  backslash, drive-qualified, and symbolic-link escape paths;
 - generates output names instead of trusting configuration as a filesystem path;
-- refuses implicit replacement of existing bundles and symbolic-link targets.
+- refuses implicit replacement of existing bundles and symbolic-link targets;
+- prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
+  spreadsheet applications treat them as text.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 files as potentially sensitive content, review drafts before pasting them into a
 platform, and do not commit private drafts or secrets.
+Consumers that require byte-for-byte source content should use the manifest and campaign source
+rather than stripping the CSV protection.
