@@ -9,6 +9,7 @@ import pytest
 from jsonschema import Draft202012Validator
 
 from samsarix_creative_spirals import (
+    CampaignApproval,
     ConfigError,
     CampaignBundle,
     ContentPolicy,
@@ -270,6 +271,14 @@ def test_policy_schema_is_valid_and_accepts_normalized_source() -> None:
     )
 
 
+def test_embedded_content_policy_binding_schemas_stay_synchronized() -> None:
+    binding = load_content_policy_schema()["$defs"]["binding"]
+
+    assert load_approval_schema()["$defs"]["contentPolicy"] == binding
+    assert load_plan_approval_schema()["$defs"]["contentPolicy"] == binding
+    assert load_readiness_schema()["$defs"]["contentPolicy"] == binding
+
+
 def test_campaign_approval_requires_the_bound_policy(campaign_data: dict[str, Any]) -> None:
     bundle = _bundle(campaign_data)
     policy = _policy({"id": "no-internal", "kind": "blockedPhrase", "phrase": "internal only"})
@@ -308,8 +317,6 @@ def test_content_policy_binding_parser_rejects_tampering(
     }
 
     with pytest.raises(ConfigError) as exc:
-        from samsarix_creative_spirals import CampaignApproval
-
         CampaignApproval.from_dict(raw)
 
     message = str(exc.value)
@@ -366,17 +373,33 @@ def test_plan_approval_handoff_and_readiness_require_bound_policy(
         content_policy=policy,
     )
     packet = load_campaign_plan_handoff(packet_path)
-    assert verify_campaign_plan_handoff(bundle, packet, content_policy=policy).valid
-    assert "approval-content-policy-required" in {
-        issue.code for issue in verify_campaign_plan_handoff(bundle, packet).issues
+    assert packet.content_policy == policy
+    assert verify_campaign_plan_handoff(bundle, packet).valid
+
+    changed_policy = _policy({"id": "no-secret", "kind": "blockedPhrase", "phrase": "secret"})
+    assert "content-policy-argument-changed" in {
+        issue.code
+        for issue in verify_campaign_plan_handoff(
+            bundle, packet, content_policy=changed_policy
+        ).issues
     }
 
     readiness = build_campaign_plan_readiness(
         bundle,
         handoff=packet,
         assessed_at=datetime(2026, 8, 5, 12, tzinfo=timezone.utc),
-        content_policy=policy,
     )
     assert readiness.stage == "handoff-ready"
     assert readiness.content_policy == policy.binding
     Draft202012Validator(load_readiness_schema()).validate(readiness.to_dict())
+
+    policy_path = packet_path / "content-policy.json"
+    tampered = json.loads(policy_path.read_text(encoding="utf-8"))
+    tampered["rules"][0]["phrase"] = "changed after approval"
+    policy_path.write_text(json.dumps(tampered), encoding="utf-8")
+    tampered_packet = load_campaign_plan_handoff(packet_path)
+    tampered_codes = {
+        issue.code for issue in verify_campaign_plan_handoff(bundle, tampered_packet).issues
+    }
+    assert "approval-content-policy-changed" in tampered_codes
+    assert "artifact-metadata-changed" in tampered_codes

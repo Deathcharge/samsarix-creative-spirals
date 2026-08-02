@@ -256,7 +256,7 @@ identity, idempotency, authorization, and compatibility rules.
 ## Approved downstream handoff
 
 After the complete plan is approved, create one non-overwriting packet that contains the embedded
-approval and exact plan-export artifacts:
+approval, any approval-bound normalized policy, and exact plan-export artifacts:
 
 ```bash
 samsarix-campaign plan handoff create \
@@ -268,9 +268,9 @@ samsarix-campaign plan handoff verify \
   handoff-outbox/RELEASE-SEQUENCE-SCH_ID
 ```
 
-Verification rechecks current source and the recorded quality policy, regenerates every expected
-artifact, checks byte lengths and SHA-256 values, and rejects missing, substituted, symbolic-link,
-or extra files. The packet is the safe input boundary for a manual workflow or separately
+Verification rechecks current source and the recorded quality policy, uses an embedded content
+policy automatically, regenerates every expected artifact, checks byte lengths and SHA-256 values,
+and rejects missing, substituted, symbolic-link, or extra files. The packet is the safe input boundary for a manual workflow or separately
 permissioned adapter; it does not connect an account, queue, schedule, or publish anything.
 
 The hashes are unsigned integrity checks. They do not authenticate the reviewer or producer and

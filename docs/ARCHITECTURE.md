@@ -17,7 +17,8 @@ CampaignConfig
     │ platform formatting and limit checks
     ▼
 CampaignBundle
-    ├── content-policy.json ──► deterministic quality report / semantic diff
+    ├── content-policy.json ──► deterministic quality report
+    ├── another CampaignBundle ──► semantic diff of campaign fields and rendered drafts
     ├──────────────► source-bound local approval verification
     │ explicit export only
     ▼
@@ -38,7 +39,7 @@ CampaignPlanBundle
     ├──► deterministic plan diff / source-bound plan approval verification
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
     ├──► exclusive approved handoff packet
-            ├── embedded approval.json + handoff.json
+            ├── embedded approval.json + optional content-policy.json + handoff.json
             └── exact regenerated plan-export artifacts
     └──► point-in-time readiness JSON / exclusive offline HTML board
             └── quality + schedule + approval + handoff evidence state
@@ -114,11 +115,12 @@ approval v1 contract remains separate so existing consumers do not need to disti
 
 Creates an approved plan handoff only after current approval verification and a generation time at
 or after approval. The handoff manifest binds plan identity, producer version, generation time,
-embedded approval, and fixed rendered artifacts by size and SHA-256. Export is exclusive and uses
-a private temporary sibling plus directory rename. Verification regenerates exact bytes from
-current source, rejects unexpected entries, symbolic links, and non-regular files, and checks that
-files remain stable during reads. Hashes are unsigned integrity metadata, not authenticated
-provenance or authorization.
+embedded approval, optional normalized approval-bound policy, and fixed rendered artifacts by size
+and SHA-256. Export is exclusive and uses a private temporary sibling plus directory rename.
+Verification uses the embedded policy by default, regenerates exact bytes from current source,
+rejects unexpected entries, symbolic links, and non-regular files, and checks that files remain
+stable during reads. Hashes are unsigned integrity metadata, not authenticated provenance or
+authorization.
 
 ### `readiness.py`
 
@@ -158,7 +160,7 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
-| Approved handoff packet | Local directory, metadata, and generated files | Exclusive atomic creation; fixed shape; source, approval, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
+| Approved handoff packet | Local directory, metadata, approval/policy evidence, and generated files | Exclusive atomic creation; fixed shape; source, approval, embedded-policy, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem

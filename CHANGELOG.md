@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
   truncation, with stable finding codes and rule IDs in campaign, plan, and readiness results.
 - Added optional policy bindings to campaign and plan approval v1; verification, approved handoff,
   and readiness now reject an omitted, newly introduced, or changed policy relative to approval.
+- Made policy-bound handoffs self-contained by embedding normalized, checksummed policy source;
+  handoff verification and readiness use it automatically and can cross-check an external copy.
 - Added public immutable policy types/loaders/evaluator, `policy validate`, `--policy` across all
   relevant CLI gates, a packaged Draft 2020-12 schema, offline readiness display, and a runnable
   example.

@@ -56,9 +56,10 @@ samsarix-campaign plan status examples/launch-plan.json \
 
 If both `--approval` and `--handoff` are supplied, the explicit approval must exactly equal the
 record embedded in the packet. The handoff can otherwise supply its embedded approval by itself.
-Add `--policy POLICY` to assess literal phrase rules and to verify any policy binding in approval
-or handoff evidence. The JSON and HTML reports show the applied policy identity. See
-[`POLICIES.md`](POLICIES.md).
+Add `--policy POLICY` to assess literal phrase rules and to verify a standalone approval binding.
+A policy-bound handoff supplies its embedded normalized policy automatically; an explicit policy
+then acts as an additional equality check. The JSON and HTML reports show the applied policy
+identity. See [`POLICIES.md`](POLICIES.md).
 
 ## Stages
 

@@ -328,14 +328,15 @@ def build_campaign_plan_readiness(
     if timestamp.utcoffset() is None:
         raise ConfigError("assessed_at must include timezone information")
     timestamp = timestamp.astimezone(timezone.utc)
+    effective_policy = content_policy or (handoff.content_policy if handoff is not None else None)
 
     quality = check_campaign_plan(
         bundle,
         warnings_as_errors=warnings_as_errors,
-        content_policy=content_policy,
+        content_policy=effective_policy,
     )
     schedule = _assess_schedule(bundle, timestamp, require_scheduled=require_scheduled)
-    evidence = _assess_evidence(bundle, approval, handoff, content_policy=content_policy)
+    evidence = _assess_evidence(bundle, approval, handoff, content_policy=effective_policy)
     issues = _quality_readiness_issues(quality.issues)
     issues.extend(schedule.issues)
     issues.extend(evidence.issues)
@@ -381,7 +382,7 @@ def build_campaign_plan_readiness(
         handoff_id=evidence.handoff_id,
         issues=tuple(issues),
         items=item_reports,
-        content_policy=content_policy.binding if content_policy is not None else None,
+        content_policy=effective_policy.binding if effective_policy is not None else None,
     )
 
 
@@ -441,10 +442,8 @@ def render_campaign_plan_readiness_html(
     )
     stage_label = report.stage.replace("-", " ").title()
     approval_detail = (
-        _escape(
-            f"{report.approval.approved_by} at "
-            f"{report.approval.to_dict()['approvedAt']} ({report.approval.quality_policy})"
-        )
+        f"{report.approval.approved_by} at "
+        f"{report.approval.to_dict()['approvedAt']} ({report.approval.quality_policy})"
         if report.approval
         else "Not provided"
     )
@@ -493,7 +492,7 @@ code {{ overflow-wrap: anywhere; }} li {{ margin: .5rem 0; }}
 {'Ready' if report.schedule_ready else 'Blocked'};
 {'complete' if report.schedule_complete else 'incomplete'}</p>
 <p class="fact"><strong>Approval</strong><br>{_escape(report.approval_status)}<br>
-{approval_detail}</p>
+{_escape(approval_detail)}</p>
 <p class="fact"><strong>Handoff</strong><br>{_escape(report.handoff_status)}<br>
 {_escape(report.handoff_id or 'Not provided')}</p>
 </div></section>

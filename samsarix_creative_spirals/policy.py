@@ -218,65 +218,16 @@ def _parse_rule(
     if unknown:
         issues.append(f"{field} has unknown field(s): {', '.join(unknown)}")
 
-    rule_id_value = value.get("id")
-    rule_id = rule_id_value if isinstance(rule_id_value, str) else ""
-    if not _RULE_ID_RE.fullmatch(rule_id):
-        issues.append(f"{field}.id must match {_RULE_ID_RE.pattern}")
-    elif rule_id in seen_ids:
-        issues.append(f"{field}.id duplicates {rule_id}")
-    else:
-        seen_ids.add(rule_id)
+    rule_id = _parse_rule_id(value, field=field, seen_ids=seen_ids, issues=issues)
 
     kind_value = value.get("kind")
     kind = kind_value if isinstance(kind_value, str) else ""
     if kind not in {"blockedPhrase", "requiredPhrase"}:
         issues.append(f"{field}.kind must be blockedPhrase or requiredPhrase")
 
-    phrase_value = value.get("phrase")
-    if not isinstance(phrase_value, str):
-        issues.append(f"{field}.phrase must be a string")
-        phrase = ""
-    else:
-        phrase = _normalize_text(phrase_value).strip()
-        if not phrase:
-            issues.append(f"{field}.phrase must not be empty")
-        elif len(phrase) > MAX_POLICY_PHRASE_LENGTH:
-            issues.append(f"{field}.phrase must be at most {MAX_POLICY_PHRASE_LENGTH} characters")
-        if _has_control(phrase):
-            issues.append(f"{field}.phrase must be a single line without control characters")
-
-    targets_value = value.get("platforms")
-    targets: list[str] = []
-    if targets_value is None:
-        targets.extend(SUPPORTED_PLATFORMS)
-    elif not isinstance(targets_value, list):
-        issues.append(f"{field}.platforms must be a non-empty array")
-    else:
-        if not targets_value:
-            issues.append(f"{field}.platforms must contain at least one platform")
-        if len(targets_value) > len(SUPPORTED_PLATFORMS):
-            issues.append(
-                f"{field}.platforms must contain at most {len(SUPPORTED_PLATFORMS)} items"
-            )
-        selected: set[str] = set()
-        for target_index, target_value in enumerate(targets_value):
-            target_field = f"{field}.platforms[{target_index}]"
-            if not isinstance(target_value, str):
-                issues.append(f"{target_field} must be a string")
-                continue
-            target = target_value.strip().lower()
-            if target not in SUPPORTED_PLATFORMS:
-                issues.append(f"{target_field} must be one of: {', '.join(SUPPORTED_PLATFORMS)}")
-            elif target in selected:
-                issues.append(f"{target_field} duplicates {target}")
-            else:
-                selected.add(target)
-        targets.extend(platform for platform in SUPPORTED_PLATFORMS if platform in selected)
-
-    severity_value = value.get("severity", "error")
-    severity = severity_value if isinstance(severity_value, str) else ""
-    if severity not in {"warning", "error"}:
-        issues.append(f"{field}.severity must be warning or error")
+    phrase = _parse_phrase(value, field=field, issues=issues)
+    targets = _parse_platforms(value, field=field, issues=issues)
+    severity = _parse_severity(value, field=field, issues=issues)
     case_sensitive_value = value.get("caseSensitive", False)
     if not isinstance(case_sensitive_value, bool):
         issues.append(f"{field}.caseSensitive must be a boolean")
@@ -294,6 +245,78 @@ def _parse_rule(
         severity=severity,
         case_sensitive=case_sensitive,
     )
+
+
+def _parse_rule_id(
+    value: Mapping[str, Any],
+    *,
+    field: str,
+    seen_ids: set[str],
+    issues: list[str],
+) -> str:
+    """Parse and register one bounded, unique rule identifier."""
+    rule_id_value = value.get("id")
+    rule_id = rule_id_value if isinstance(rule_id_value, str) else ""
+    if not _RULE_ID_RE.fullmatch(rule_id):
+        issues.append(f"{field}.id must match {_RULE_ID_RE.pattern}")
+    elif rule_id in seen_ids:
+        issues.append(f"{field}.id duplicates {rule_id}")
+    else:
+        seen_ids.add(rule_id)
+    return rule_id
+
+
+def _parse_phrase(value: Mapping[str, Any], *, field: str, issues: list[str]) -> str:
+    """Parse and normalize one literal policy phrase."""
+    phrase_value = value.get("phrase")
+    if not isinstance(phrase_value, str):
+        issues.append(f"{field}.phrase must be a string")
+        return ""
+    phrase = _normalize_text(phrase_value).strip()
+    if not phrase:
+        issues.append(f"{field}.phrase must not be empty")
+    elif len(phrase) > MAX_POLICY_PHRASE_LENGTH:
+        issues.append(f"{field}.phrase must be at most {MAX_POLICY_PHRASE_LENGTH} characters")
+    if _has_control(phrase):
+        issues.append(f"{field}.phrase must be a single line without control characters")
+    return phrase
+
+
+def _parse_platforms(value: Mapping[str, Any], *, field: str, issues: list[str]) -> tuple[str, ...]:
+    """Parse platform targets and return them in canonical platform order."""
+    targets_value = value.get("platforms")
+    if targets_value is None:
+        return SUPPORTED_PLATFORMS
+    if not isinstance(targets_value, list):
+        issues.append(f"{field}.platforms must be a non-empty array")
+        return ()
+    if not targets_value:
+        issues.append(f"{field}.platforms must contain at least one platform")
+    if len(targets_value) > len(SUPPORTED_PLATFORMS):
+        issues.append(f"{field}.platforms must contain at most {len(SUPPORTED_PLATFORMS)} items")
+    selected: set[str] = set()
+    for target_index, target_value in enumerate(targets_value):
+        target_field = f"{field}.platforms[{target_index}]"
+        if not isinstance(target_value, str):
+            issues.append(f"{target_field} must be a string")
+            continue
+        target = target_value.strip().lower()
+        if target not in SUPPORTED_PLATFORMS:
+            issues.append(f"{target_field} must be one of: {', '.join(SUPPORTED_PLATFORMS)}")
+        elif target in selected:
+            issues.append(f"{target_field} duplicates {target}")
+        else:
+            selected.add(target)
+    return tuple(platform for platform in SUPPORTED_PLATFORMS if platform in selected)
+
+
+def _parse_severity(value: Mapping[str, Any], *, field: str, issues: list[str]) -> str:
+    """Parse a rule severity, defaulting omitted values to an error."""
+    severity_value = value.get("severity", "error")
+    severity = severity_value if isinstance(severity_value, str) else ""
+    if severity not in {"warning", "error"}:
+        issues.append(f"{field}.severity must be warning or error")
+    return severity
 
 
 def load_content_policy(path: str | Path) -> ContentPolicy:
@@ -355,7 +378,9 @@ def evaluate_content_policy(
                 "error" if warnings_as_errors and rule.severity == "warning" else rule.severity
             )
             action = "contains blocked phrase" if matched else "is missing required phrase"
-            message = f"Content policy rule {rule.rule_id!r}: " f"draft {action} {rule.phrase!r}."
+            message = "Content policy rule {!r}: draft {} {!r}.".format(
+                rule.rule_id, action, rule.phrase
+            )
             findings.append(
                 QualityIssue(
                     code=(

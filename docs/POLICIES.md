@@ -57,7 +57,9 @@ samsarix-campaign approval verify examples/campaign-variants.json \
 
 Every plan quality, approval, handoff, and readiness command that evaluates or verifies evidence
 also accepts `--policy`. If a plan approval contains `contentPolicy`, the exact current file must be
-supplied to approval verification, handoff creation/verification, and readiness assessment.
+supplied to approval verification and handoff creation. The resulting handoff embeds normalized
+`content-policy.json`, so handoff verification and readiness can use the packet alone. Supplying an
+external policy to either remains useful as an additional equality check.
 
 ## Version 1 contract
 
@@ -189,7 +191,8 @@ When adopting policies:
 1. Commit and review the policy beside campaign sources.
 2. Run it against existing copy and choose warning/error severity deliberately.
 3. Supply the same path when creating approval.
-4. Continue supplying the exact policy for all later evidence verification.
+4. Supply the exact policy when verifying standalone approvals or creating a handoff. Thereafter,
+   verify the self-contained packet; optionally supply the repository copy as a cross-check.
 5. Treat a policy edit as a new review event even when campaign source did not change.
 
 Policies can contain embargo language, disclosures, campaign names, or other sensitive business

@@ -193,6 +193,8 @@ def _print_handoff_check(result: HandoffCheck) -> None:
 
 def _print_plan_readiness(result: CampaignPlanReadiness) -> None:
     print(f"Launch readiness: {result.stage.replace('-', ' ')} for {result.plan_id}")
+    if result.content_policy is not None:
+        print(f"Content policy: {result.content_policy.name} ({result.content_policy.policy_id})")
     print(
         f"Quality: {'passed' if result.quality_passed else 'blocked'}; "
         f"schedule: {'ready' if result.schedule_ready else 'blocked'}; "

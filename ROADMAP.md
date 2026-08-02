@@ -223,7 +223,7 @@ Rollback is a revert of PR #12 or pinning pre-0.10 main commit `281d0e6`. Full s
 disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#010-platform-native-variants-release-evidence).
 
-## Completed milestone — 0.11 portable content policies
+## Active milestone — 0.11 portable content policies
 
 - [x] Add bounded, reusable literal blocked/required phrase rules with platform targeting,
   case-sensitive or case-folded matching, and warning/error severity.

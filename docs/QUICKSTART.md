@@ -210,8 +210,9 @@ samsarix-campaign plan handoff verify \
 
 Verification returns `4` when current source or approval is stale, a rendered file changed, a file
 is missing or unexpected, or the producer version differs. A packet contains `handoff.json`, the
-embedded `approval.json`, and the same manifest, adapter, calendar, and platform CSV files as plan
-export. It is never overwritten in place.
+embedded `approval.json`, optional approval-bound `content-policy.json`, and the same manifest,
+adapter, calendar, and platform CSV files as plan export. Verification uses the embedded policy
+without another CLI argument. The packet is never overwritten in place.
 
 These checksums are unsigned integrity metadata, not authenticated reviewer/producer provenance.
 Read [HANDOFFS.md](HANDOFFS.md) before connecting a downstream adapter.
