@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here.
 
-## 0.12.0 - Unreleased
+## 0.12.0 - 2026-08-02
 
 - Added optional source-level `linkTracking` with bounded common query parameters and explicit
   per-platform overrides.

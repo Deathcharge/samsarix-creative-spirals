@@ -252,7 +252,7 @@ Rollback is a revert of PR #13 or a pin to pre-0.11 main commit `3a5c0f5`. Full 
 review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#011-portable-content-policy-release-evidence).
 
-## Active milestone — 0.12 deterministic link tracking
+## Completed milestone — 0.12 deterministic link tracking
 
 - [x] Add bounded common query parameters and explicit requested-platform overrides to campaign
   source without introducing templates, environment expansion, or remote state.
@@ -262,7 +262,7 @@ review disposition, compatibility notes, and limitations are in
   exports, handoffs, and readiness without changing downstream artifact schemas.
 - [x] Add schema, public API, realistic example, adversarial tests, installed-wheel CI smoke,
   migration guidance, and privacy/security boundaries.
-- [ ] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
+- [x] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
   evidence.
 
 Google Analytics recommends consistent manual campaign tags; Buffer and Sprout Social both expose
@@ -270,6 +270,15 @@ automated or reusable link-tracking parameters inside their connected publishing
 Samsarix provides a deterministic Git-native attribution step before that boundary, without
 opening URLs, shortening links, collecting clicks, or requiring an analytics account. Contract
 details and official sources are in [`docs/TRACKING.md`](docs/TRACKING.md).
+
+Technical completion evidence: implementation/review head `4f0c6b1`; merge commit `a052e12`; 322
+tests at 94.54% coverage plus clean formatting, lint, Ruff, strict typing, compilation, eight
+installed schema checks, and an isolated installed-wheel tracking-to-handoff journey; 0.12.0 wheel
+SHA-256 `693b1ae0384d0bc6946dd298f42cc501ddc369dda9f0a46aa97ecf0a9d398810`; and
+[post-merge Python 3.10/3.13 run 30741706143](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30741706143).
+Rollback is a revert of PR #14 or a pin to pre-0.12 main commit `b701c04`. Full sdist digest, review
+disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#012-deterministic-link-tracking-release-evidence).
 
 ## Deliberate exclusions
 

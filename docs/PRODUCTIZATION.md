@@ -907,7 +907,7 @@ Compatibility and rollback:
   `3a5c0f5278ffea4a81ca6ab0bae3479318df0da1`. After owner publication, use normal version pinning
   and a corrective release; do not replace published artifacts silently.
 
-## 0.12 deterministic link-tracking working record
+## 0.12 deterministic link-tracking release evidence
 
 ### Research and product decision
 
@@ -929,7 +929,7 @@ The configuration lives inside campaign source because it changes rendered outpu
 existing canonical identity, semantic diff, approvals, plans, adapters, exports, handoffs, and
 readiness bind it automatically instead of creating another side-loaded evidence dependency.
 
-### Bounded contract and implementation status
+### Bounded contract and implementation
 
 Campaign schema v1 gains optional `linkTracking` with common literal parameters and per-platform
 overrides. Names are lowercase bounded ASCII; normalized values, maps, merged maps, and final URLs
@@ -938,19 +938,63 @@ complete-variant link, sorts names, percent-encodes UTF-8, preserves an existing
 fragment, and rejects existing-name collisions instead of guessing whether to keep or replace a
 value. Body/title URL-looking text is intentionally untouched.
 
-Implemented locally: immutable `LinkTracking`, strict runtime and Draft 2020-12 schema validation,
-source hashing and semantic-field coverage, exact rendered propagation, public API/version update,
-a five-platform example, direct campaign/approval/plan/adapter/handoff tests, installed-wheel CI
-assertions, and author/security/migration documentation.
+Implemented and merged: immutable `LinkTracking`, strict runtime and Draft 2020-12 schema
+validation, source hashing and semantic-field coverage, exact rendered propagation, public
+API/version update, a five-platform example, direct campaign/approval/plan/adapter/handoff tests,
+installed-wheel CI assertions, and author/security/migration documentation.
 
-Release acceptance requires clean formatting, lint, strict typing, full tests above the 90%
-coverage floor, compilation, schema metaschema validation, isolated sdist-to-wheel build, an
-installed-wheel tracking-to-handoff journey, hosted Python 3.10/3.13 CI, review disposition, exact
-artifact hashes, merge, and a documented rollback point. Exact evidence will replace this working
-status only after those gates pass.
+### Release verification and disposition
 
-Compatibility is additive for 0.12.x: campaign schema remains v1 and sources without
-`linkTracking` retain their prior normalized source and generated output. Adapter v2 plus plan,
-approval, handoff, readiness, manifest, and content-policy schemas remain unchanged. Runtime stays
-standard-library-only and performs no URL open, redirect, shortener, analytics, credential,
-publisher, scheduler, database, or telemetry operation.
+Implementation and all review fixes converge at exact commit
+`4f0c6b129ea781b6adb52fa9e1f9bdeee9ed38ff`; PR #14 merged that head to `main` as
+`a052e123a78c2021fe48692fdb5644d6426a6dad`. This evidence section is a subsequent docs-only
+change, so the artifact hashes identify the exact reviewed code tree rather than a
+self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 31 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m ruff check samsarix_creative_spirals/models.py tests/test_tracking.py` | 0 | No findings in the review-targeted parser paths. |
+| `python -m mypy` | 0 | Strict typing passed across 30 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 322 passed; 94.54% total coverage and 98% model coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests` | 0 | Package and tests compiled. |
+| Installed-wheel Draft 2020-12 metaschema validation | 0 | All eight packaged schemas validated outside the checkout. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.12.0 sdist, then built the wheel from that exact reviewed-head sdist. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime version 0.12.0, tracked campaign `scs_8ba65d16afb3`, plan `scp_cfcb3547bed2`, adapter URL assertions, plan approval, handoff `sch_758147844753`, and offline handoff verification all passed outside the checkout. |
+| Hosted GitHub Actions | 0 | [Push run 30741545437](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30741545437) and [PR run 30741547091](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30741547091) each passed the full Python 3.10/3.13 matrix at exact head `4f0c6b1`. |
+| Post-merge GitHub Actions | 0 | [Main run 30741706143](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30741706143) passed both complete matrices at merge commit `a052e12`. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Isolated artifact digests from exact commit `4f0c6b1`:
+
+- `samsarix_creative_spirals-0.12.0-py3-none-any.whl` — SHA-256
+  `693b1ae0384d0bc6946dd298f42cc501ddc369dda9f0a46aa97ecf0a9d398810`.
+- `samsarix_creative_spirals-0.12.0.tar.gz` — SHA-256
+  `e4de6d6ed9c72db1d336d2cf351e0bbf1c3224ac463092177d7d03219c35eb49`.
+
+[PR #14](https://github.com/Deathcharge/samsarix-creative-spirals/pull/14) received five
+CodeRabbit inline comments. All were validated and addressed: release-state and API prose were
+aligned; the effective per-platform limit and override contract were clarified; platform-map
+parsing was decomposed; and a platform-specific override without an effective link became a
+validation error with regression coverage. All five threads are resolved. The incremental
+automated re-review was rate-limited, while both hosted matrices and the complete local gates
+passed on the resulting head.
+
+Release disposition: **release candidate with one owner-controlled distribution gate**. The
+merged source and isolated wheel support the declared deterministic attribution journey with no
+known locally actionable P0 or P1 defect. Public PyPI publication has not been performed and
+remains an explicit owner action. External-user adoption evidence likewise remains unavailable;
+competitor workflow evidence demonstrates the problem category, not product-market fit.
+
+Compatibility and rollback:
+
+- Campaign schema remains v1 and gains only optional `linkTracking`; sources that omit it retain
+  their prior normalized source, identity, and generated output.
+- Adapter v2 plus plan, approval, handoff, readiness, manifest, and content-policy schemas remain
+  unchanged. Tracking is carried by existing normalized source identity and exact rendered text.
+- Runtime remains standard-library-only with no URL open, redirect, shortener, analytics,
+  credential, publisher, scheduler, database, telemetry, or external operating cost.
+- Before publication, roll back by reverting merge commit `a052e12` or pinning pre-0.12 main commit
+  `b701c04c8ce1c48241449a5a1fb8caf6d04524c6`. After owner publication, use normal version
+  pinning and a corrective release; do not replace published artifacts silently.
