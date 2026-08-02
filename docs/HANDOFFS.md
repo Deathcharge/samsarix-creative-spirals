@@ -2,8 +2,8 @@
 
 An approved handoff packet is the last local-first boundary before a person or separately
 permissioned adapter imports campaign drafts into a publisher. It packages the current plan,
-embedded approval record, exact rendered outputs, and bounded integrity metadata in one exclusive
-directory.
+embedded approval record, any approval-bound content policy, exact rendered outputs, and bounded
+integrity metadata in one exclusive directory.
 
 The packet answers four offline questions:
 
@@ -49,6 +49,12 @@ Use `--json` for automation. Verification returns `0` only when the packet is cu
 `4` for a well-formed but invalid packet, `1` for malformed input or I/O failure, and `2` for CLI
 usage errors.
 
+If the plan approval binds a portable content policy, supply its exact file with `--policy POLICY`
+during handoff creation. The packet then embeds normalized `content-policy.json`, declares its
+size and checksum, and uses it automatically during handoff verification and readiness assessment.
+An optional `--policy POLICY` on those later commands cross-checks an external copy; a mismatch
+invalidates the packet. See [`POLICIES.md`](POLICIES.md).
+
 ## Packet contract
 
 Each packet has a generated name ending in its `sch_*` handoff ID:
@@ -58,6 +64,7 @@ handoff-outbox/
 └── release-sequence-sch_0123456789ab/
     ├── handoff.json
     ├── approval.json
+    ├── content-policy.json  # present only for a policy-bound approval
     ├── manifest.json
     ├── adapter.json
     ├── calendar.ics
@@ -73,20 +80,22 @@ handoff-outbox/
 samsarix-campaign schema --kind handoff
 ```
 
-Its `artifacts` object declares each plan-export file and the embedded `approval.json` by fixed,
-packet-relative path, exact byte length, and lowercase SHA-256. The manifest also contains the full
+Its `artifacts` object declares each plan-export file, embedded `approval.json`, and optional
+`content-policy.json` by fixed, packet-relative path, exact byte length, and lowercase SHA-256. The
+manifest also contains the full
 plan source hash, plan ID, UTC generation time, producer name/version, a full `handoffHash`, and an
 `sch_*` ID derived from that hash. The hash covers canonical handoff metadata and all artifact
 descriptors; it intentionally excludes itself and its shortened ID.
 
 The verifier:
 
-- reloads current plan source and re-runs the approval's recorded aggregate quality policy;
+- reloads current plan source and re-runs the approval's recorded aggregate quality policy plus
+  the normalized policy embedded when one was bound;
 - checks current plan ID and full source hash, including order, schedule, required channels,
   source paths, media metadata, and every referenced campaign;
 - regenerates adapter JSON, calendar, plan manifest, and platform CSV bytes with the recorded
   generation time and current producer version;
-- verifies the embedded approval bytes, every declared size and checksum, canonical on-disk
+- verifies the embedded approval and policy bytes, every declared size and checksum, canonical on-disk
   `handoff.json`, fixed root/CSV directory shape, and absence of extra entries;
 - refuses symbolic-link artifacts and non-regular files and detects file identity, size, or
   modification-time changes during a verification read.

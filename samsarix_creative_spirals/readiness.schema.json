@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/plan-readiness-v1.schema.json",
   "title": "Samsarix Creative Spirals plan readiness report",
-  "description": "Point-in-time local quality, schedule, approval, and handoff readiness for one campaign plan.",
+  "description": "Point-in-time local quality, optional content policy, schedule, approval, and handoff readiness for one campaign plan.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -26,6 +26,7 @@
     },
     "ready": {"type": "boolean"},
     "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
+    "contentPolicy": {"$ref": "#/$defs/contentPolicy"},
     "schedulePolicy": {"enum": ["optional", "required"]},
     "qualityPassed": {"type": "boolean"},
     "scheduleComplete": {"type": "boolean"},
@@ -95,6 +96,7 @@
           "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
         },
         "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
+        "contentPolicy": {"$ref": "#/$defs/contentPolicy"},
         "note": {"type": "string", "minLength": 1, "maxLength": 500}
       }
     },
@@ -120,7 +122,21 @@
         "item": {"type": "integer", "minimum": 1, "maximum": 100},
         "campaignId": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^scs_[0-9a-f]{12}$"}]},
         "platform": {"oneOf": [{"type": "null"}, {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]}]},
+        "ruleId": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
         "message": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "contentPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyId", "sourceHash", "name"],
+      "properties": {
+        "policyId": {"type": "string", "pattern": "^scpol_[0-9a-f]{12}$"},
+        "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "name": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        }
       }
     },
     "readinessItem": {

@@ -50,8 +50,16 @@ One stable quality finding with `code`, `severity`, `platform`, and human-readab
 
 ### `CampaignCheck`
 
-An immutable quality result with `campaign_id`, `publishable`, and ordered `issues`. `to_dict()`
+An immutable quality result with `campaign_id`, `publishable`, ordered `issues`, and optional
+`content_policy` binding. `to_dict()`
 returns the same schema used by `samsarix-campaign check --json`.
+
+### Content-policy models
+
+`ContentPolicy` is a validated, normalized policy with deterministic `source_hash`, short
+`policy_id`, and `binding` properties. It contains immutable `ContentPolicyRule` values.
+`ContentPolicyBinding` is the `{policyId, sourceHash, name}` identity included in checks and
+optionally bound into approvals. See `docs/POLICIES.md` for exact v1 semantics.
 
 ### Campaign-plan models
 
@@ -77,9 +85,10 @@ a nested `CampaignDiff`. `CampaignPlanApproval` is full-plan source-bound metada
 
 `CampaignPlanHandoff` is the strict unsigned handoff v1 manifest. It contains the `sch_*` identity,
 full metadata hash, plan identity, UTC generation time, producer version, and ordered
-`HandoffArtifact` descriptors. `CampaignPlanHandoffPacket` pairs that metadata and its embedded
-`CampaignPlanApproval` with the packet root. `HandoffIssue` and `HandoffCheck` provide stable
-machine-readable verification results. These hashes authenticate no person or system.
+`HandoffArtifact` descriptors. `CampaignPlanHandoffPacket` pairs that metadata, its embedded
+`CampaignPlanApproval`, optional normalized `ContentPolicy`, and the packet root. `HandoffIssue`
+and `HandoffCheck` provide stable machine-readable verification results. These hashes authenticate
+no person or system.
 
 ### Launch-readiness models
 
@@ -115,11 +124,22 @@ Bluesky (300 graphemes and 3,000 UTF-8 bytes), Mastodon (500 characters with 23-
 accounting), and Discord (2,000 UTF-16 code units). `platformLimits` may make any platform stricter;
 Mastodon may be raised to match an intended instance's advertised limit.
 
-### `check_campaign(bundle, *, warnings_as_errors=False) -> CampaignCheck`
+### `check_campaign(bundle, *, warnings_as_errors=False, content_policy=None) -> CampaignCheck`
 
 Produces a deterministic quality report without file or network I/O. Truncation is always an error.
 Other platform review warnings remain warnings unless `warnings_as_errors=True`. `publishable` is
-true when the report contains no error-severity issue.
+true when the report contains no error-severity issue. An optional `ContentPolicy` evaluates the
+final rendered draft text and adds rule IDs to policy findings.
+
+### `load_content_policy(path) -> ContentPolicy`
+
+Reads and validates one bounded UTF-8 policy JSON file with the same duplicate-key, nesting, and
+file-size protections as other source loaders. It performs no network I/O.
+
+### `evaluate_content_policy(bundle, policy, *, warnings_as_errors=False) -> tuple[QualityIssue, ...]`
+
+Returns only deterministic literal phrase findings. Normal workflows should use `check_campaign`
+or `check_campaign_plan` so built-in and external policy findings share one gate.
 
 ### `export_campaign(bundle, output_root="outbox", *, overwrite=False, exported_at=None) -> Path`
 
@@ -145,10 +165,11 @@ the complete before/after mapping. Consumers that exhaustively enumerate v1 fiel
 this optional source field, while consumers that display or preserve unknown names continue to work
 unchanged. Generated draft fields and the surrounding diff shape are unchanged.
 
-### `create_campaign_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None) -> CampaignApproval`
+### `create_campaign_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None, content_policy=None) -> CampaignApproval`
 
 Re-runs the selected quality policy and refuses to create an approval if it fails. The result binds
-the reviewer label, UTC time, policy, optional note, campaign ID, and full normalized source hash.
+the reviewer label, UTC time, built-in warning policy, optional note, campaign ID, and full
+normalized source hash. When supplied, it stores a `ContentPolicyBinding`—not policy rules.
 `approved_at` must be timezone-aware when supplied. The result records review state; it does not
 authenticate `approved_by`.
 
@@ -162,10 +183,12 @@ replaced. Parent directories are created when needed.
 Reads a bounded UTF-8 JSON object and rejects duplicate/unknown fields, malformed identity hashes,
 invalid timestamps, unsupported policies, controls, and overlong metadata.
 
-### `verify_campaign_approval(bundle, approval) -> ApprovalCheck`
+### `verify_campaign_approval(bundle, approval, *, content_policy=None) -> ApprovalCheck`
 
-Requires both full source hash and campaign ID to match, then re-runs the policy stored in the
-approval. `valid` is false with stable issue codes if source changed or quality no longer passes.
+Requires both full source hash and campaign ID to match, then re-runs the recorded built-in warning
+policy. If the approval has `contentPolicy`, the caller must supply the exact current
+`content_policy`; verification compares its binding and re-runs those supplied rules. `valid` is
+false with stable issue codes if source, policy identity, or quality no longer passes.
 
 ### `parse_approval_timestamp(value) -> datetime`
 
@@ -205,10 +228,11 @@ normalized intended time, and referenced campaign semantics. Reorders appear as 
 the affected positions. The function builds deterministic identities but performs no file or
 network I/O; callers load plan files separately with `load_campaign_plan`.
 
-### `create_campaign_plan_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None) -> CampaignPlanApproval`
+### `create_campaign_plan_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None, content_policy=None) -> CampaignPlanApproval`
 
 Re-runs the aggregate plan quality policy and refuses creation when it fails. The approval binds
-the reviewer label, UTC time, policy, optional note, plan ID, and full plan source hash. That hash
+the reviewer label, UTC time, built-in warning policy, optional note, plan ID, and full plan source
+hash. When supplied, it stores a `ContentPolicyBinding` rather than policy rules. The plan hash
 covers order, schedule, required platforms, source references, and every normalized referenced
 campaign. The reviewer label is not authenticated.
 
@@ -222,42 +246,47 @@ never replaced, and parent directories are created when needed.
 Reads a bounded UTF-8 JSON object and validates the dedicated plan-approval v1 contract, including
 artifact type, plan identity, timestamp, quality policy, and reviewer metadata.
 
-### `verify_campaign_plan_approval(bundle, approval) -> PlanApprovalCheck`
+### `verify_campaign_plan_approval(bundle, approval, *, content_policy=None) -> PlanApprovalCheck`
 
-Requires the full plan source hash and plan ID to match, then re-runs the stored quality policy.
-Stable issue codes distinguish changed source, changed plan ID, and a current policy failure.
+Requires the full plan source hash and plan ID to match, then re-runs the recorded built-in warning
+policy. If the approval has `contentPolicy`, the caller must supply the exact current
+`content_policy`; verification compares its binding and re-runs those supplied rules. Stable issue
+codes distinguish changed source, changed plan ID, missing/changed policy, and quality failure.
 
-### `build_campaign_plan_handoff(bundle, approval, *, generated_at) -> CampaignPlanHandoff`
+### `build_campaign_plan_handoff(bundle, approval, *, generated_at, content_policy=None) -> CampaignPlanHandoff`
 
 Re-verifies the approval and recorded aggregate quality policy, requires a timezone-aware handoff
 time at or after approval, renders exact plan-export bytes, and returns deterministic unsigned
 metadata for that input and timestamp. It performs no file or network I/O.
 
-### `export_campaign_plan_handoff(bundle, approval, output_root="handoff-outbox", *, generated_at=None) -> Path`
+### `export_campaign_plan_handoff(bundle, approval, output_root="handoff-outbox", *, generated_at=None, content_policy=None) -> Path`
 
-Creates a private temporary directory, writes the embedded approval, handoff manifest, and exact
-plan-export artifacts, then renames the complete directory into a generated `sch_*` path. It
-refuses a symbolic-link/non-directory root and never replaces an existing packet.
+Creates a private temporary directory, writes the embedded approval, optional normalized policy,
+handoff manifest, and exact plan-export artifacts, then renames the complete directory into a
+generated `sch_*` path. It refuses a symbolic-link/non-directory root and never replaces an
+existing packet.
 
 ### `load_campaign_plan_handoff(path) -> CampaignPlanHandoffPacket`
 
-Loads bounded handoff and approval JSON from a non-symbolic-link directory and validates both
-strict runtime contracts. Artifact content verification remains explicit.
+Loads bounded handoff, approval, and optional content-policy JSON from a non-symbolic-link
+directory and validates their strict runtime contracts. Artifact content verification remains
+explicit.
 
-### `verify_campaign_plan_handoff(bundle, packet) -> HandoffCheck`
+### `verify_campaign_plan_handoff(bundle, packet, *, content_policy=None) -> HandoffCheck`
 
-Rechecks current source and approval quality, metadata identity and producer version, fixed packet
-shape, on-disk metadata, and every regenerated artifact size and SHA-256. It rejects symbolic
-links, non-regular files, missing/extra files, and files that change while read. `valid` does not
-claim signer identity or authenticated provenance.
+Rechecks current source and approval quality, using the packet's embedded policy by default;
+an explicit policy must match it. It also verifies metadata identity and producer version, fixed
+packet shape, on-disk metadata, and every regenerated artifact size and SHA-256. It rejects
+symbolic links, non-regular files, missing/extra files, and files that change while read. `valid`
+does not claim signer identity or authenticated provenance.
 
-### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False) -> CampaignPlanReadiness`
+### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False, content_policy=None) -> CampaignPlanReadiness`
 
 Combines the current aggregate quality result, schedule state at a timezone-aware assessment time,
 optional plan approval, and optional exact handoff verification. A handoff supplies its embedded
-approval when no explicit approval is given; if both are given, they must be exactly equal. Past
-or due intended times block readiness. Missing times block only under `require_scheduled=True`.
-No files are written and no network calls are made.
+approval and policy when explicit values are absent; explicit values must match packet evidence.
+Past or due intended times block readiness. Missing times block only under
+`require_scheduled=True`. No files are written and no network calls are made.
 
 ### `render_campaign_plan_readiness_html(report, bundle) -> str`
 
@@ -295,6 +324,11 @@ manifest-last safety model applies as campaign export.
 
 Loads a fresh dictionary from the plan schema bundled in the wheel. The CLI equivalent is
 `samsarix-campaign schema --kind plan`.
+
+### `load_content_policy_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the content-policy v1 schema bundled in the wheel. The CLI
+equivalent is `samsarix-campaign schema --kind content-policy`.
 
 ### `load_approval_schema() -> dict[str, Any]`
 
@@ -354,8 +388,9 @@ else:
 
 The package is pre-1.0. The exported names, campaign/plan/approval/handoff/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.10.x. Campaign schema v1 gains the optional `platformVariants` field;
-existing sources behave unchanged, while strict source consumers must load the current schema
-before accepting variants. Internal helpers and exact prose in warning
+compatibility surface for 0.11.x. Content-policy schema v1 is new; approval and plan-approval v1
+gain an optional `contentPolicy` binding, and readiness v1 gains optional policy identity/rule
+context. Existing sources and evidence behave unchanged when no policy is supplied. Internal
+helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

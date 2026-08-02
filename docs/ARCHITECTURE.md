@@ -17,7 +17,8 @@ CampaignConfig
     │ platform formatting and limit checks
     ▼
 CampaignBundle
-    ├──────────────► deterministic quality report / semantic diff
+    ├── content-policy.json ──► deterministic quality report
+    ├── another CampaignBundle ──► semantic diff of campaign fields and rendered drafts
     ├──────────────► source-bound local approval verification
     │ explicit export only
     ▼
@@ -38,7 +39,7 @@ CampaignPlanBundle
     ├──► deterministic plan diff / source-bound plan approval verification
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
     ├──► exclusive approved handoff packet
-            ├── embedded approval.json + handoff.json
+            ├── embedded approval.json + optional content-policy.json + handoff.json
             └── exact regenerated plan-export artifacts
     └──► point-in-time readiness JSON / exclusive offline HTML board
             └── quality + schedule + approval + handoff evidence state
@@ -75,6 +76,14 @@ Converts a built bundle into stable error/warning findings. Truncation is a bloc
 warnings are optionally promoted to errors. The operation is pure and gives CI a distinct exit path
 without conflating valid-but-unacceptable output with malformed configuration.
 
+### `policy.py`
+
+Validates bounded portable policy profiles, normalizes rule defaults, and derives a full SHA-256
+identity plus short display ID. It applies literal blocked/required phrases to final rendered draft
+content with optional platform targets, casing, and warning/error severity. Regex, semantic models,
+network calls, and media dereferencing are deliberately excluded. A small binding verifier makes
+approval omission or substitution explicit.
+
 ### `plans.py`
 
 Validates a bounded sequence of relative campaign references and explicit-offset intended times.
@@ -90,25 +99,28 @@ versioned publisher-neutral contract.
 
 Compares normalized campaign fields and generated platform drafts in stable order. Local approval
 creation first runs the selected quality policy, then records the exact full source hash. Approval
-verification compares current identity and re-runs that stored policy. Reviewer labels and files
+verification compares current identity, requires the exact external content policy when one was
+bound, and re-runs that stored policy. Reviewer labels and files
 are intentionally non-cryptographic; repository access control remains outside the package.
 
 ### `plan_review.py`
 
 Compares normalized plan metadata and ordered positions, with nested campaign diffs when content
 changes. Plan approval creation gates the whole built sequence and binds the full plan hash;
-verification checks identity and re-runs the stored aggregate quality policy. The campaign
+verification checks identity, requires the exact external content policy when one was bound, and
+re-runs the stored aggregate quality policy. The campaign
 approval v1 contract remains separate so existing consumers do not need to distinguish a union.
 
 ### `handoff.py`
 
 Creates an approved plan handoff only after current approval verification and a generation time at
 or after approval. The handoff manifest binds plan identity, producer version, generation time,
-embedded approval, and fixed rendered artifacts by size and SHA-256. Export is exclusive and uses
-a private temporary sibling plus directory rename. Verification regenerates exact bytes from
-current source, rejects unexpected entries, symbolic links, and non-regular files, and checks that
-files remain stable during reads. Hashes are unsigned integrity metadata, not authenticated
-provenance or authorization.
+embedded approval, optional normalized approval-bound policy, and fixed rendered artifacts by size
+and SHA-256. Export is exclusive and uses a private temporary sibling plus directory rename.
+Verification uses the embedded policy by default, regenerates exact bytes from current source,
+rejects unexpected entries, symbolic links, and non-regular files, and checks that files remain
+stable during reads. Hashes are unsigned integrity metadata, not authenticated provenance or
+authorization.
 
 ### `readiness.py`
 
@@ -122,7 +134,7 @@ workflow state or a publication receipt.
 ### `schema.py` and bundled JSON Schemas
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
-dictionary to library callers. Campaign, plan, campaign-approval, plan-approval, handoff,
+dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval, handoff,
 readiness, and adapter schemas help editors and generic validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
@@ -142,12 +154,13 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
 | Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
 | Campaign fields | Baseline and per-platform text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, canonical/requested platform allowlists, hard platform ceilings. |
+| Content policy | Local JSON, rule phrases, targets, severity, casing | Shared file/nesting limits, 50-rule and 200-character phrase caps, strict fields/IDs, literal matching only, deterministic identity. |
 | Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds, no core dereference. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
-| Approved handoff packet | Local directory, metadata, and generated files | Exclusive atomic creation; fixed shape; source, approval, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
+| Approved handoff packet | Local directory, metadata, approval/policy evidence, and generated files | Exclusive atomic creation; fixed shape; source, approval, embedded-policy, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
@@ -174,7 +187,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.10 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.11 scope.
 
 ## Dependency and cost model
 

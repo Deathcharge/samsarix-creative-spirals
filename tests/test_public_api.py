@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.10.0"
+    assert package.__version__ == "0.11.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -30,6 +30,9 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanReadiness",
         "CampaignPlanReadinessItem",
         "ConfigError",
+        "ContentPolicy",
+        "ContentPolicyBinding",
+        "ContentPolicyRule",
         "HandoffArtifact",
         "HandoffCheck",
         "HandoffIssue",
@@ -60,6 +63,7 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_plan_approval",
         "export_campaign_plan_handoff",
         "export_campaign_plan_readiness_html",
+        "evaluate_content_policy",
         "load_adapter_schema",
         "load_approval_schema",
         "load_campaign",
@@ -68,6 +72,8 @@ def test_public_api_is_deliberate() -> None:
         "load_campaign_plan_approval",
         "load_campaign_plan_handoff",
         "load_campaign_schema",
+        "load_content_policy",
+        "load_content_policy_schema",
         "load_handoff_schema",
         "load_plan_approval_schema",
         "load_plan_schema",

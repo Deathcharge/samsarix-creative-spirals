@@ -48,13 +48,15 @@ jobs:
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign schema --kind handoff > /tmp/handoff.schema.json
           samsarix-campaign schema --kind readiness > /tmp/readiness.schema.json
+          samsarix-campaign schema --kind content-policy > /tmp/content-policy.schema.json
+          samsarix-campaign policy validate examples/content-policy.json --json > /tmp/policy-validation.json
           samsarix-campaign check examples/campaign.json --json
           samsarix-campaign preview examples/campaign.json
           samsarix-campaign validate examples/campaign-media.json --json
           samsarix-campaign check examples/campaign-media.json --json
           samsarix-campaign preview examples/campaign-media.json --json
           samsarix-campaign validate examples/campaign-variants.json --json > /tmp/variants-validation.json
-          samsarix-campaign check examples/campaign-variants.json --json > /tmp/variants-check.json
+          samsarix-campaign check examples/campaign-variants.json --policy examples/content-policy.json --json > /tmp/variants-check.json
           samsarix-campaign preview examples/campaign-variants.json --json > /tmp/variants-preview.json
           python - <<'PY'
           import json
@@ -62,10 +64,13 @@ jobs:
 
           validation = json.loads(Path("/tmp/variants-validation.json").read_text())
           check = json.loads(Path("/tmp/variants-check.json").read_text())
+          policy = json.loads(Path("/tmp/policy-validation.json").read_text())
           preview = json.loads(Path("/tmp/variants-preview.json").read_text())
           drafts = {draft["platform"]: draft["content"] for draft in preview["drafts"]}
           assert validation["valid"] is True
           assert check["publishable"] is True
+          assert check["contentPolicy"] == policy["contentPolicy"]
+          assert check["issues"][-1]["ruleId"] == "community-salutation-review"
           assert "Turn campaign copy" in drafts["x"]
           assert "A local-first release communications workflow" in drafts["linkedin"]
           assert "**Release workflow update**" in drafts["discord"]
@@ -74,16 +79,17 @@ jobs:
           assert "Turn campaign copy" not in drafts["bluesky"]
           PY
           samsarix-campaign plan validate examples/launch-plan.json --json
-          samsarix-campaign plan check examples/launch-plan.json --json
+          samsarix-campaign plan check examples/launch-plan.json --policy examples/content-policy.json --json
           samsarix-campaign plan preview examples/launch-plan.json --json
           samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json --json --exit-code
-          samsarix-campaign plan approval create examples/launch-plan.json --by "CI reviewer" --at 2026-08-03T14:15:00Z --output /tmp/plan.approval.json --json
-          samsarix-campaign plan approval verify examples/launch-plan.json /tmp/plan.approval.json --json
-          samsarix-campaign plan handoff create examples/launch-plan.json /tmp/plan.approval.json --at 2026-08-04T09:30:00Z --output /tmp/samsarix-handoff-outbox --json
+          samsarix-campaign plan approval create examples/launch-plan.json --policy examples/content-policy.json --by "CI reviewer" --at 2026-08-03T14:15:00Z --output /tmp/plan.approval.json --json
+          samsarix-campaign plan approval verify examples/launch-plan.json /tmp/plan.approval.json --policy examples/content-policy.json --json
+          samsarix-campaign plan handoff create examples/launch-plan.json /tmp/plan.approval.json --policy examples/content-policy.json --at 2026-08-04T09:30:00Z --output /tmp/samsarix-handoff-outbox --json
           HANDOFF_PATH=$(find /tmp/samsarix-handoff-outbox -mindepth 1 -maxdepth 1 -type d -print -quit)
+          test -f "$HANDOFF_PATH/content-policy.json"
           samsarix-campaign plan handoff verify examples/launch-plan.json "$HANDOFF_PATH" --json
           samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --at 2026-08-05T12:00:00Z --require-scheduled --require-stage handoff --html /tmp/launch-readiness.html --json
           samsarix-campaign plan export examples/launch-plan.json --output /tmp/samsarix-plan-outbox --json
           samsarix-campaign diff examples/campaign.json examples/campaign-follow-up.json --json
-          samsarix-campaign approval create examples/campaign.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json
-          samsarix-campaign approval verify examples/campaign.json /tmp/campaign.approval.json --json
+          samsarix-campaign approval create examples/campaign.json --policy examples/content-policy.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json
+          samsarix-campaign approval verify examples/campaign.json /tmp/campaign.approval.json --policy examples/content-policy.json --json

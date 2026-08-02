@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "Release communications guardrails",
+  "rules": [
+    {
+      "id": "no-internal-markers",
+      "kind": "blockedPhrase",
+      "phrase": "internal only"
+    },
+    {
+      "id": "local-language-required",
+      "kind": "requiredPhrase",
+      "phrase": "local"
+    },
+    {
+      "id": "community-salutation-review",
+      "kind": "blockedPhrase",
+      "phrase": "Hey community",
+      "platforms": ["discord"],
+      "severity": "warning"
+    }
+  ]
+}

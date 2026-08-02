@@ -19,6 +19,7 @@ from .handoff import (
     verify_campaign_plan_handoff,
 )
 from .models import CampaignBundle, CampaignCheck, ConfigError
+from .policy import ContentPolicy, load_content_policy
 from .plans import (
     CampaignPlanBundle,
     CampaignPlanCheck,
@@ -56,6 +57,7 @@ from .schema import (
     load_adapter_schema,
     load_approval_schema,
     load_campaign_schema,
+    load_content_policy_schema,
     load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
@@ -67,6 +69,11 @@ from .workflow import build_campaign, export_campaign, load_campaign
 
 def _json_print(value: object) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2))
+
+
+def _optional_content_policy(args: argparse.Namespace) -> ContentPolicy | None:
+    path = getattr(args, "policy", None)
+    return load_content_policy(path) if path else None
 
 
 def _print_preview(bundle: CampaignBundle) -> None:
@@ -84,6 +91,8 @@ def _print_preview(bundle: CampaignBundle) -> None:
 def _print_check(result: CampaignCheck) -> None:
     status = "passed" if result.publishable else "failed"
     print(f"Quality check {status} for {result.campaign_id}")
+    if result.content_policy is not None:
+        print(f"Content policy: {result.content_policy.name} ({result.content_policy.policy_id})")
     for issue in result.issues:
         print(f"{issue.severity}: [{issue.platform}] {issue.message}")
 
@@ -104,6 +113,8 @@ def _print_plan_preview(bundle: CampaignPlanBundle) -> None:
 def _print_plan_check(result: CampaignPlanCheck) -> None:
     status = "passed" if result.publishable else "failed"
     print(f"Plan quality check {status} for {result.plan_id}")
+    if result.content_policy is not None:
+        print(f"Content policy: {result.content_policy.name} ({result.content_policy.policy_id})")
     for issue in result.issues:
         platform = f" [{issue.platform}]" if issue.platform else ""
         print(f"{issue.severity}: item {issue.item}{platform} {issue.message}")
@@ -182,6 +193,8 @@ def _print_handoff_check(result: HandoffCheck) -> None:
 
 def _print_plan_readiness(result: CampaignPlanReadiness) -> None:
     print(f"Launch readiness: {result.stage.replace('-', ' ')} for {result.plan_id}")
+    if result.content_policy is not None:
+        print(f"Content policy: {result.content_policy.name} ({result.content_policy.policy_id})")
     print(
         f"Quality: {'passed' if result.quality_passed else 'blocked'}; "
         f"schedule: {'ready' if result.schedule_ready else 'blocked'}; "
@@ -234,7 +247,11 @@ def _preview_command(args: argparse.Namespace) -> int:
 
 def _check_command(args: argparse.Namespace) -> int:
     bundle = build_campaign(load_campaign(args.config))
-    result = check_campaign(bundle, warnings_as_errors=args.warnings_as_errors)
+    result = check_campaign(
+        bundle,
+        warnings_as_errors=args.warnings_as_errors,
+        content_policy=_optional_content_policy(args),
+    )
     if args.json:
         _json_print(result.to_dict())
     else:
@@ -270,6 +287,7 @@ def _approval_create_command(args: argparse.Namespace) -> int:
         approved_at=approved_at,
         warnings_as_errors=args.warnings_as_errors,
         note=args.note,
+        content_policy=_optional_content_policy(args),
     )
     output = Path(args.output) if args.output else Path(f"{args.config}.approval.json")
     path = export_campaign_approval(approval, output)
@@ -283,7 +301,11 @@ def _approval_create_command(args: argparse.Namespace) -> int:
 
 def _approval_verify_command(args: argparse.Namespace) -> int:
     bundle = build_campaign(load_campaign(args.config))
-    result = verify_campaign_approval(bundle, load_campaign_approval(args.approval))
+    result = verify_campaign_approval(
+        bundle,
+        load_campaign_approval(args.approval),
+        content_policy=_optional_content_policy(args),
+    )
     if args.json:
         _json_print(result.to_dict())
     else:
@@ -318,7 +340,11 @@ def _plan_preview_command(args: argparse.Namespace) -> int:
 
 def _plan_check_command(args: argparse.Namespace) -> int:
     bundle = build_campaign_plan(load_campaign_plan(args.plan))
-    result = check_campaign_plan(bundle, warnings_as_errors=args.warnings_as_errors)
+    result = check_campaign_plan(
+        bundle,
+        warnings_as_errors=args.warnings_as_errors,
+        content_policy=_optional_content_policy(args),
+    )
     if args.json:
         _json_print(result.to_dict())
     else:
@@ -357,6 +383,7 @@ def _plan_approval_create_command(args: argparse.Namespace) -> int:
         approved_at=approved_at,
         warnings_as_errors=args.warnings_as_errors,
         note=args.note,
+        content_policy=_optional_content_policy(args),
     )
     output = Path(args.output) if args.output else Path(f"{args.plan}.approval.json")
     path = export_campaign_plan_approval(approval, output)
@@ -373,6 +400,7 @@ def _plan_approval_verify_command(args: argparse.Namespace) -> int:
     result = verify_campaign_plan_approval(
         bundle,
         load_campaign_plan_approval(args.approval),
+        content_policy=_optional_content_policy(args),
     )
     if args.json:
         _json_print(result.to_dict())
@@ -390,6 +418,7 @@ def _plan_handoff_create_command(args: argparse.Namespace) -> int:
         approval,
         args.output,
         generated_at=generated_at,
+        content_policy=_optional_content_policy(args),
     )
     packet = load_campaign_plan_handoff(path)
     if args.json:
@@ -405,6 +434,7 @@ def _plan_handoff_verify_command(args: argparse.Namespace) -> int:
     result = verify_campaign_plan_handoff(
         bundle,
         load_campaign_plan_handoff(args.handoff),
+        content_policy=_optional_content_policy(args),
     )
     if args.json:
         _json_print(result.to_dict())
@@ -425,6 +455,7 @@ def _plan_status_command(args: argparse.Namespace) -> int:
         assessed_at=assessed_at,
         warnings_as_errors=args.warnings_as_errors,
         require_scheduled=args.require_scheduled,
+        content_policy=_optional_content_policy(args),
     )
     if args.html:
         export_campaign_plan_readiness_html(result, bundle, args.html)
@@ -444,6 +475,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "adapter": load_adapter_schema,
         "approval": load_approval_schema,
         "campaign": load_campaign_schema,
+        "content-policy": load_content_policy_schema,
         "handoff": load_handoff_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
@@ -463,6 +495,18 @@ def _schema_command(args: argparse.Namespace) -> int:
     except FileExistsError:
         raise ConfigError(f"refusing to overwrite existing file: {path}") from None
     print(f"Wrote {args.kind} schema to {path}")
+    return 0
+
+
+def _policy_validate_command(args: argparse.Namespace) -> int:
+    policy = load_content_policy(args.policy)
+    if args.json:
+        _json_print({"valid": True, "contentPolicy": policy.binding.to_dict()})
+    else:
+        print(
+            f"Valid content policy {policy.policy_id}: {policy.name} "
+            f"({len(policy.rules)} rules)"
+        )
     return 0
 
 
@@ -497,6 +541,7 @@ def build_parser() -> argparse.ArgumentParser:
         "check", help="fail when generated drafts require quality intervention"
     )
     check_parser.add_argument("config")
+    check_parser.add_argument("--policy", help="optional local content-policy JSON")
     check_parser.add_argument(
         "--warnings-as-errors",
         action="store_true",
@@ -538,6 +583,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     approval_create_parser.add_argument("config")
     approval_create_parser.add_argument(
+        "--policy", help="content policy to evaluate and bind to this approval"
+    )
+    approval_create_parser.add_argument(
         "--by", dest="approved_by", required=True, help="human-readable reviewer label"
     )
     approval_create_parser.add_argument(
@@ -562,6 +610,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     approval_verify_parser.add_argument("config")
     approval_verify_parser.add_argument("approval")
+    approval_verify_parser.add_argument(
+        "--policy", help="exact content policy bound to the approval, when present"
+    )
     approval_verify_parser.add_argument(
         "--json", action="store_true", help="emit machine-readable output"
     )
@@ -594,6 +645,7 @@ def build_parser() -> argparse.ArgumentParser:
         "check", help="run aggregate campaign and plan quality gates"
     )
     plan_check_parser.add_argument("plan")
+    plan_check_parser.add_argument("--policy", help="optional local content-policy JSON")
     plan_check_parser.add_argument(
         "--warnings-as-errors",
         action="store_true",
@@ -608,6 +660,9 @@ def build_parser() -> argparse.ArgumentParser:
         "status", help="assess launch readiness and optionally write an offline HTML board"
     )
     plan_status_parser.add_argument("plan")
+    plan_status_parser.add_argument(
+        "--policy", help="content policy to assess and verify against evidence"
+    )
     plan_status_parser.add_argument("--approval", help="optional source-bound plan approval JSON")
     plan_status_parser.add_argument("--handoff", help="optional approved handoff packet directory")
     plan_status_parser.add_argument(
@@ -677,6 +732,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_approval_create_parser.add_argument("plan")
     plan_approval_create_parser.add_argument(
+        "--policy", help="content policy to evaluate and bind to this approval"
+    )
+    plan_approval_create_parser.add_argument(
         "--by", dest="approved_by", required=True, help="human-readable reviewer label"
     )
     plan_approval_create_parser.add_argument(
@@ -704,6 +762,9 @@ def build_parser() -> argparse.ArgumentParser:
     plan_approval_verify_parser.add_argument("plan")
     plan_approval_verify_parser.add_argument("approval")
     plan_approval_verify_parser.add_argument(
+        "--policy", help="exact content policy bound to the approval, when present"
+    )
+    plan_approval_verify_parser.add_argument(
         "--json", action="store_true", help="emit machine-readable output"
     )
     plan_approval_verify_parser.set_defaults(handler=_plan_approval_verify_command)
@@ -717,6 +778,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_handoff_create_parser.add_argument("plan")
     plan_handoff_create_parser.add_argument("approval")
+    plan_handoff_create_parser.add_argument(
+        "--policy", help="exact content policy bound to the approval, when present"
+    )
     plan_handoff_create_parser.add_argument(
         "--at", dest="generated_at", help="explicit RFC 3339 handoff time (default: now)"
     )
@@ -734,9 +798,26 @@ def build_parser() -> argparse.ArgumentParser:
     plan_handoff_verify_parser.add_argument("plan")
     plan_handoff_verify_parser.add_argument("handoff")
     plan_handoff_verify_parser.add_argument(
+        "--policy", help="exact content policy bound to the packet approval, when present"
+    )
+
+    plan_handoff_verify_parser.add_argument(
         "--json", action="store_true", help="emit machine-readable output"
     )
     plan_handoff_verify_parser.set_defaults(handler=_plan_handoff_verify_command)
+
+    policy_parser = subparsers.add_parser(
+        "policy", help="validate portable local content-policy profiles"
+    )
+    policy_subparsers = policy_parser.add_subparsers(dest="policy_command")
+    policy_validate_parser = policy_subparsers.add_parser(
+        "validate", help="validate and identify a content-policy JSON file"
+    )
+    policy_validate_parser.add_argument("policy")
+    policy_validate_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    policy_validate_parser.set_defaults(handler=_policy_validate_command)
 
     schema_parser = subparsers.add_parser(
         "schema", help="print or write a bundled authoring or adapter JSON Schema"
@@ -745,6 +826,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--kind",
         choices=(
             "campaign",
+            "content-policy",
             "plan",
             "approval",
             "plan-approval",

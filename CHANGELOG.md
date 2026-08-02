@@ -2,6 +2,22 @@
 
 All notable changes to this project are documented here.
 
+## 0.11.0 - 2026-08-02
+
+- Added portable content-policy v1 JSON with bounded literal `blockedPhrase` and `requiredPhrase`
+  rules, per-platform targeting, casing controls, warning/error severity, and deterministic identity.
+- Applied policies to exact final rendered platform content, including platform variants and
+  truncation, with stable finding codes and rule IDs in campaign, plan, and readiness results.
+- Added optional policy bindings to campaign and plan approval v1; verification, approved handoff,
+  and readiness now reject an omitted, newly introduced, or changed policy relative to approval.
+- Made policy-bound handoffs self-contained by embedding normalized, checksummed policy source;
+  handoff verification and readiness use it automatically and can cross-check an external copy.
+- Added public immutable policy types/loaders/evaluator, `policy validate`, `--policy` across all
+  relevant CLI gates, a packaged Draft 2020-12 schema, offline readiness display, and a runnable
+  example.
+- Documented current approval/blocked-word workflow evidence, literal matching limits, additive
+  compatibility, policy confidentiality, unsigned identity, and the no-network/no-regex boundary.
+
 ## 0.10.0 - 2026-08-02
 
 - Added optional complete `platformVariants` content overrides for X, LinkedIn, Bluesky, Mastodon,

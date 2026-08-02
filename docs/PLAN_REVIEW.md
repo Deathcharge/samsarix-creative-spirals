@@ -33,6 +33,11 @@ Pass `--warnings-as-errors` during creation when duplicate times, out-of-order s
 campaign review warnings must block approval. The selected policy is stored and re-run during
 every verification. Existing approval files are never overwritten.
 
+When the plan is governed by a portable content policy, pass the same `--policy POLICY` to plan
+check, approval creation, and every later verification. Approval v1 then includes an optional
+`contentPolicy` identity; omission or substitution after review is an explicit invalid result. See
+[`POLICIES.md`](POLICIES.md).
+
 ## Semantic diff contract
 
 JSON output uses `schemaVersion: 1` and includes both plan IDs, both full source hashes, ordered
@@ -60,7 +65,8 @@ Each record contains:
 - `artifactType: "plan"` and `schemaVersion: 1`;
 - the deterministic `scp_*` plan ID and full SHA-256 source hash;
 - a normalized reviewer label and UTC review time;
-- the `errors-only` or `warnings-as-errors` quality policy; and
+- the `errors-only` or `warnings-as-errors` quality policy;
+- an optional normalized external `contentPolicy` ID, full source hash, and name; and
 - an optional review note.
 
 The plan source hash covers normalized plan metadata, ordered source paths, normalized intended

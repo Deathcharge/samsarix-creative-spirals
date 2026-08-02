@@ -9,8 +9,11 @@ import re
 import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
+
+if TYPE_CHECKING:
+    from .policy import ContentPolicyBinding
 
 SUPPORTED_PLATFORMS = ("x", "linkedin", "bluesky", "mastodon", "discord")
 PLATFORM_LIMITS = {
@@ -561,14 +564,18 @@ class QualityIssue:
     severity: str
     platform: str
     message: str
+    rule_id: str | None = None
 
     def to_dict(self) -> dict[str, str]:
-        return {
+        result = {
             "code": self.code,
             "severity": self.severity,
             "platform": self.platform,
             "message": self.message,
         }
+        if self.rule_id is not None:
+            result["ruleId"] = self.rule_id
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -578,14 +585,18 @@ class CampaignCheck:
     campaign_id: str
     publishable: bool
     issues: tuple[QualityIssue, ...]
+    content_policy: ContentPolicyBinding | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "schemaVersion": 1,
             "campaignId": self.campaign_id,
             "publishable": self.publishable,
             "issues": [issue.to_dict() for issue in self.issues],
         }
+        if self.content_policy is not None:
+            result["contentPolicy"] = self.content_policy.to_dict()
+        return result
 
 
 @dataclass(frozen=True, slots=True)

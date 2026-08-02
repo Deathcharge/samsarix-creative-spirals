@@ -4,7 +4,8 @@ Samsarix Creative Spirals is a local-first CLI and typed Python library that tur
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
-source-bound campaign and plan approval records make exact changes visible before handoff.
+portable content-policy profiles plus source-bound campaign and plan approval records make exact
+changes and guardrails visible before handoff.
 Approved handoff packets then bind current source, approval metadata, and exact rendered files for
 offline verification immediately before downstream use. A consolidated readiness command and
 offline HTML board show the current quality, schedule, approval, and handoff stage in one place.
@@ -12,7 +13,7 @@ offline HTML board show the current quality, schedule, approval, and handoff sta
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.10 alpha.** Platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
+> Maturity: **0.11 alpha.** Portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
 > semantic review and local approvals, portable image metadata, approved handoff verification, and
 > launch-readiness reporting are implemented and tested. Automatic
 > publishing,
@@ -138,6 +139,8 @@ samsarix-campaign schema --kind approval
 samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --kind handoff
+samsarix-campaign schema --kind readiness
+samsarix-campaign schema --kind content-policy
 samsarix-campaign schema --output campaign.schema.json
 ```
 
@@ -162,6 +165,18 @@ samsarix-campaign check campaign.json --warnings-as-errors
 This command performs no writes or network calls. A successful JSON report has
 `"publishable": true`; findings have stable `code`, `severity`, `platform`, and `message` fields.
 
+Apply repository-owned literal phrase guardrails to the final rendered platform drafts:
+
+```bash
+samsarix-campaign policy validate examples/content-policy.json --json
+samsarix-campaign check examples/campaign-variants.json \
+  --policy examples/content-policy.json --json
+```
+
+Policies can block or require an exact phrase globally or on selected platforms, with warning or
+error severity. They are bounded, deterministic JSON—not regex, AI moderation, or legal
+compliance. See [Portable content policies](docs/POLICIES.md) for the contract and trust model.
+
 ## Semantic review and local approval
 
 Compare normalized source fields and every generated platform draft before accepting a change:
@@ -180,6 +195,9 @@ After `check` passes, record the exact normalized source hash and quality policy
 samsarix-campaign approval create campaign.json --by "Release reviewer"
 samsarix-campaign approval verify campaign.json campaign.json.approval.json
 ```
+
+Add the same `--policy content-policy.json` argument to both commands to bind the normalized policy
+hash into approval. Once bound, omitting or changing that policy makes verification fail.
 
 Changing the campaign invalidates the approval. Existing approval files are never overwritten.
 `approvedBy` is a human-readable label, not an authenticated identity: approval records are useful
@@ -238,7 +256,7 @@ identity, idempotency, authorization, and compatibility rules.
 ## Approved downstream handoff
 
 After the complete plan is approved, create one non-overwriting packet that contains the embedded
-approval and exact plan-export artifacts:
+approval, any approval-bound normalized policy, and exact plan-export artifacts:
 
 ```bash
 samsarix-campaign plan handoff create \
@@ -250,9 +268,9 @@ samsarix-campaign plan handoff verify \
   handoff-outbox/RELEASE-SEQUENCE-SCH_ID
 ```
 
-Verification rechecks current source and the recorded quality policy, regenerates every expected
-artifact, checks byte lengths and SHA-256 values, and rejects missing, substituted, symbolic-link,
-or extra files. The packet is the safe input boundary for a manual workflow or separately
+Verification rechecks current source and the recorded quality policy, uses an embedded content
+policy automatically, regenerates every expected artifact, checks byte lengths and SHA-256 values,
+and rejects missing, substituted, symbolic-link, or extra files. The packet is the safe input boundary for a manual workflow or separately
 permissioned adapter; it does not connect an account, queue, schedule, or publish anything.
 
 The hashes are unsigned integrity checks. They do not authenticate the reviewer or producer and
@@ -290,22 +308,23 @@ samsarix-campaign --version
 samsarix-campaign init [PATH]
 samsarix-campaign validate CONFIG [--json]
 samsarix-campaign preview CONFIG [--json]
-samsarix-campaign check CONFIG [--warnings-as-errors] [--json]
+samsarix-campaign check CONFIG [--policy POLICY] [--warnings-as-errors] [--json]
 samsarix-campaign export CONFIG [--output DIRECTORY] [--overwrite] [--json]
 samsarix-campaign diff BEFORE AFTER [--json] [--exit-code]
-samsarix-campaign approval create CONFIG --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
-samsarix-campaign approval verify CONFIG APPROVAL [--json]
+samsarix-campaign approval create CONFIG --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
+samsarix-campaign approval verify CONFIG APPROVAL [--policy POLICY] [--json]
+samsarix-campaign policy validate POLICY [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
-samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
-samsarix-campaign plan status PLAN [--approval PATH] [--handoff DIRECTORY] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff] [--html PATH] [--json]
+samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--json]
+samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
-samsarix-campaign plan approval create PLAN --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
-samsarix-campaign plan approval verify PLAN APPROVAL [--json]
-samsarix-campaign plan handoff create PLAN APPROVAL [--at RFC3339] [--output DIRECTORY] [--json]
-samsarix-campaign plan handoff verify PLAN HANDOFF [--json]
+samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
+samsarix-campaign plan approval verify PLAN APPROVAL [--policy POLICY] [--json]
+samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
+samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter|handoff|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
@@ -398,7 +417,7 @@ for trust boundaries and failure behavior.
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
 - Media-file processing, per-account capabilities and mention resolution, cryptographic approvals,
-  hosted collaboration, network publishing, and analytics are outside the 0.10 scope. Calendar and readiness files record
+  hosted collaboration, network publishing, and analytics are outside the 0.11 scope. Calendar and readiness files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
