@@ -404,7 +404,7 @@ Current local verification on Windows/Python 3.11:
 | Draft 2020-12 schema validation | 0 | Campaign, plan, approval, and adapter schemas plus representative payloads passed. |
 | `python -m build --outdir <isolated-dir>/dist` | 0 | Built the `0.5.0` sdist and universal wheel with all four schemas and legal files. |
 | Python 3.11 installed-wheel review journey | 0 | Version, schemas, diff, approval create/verify, plan export, adapter artifact, and public API passed outside the repository. |
-| GitHub Actions Python 3.10/3.13 | 0 | Hosted Linux quality, build, and installed-wheel journeys passed on both versions for commit `7fd2a4a`. |
+| GitHub Actions Python 3.10/3.13 | 0 | Hosted Linux quality, build, and installed-wheel journeys passed on both versions for implementation head `9b42e2b`. |
 
 Known 0.5 boundaries:
 
@@ -420,6 +420,7 @@ Known 0.5 boundaries:
   fixture fix. External-user adoption signals remain unknown; no live provider credential was used
   and no generic artifact is represented as a direct provider import contract.
 
-**0.5 release candidate; declared local, package, fixture, and hosted-CI gates pass.** Automated pull
-request review remains the merge gate. A real external-user pilot and PyPI publication remain
-owner-controlled follow-ups rather than claims made from tests.
+**0.5 release candidate; declared local, package, fixture, and hosted-CI gates pass.** The automated
+review status passed but reported a service rate limit and posted no detailed comments; the local
+adversarial pass found and fixed the stale calendar product version. A real external-user pilot and
+PyPI publication remain owner-controlled follow-ups rather than claims made from tests.
