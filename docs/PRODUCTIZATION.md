@@ -61,13 +61,13 @@ boundary with no credentials, network calls, hosted state, or account risk. It c
 publisher without depending on another Samsarix repository or the flagship application.
 
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
-analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
+analytics; AI generation; media transformation or upload; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.13 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.14 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
-link attribution without adding a scheduler, account connection, analytics collector, or network
-publisher.
+link attribution, and optional approval-bound exact image packets without adding a scheduler,
+account connection, analytics collector, or network publisher.
 
 ## Product and architecture decisions
 
@@ -1108,3 +1108,59 @@ Compatibility and rollback:
   `6462261953ddf2d3ad8fb3fdfbe4c488e5a6e960` or pinning pre-0.13 main commit
   `452e466a0dce87dc7b38d41997a30d7599b145f1`. After publication, use normal version pinning and a
   corrective release; do not replace published artifacts silently.
+
+## 0.14 approval-bound exact-media release evidence
+
+### Research and product decision
+
+The existing media contract made paths and alt text reviewable but left actual images outside the
+approval and handoff boundary. That is a material operational gap: a downstream operator could not
+prove that the image bytes being uploaded were the ones reviewed with the copy.
+
+Current first-party contracts support one conservative local envelope. X documents a 5 MB image
+upload limit; Discord's default is 10 MiB per file; the canonical Bluesky Lexicon caps an image blob
+at 2,000,000 bytes; LinkedIn supports JPG/PNG below 36,152,320 pixels; and Mastodon exposes current
+MIME, byte, pixel, count, and description limits per instance. The product therefore uses
+Bluesky's byte ceiling and LinkedIn's strict pixel inequality, while explicitly requiring
+provider/account/instance revalidation downstream. Exact links and implications are in
+[`MEDIA.md`](MEDIA.md).
+
+The opt-in belongs at approval creation, not handoff creation. This prevents an operator from
+adding different unreviewed pixels after the human review record exists. Metadata-only workflows
+retain their byte-for-byte approval and handoff shape.
+
+Priority disposition: P1 “approved media workflows cannot carry or verify the reviewed bytes” is
+closed by this slice. P2 full image decoding/metadata stripping and provider-specific upload
+adapters remain deferred because they would add decoder supply-chain surface, credentials, live
+capability state, and materially different authorization boundaries.
+
+### Bounded contract and implementation
+
+Implemented locally: immutable media binding/asset/index/collection types; deterministic `scm_*`
+identity; campaign-relative collection beneath a trusted plan root; rejection of symbolic-link
+components, non-regular files, unstable identity/size/mtime, malformed or animated images, and
+out-of-envelope resources; structural PNG CRC/chunk and JPEG frame/scan inspection; SHA-256
+content-addressed deduplication; opt-in CLI approval binding; automatic approval verification and
+handoff collection; normalized `media-index.json`; exact `media/` packet bytes; packet-shape and
+checksum verification; readiness/publication compatibility; public APIs; and a bundled Draft
+2020-12 schema.
+
+Bounds are 2,000,000 bytes per file, fewer than 36,152,320 pixels, 400 plan references, 100 MB of
+unique packet bytes, and the existing 1 MB JSON index loader. Runtime remains standard-library-only
+and credential-free. Collection performs local reads only; it does not fully decode pixels,
+antivirus-scan, remove metadata, establish rights/consent, query providers, upload, resize, or
+transform. Packet hashes remain unsigned.
+
+### Verification and release disposition
+
+Pre-review local implementation evidence currently includes 350 compatibility-plus-feature tests
+before expanded adversarial coverage, followed by 30 focused media tests at 93.11% media-module
+coverage. Final full-suite counts, formatting/lint/type/schema/build results, isolated distribution
+hashes, installed-wheel journey identities, reviewed commit, PR/merge, hosted CI, and rollback
+commit will be recorded after the release branch completes review.
+
+Compatibility is additive: campaign and adapter contracts are unchanged; plan-approval v1 gains
+optional `media`; handoff v1 permits optional `media-index.json`; readiness's embedded approval
+copy stays synchronized; and metadata-only calls emit their prior shapes. The new media-package v1
+schema and public names join the pre-1.0 surface. PyPI publication and external adoption validation
+remain owner-controlled gates.

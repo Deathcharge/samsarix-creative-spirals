@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 0.14.0 - 2026-08-02
+
+- Added opt-in `--include-media` plan approvals that bind exact campaign-relative static JPEG/PNG
+  bytes, while preserving the existing metadata-only default.
+- Added bounded stable reads, no-symlink containment, structural image/type/dimension checks,
+  SHA-256 content addressing, duplicate-byte elimination, and explicit per-file, pixel, reference,
+  and packet limits with no network or third-party runtime dependency.
+- Added self-contained exact-media handoffs with normalized `media-index.json`, deduplicated
+  `media/` payloads, approval binding, packet-shape enforcement, and byte-level tamper detection.
+- Added immutable media index/binding/asset/collection APIs, a bundled Draft 2020-12 media-package
+  schema, CLI schema output, readiness integration, adversarial coverage, and installed-wheel CI
+  planning.
+- Documented current first-party X, LinkedIn, Bluesky, Mastodon, and Discord constraints plus the
+  limits of structural validation, unsigned hashes, local content rights, and provider acceptance.
+
 ## 0.13.0 - 2026-08-02
 
 - Added exclusive initialization and offline verification of handoff-bound publication ledgers

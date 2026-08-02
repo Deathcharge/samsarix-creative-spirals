@@ -1,12 +1,31 @@
 from __future__ import annotations
 
 import json
+import struct
+import zlib
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from samsarix_creative_spirals.cli import main
+
+
+def _one_pixel_png() -> bytes:
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + kind
+            + data
+            + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+        )
+
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(b"\x00\x0c\x22\x38\xff"))
+        + chunk(b"IEND", b"")
+    )
 
 
 def _write_campaign(path: Path, data: dict[str, Any]) -> None:
@@ -649,6 +668,101 @@ def test_cli_emits_handoff_schema(capsys: Any) -> None:
     assert main(["schema", "--kind", "handoff"]) == 0
     schema = json.loads(capsys.readouterr().out)
     assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
+
+
+def test_cli_binds_packages_and_verifies_exact_media(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign_data["media"] = [
+        {
+            "path": "media/launch.png",
+            "altText": "Launch dashboard",
+            "platforms": ["x", "linkedin"],
+        }
+    ]
+    campaign = tmp_path / "campaigns" / "release.json"
+    campaign.parent.mkdir()
+    _write_campaign(campaign, campaign_data)
+    image = campaign.parent / "media" / "launch.png"
+    image.parent.mkdir()
+    image.write_bytes(_one_pixel_png())
+    plan = tmp_path / "plan.json"
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Media release",
+                "requiredPlatforms": ["x", "linkedin"],
+                "items": [
+                    {
+                        "campaign": "campaigns/release.json",
+                        "intendedAt": "2026-08-10T13:00:00Z",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    approval = tmp_path / "approval.json"
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(plan),
+                "--by",
+                "Visual reviewer",
+                "--at",
+                "2026-08-03T14:15:00Z",
+                "--include-media",
+                "--output",
+                str(approval),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    created = json.loads(capsys.readouterr().out)
+    assert created["approval"]["media"]["assetCount"] == 1
+    assert main(["plan", "approval", "verify", str(plan), str(approval)]) == 0
+    capsys.readouterr()
+
+    outbox = tmp_path / "handoffs"
+    assert (
+        main(
+            [
+                "plan",
+                "handoff",
+                "create",
+                str(plan),
+                str(approval),
+                "--at",
+                "2026-08-04T09:30:00Z",
+                "--output",
+                str(outbox),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    packet = Path(json.loads(capsys.readouterr().out)["path"])
+    assert (packet / "media-index.json").is_file()
+    assert len(list((packet / "media").iterdir())) == 1
+    assert main(["plan", "handoff", "verify", str(plan), str(packet), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["valid"] is True
+
+    image.write_bytes(_one_pixel_png()[:-1] + b"x")
+    assert main(["plan", "approval", "verify", str(plan), str(approval)]) == 1
+    assert "PNG" in capsys.readouterr().err
+    assert main(["plan", "handoff", "verify", str(plan), str(packet)]) == 0
+
+
+def test_cli_emits_media_package_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "media-package"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["contract"]["const"] == "samsarix.handoff-media"
+    assert schema["properties"]["totalBytes"]["maximum"] == 100_000_000
 
 
 def test_cli_initializes_verifies_and_gates_publication_ledger(

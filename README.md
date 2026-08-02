@@ -6,8 +6,9 @@ input, supports deliberate per-platform copy, applies platform-aware limits, che
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
 deterministic link attribution, portable content-policy profiles, and source-bound campaign and
 plan approval records make exact changes and guardrails visible before handoff.
-Approved handoff packets then bind current source, approval metadata, and exact rendered files for
-offline verification immediately before downstream use. A handoff-bound publication ledger can
+Approved handoff packets then bind current source, approval metadata, exact rendered files, and
+optionally the exact reviewed JPEG/PNG bytes for offline verification immediately before downstream
+use. A handoff-bound publication ledger can
 then reconcile operator-recorded published, failed, skipped, and pending outcomes without opening
 a URL or claiming provider verification. A consolidated readiness command and offline HTML board
 show the current quality, schedule, approval, handoff, and optional publication stage in one place.
@@ -15,8 +16,10 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.13 alpha.** Publication reconciliation, deterministic link tracking, portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
-> semantic review and local approvals, portable image metadata, approved handoff verification, and
+> Maturity: **0.14 alpha.** Approval-bound static-image packets, publication reconciliation,
+> deterministic link tracking, portable phrase policies, platform-native content variants,
+> federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
+> approvals, portable image metadata, approved handoff verification, and
 > launch-readiness reporting are implemented and tested. Automatic
 > publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
@@ -126,9 +129,11 @@ behavior.
 | `linkTracking` | no | Up to 20 deterministic query parameters in each merged effective requested-platform map, with optional platform overrides. Existing-name conflicts are rejected. |
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
-Media paths are metadata relative to the campaign file. Core validates that metadata but never
-resolves, reads, inspects, copies, or uploads the referenced files. References participate in
-campaign hashes, diffs, approvals, manifests, and adapter v2 output. See
+Media paths are metadata relative to the campaign file. Ordinary validate, preview, check, diff,
+approval, export, and handoff workflows do not dereference them. Add `--include-media` specifically
+to plan approval creation to inspect and bind the exact local JPEG/PNG bytes; a later handoff then
+packages those same approval-bound bytes automatically. References participate in campaign hashes,
+diffs, approvals, manifests, and adapter v2 output. See
 [Portable media references](docs/MEDIA.md) for targeting, path rules, platform rationale, and the
 filesystem/provider checks required of an external adapter.
 
@@ -153,6 +158,7 @@ samsarix-campaign schema --kind approval
 samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --kind handoff
+samsarix-campaign schema --kind media-package
 samsarix-campaign schema --kind readiness
 samsarix-campaign schema --kind publication
 samsarix-campaign schema --kind content-policy
@@ -259,6 +265,14 @@ every referenced campaign—to one quality policy. Any of those changes makes ve
 `4`. See [Plan review and approval](docs/PLAN_REVIEW.md) for the machine-readable contract, CI
 pattern, and trust boundary.
 
+When a plan references real images and review must cover their exact pixels, create the plan
+approval with `--include-media`. Samsarix resolves each reference beneath its campaign directory,
+rejects symbolic links and unstable reads, validates bounded static JPEG/PNG structure and
+dimensions, and records a content-addressed `scm_*` snapshot in the approval. The portable ceiling
+is 2,000,000 bytes per file, 36,152,319 pixels, 400 plan references, and 100 MB of unique image
+bytes per packet. Provider, account, and Mastodon-instance rules still require downstream
+revalidation.
+
 Plan export writes `manifest.json`, `calendar.ics`, and one UTF-8 CSV per used platform. Scheduled
 items become transparent calendar events; unscheduled items become tasks. CSV timestamps are
 explicit UTC values and the stable columns are publisher-neutral—they are intended for review and
@@ -271,7 +285,8 @@ identity, idempotency, authorization, and compatibility rules.
 ## Approved downstream handoff
 
 After the complete plan is approved, create one non-overwriting packet that contains the embedded
-approval, any approval-bound normalized policy, and exact plan-export artifacts:
+approval, any approval-bound normalized policy, exact plan-export artifacts, and any exact image
+snapshot bound with `--include-media`:
 
 ```bash
 samsarix-campaign plan handoff create \
@@ -287,6 +302,8 @@ Verification rechecks current source and the recorded quality policy, uses an em
 policy automatically, regenerates every expected artifact, checks byte lengths and SHA-256 values,
 and rejects missing, substituted, symbolic-link, or extra files. The packet is the safe input boundary for a manual workflow or separately
 permissioned adapter; it does not connect an account, queue, schedule, or publish anything.
+Media-bound packets add `media-index.json` and deduplicated content-addressed files beneath
+`media/`; verification checks those bytes against the exact snapshot named by the approval.
 
 The hashes are unsigned integrity checks. They do not authenticate the reviewer or producer and
 are not cryptographic attestations. See [Approved handoff packets](docs/HANDOFFS.md) for the packet
@@ -363,14 +380,14 @@ samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--json]
 samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--publication PATH] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff|publication] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
-samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
+samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--include-media] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--policy POLICY] [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
 samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|publication|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|media-package|publication|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
@@ -431,10 +448,11 @@ console command. The package has no third-party runtime dependencies.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
+- `media_package.py` captures, validates, indexes, and approval-binds opt-in static image bytes.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
 - `publication.py` initializes and verifies handoff-bound operator outcome ledgers.
 - `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
-- `schema.py` exposes campaign, plan, approval, handoff, publication, readiness, and adapter JSON Schemas bundled in the wheel.
+- `schema.py` exposes campaign, plan, approval, media-package, handoff, publication, readiness, and adapter JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -464,10 +482,15 @@ for trust boundaries and failure behavior.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
+- `--include-media` performs a bounded local read and structural JPEG/PNG inspection; it does not
+  fully decode pixels, scan for malware, establish copyright or consent, or prove acceptance by a
+  particular account or Mastodon instance. Packaged images may contain sensitive data and increase
+  local storage by up to 100 MB per handoff.
 - Publication records are unsigned operator assertions. Their URLs are bounded and never opened;
   they do not prove provider acceptance, remote visibility, authorship, or continued availability.
-- Media-file processing, per-account capabilities and mention resolution, cryptographic approvals,
-  hosted collaboration, network publishing, click collection, and analytics reporting are outside the 0.13 scope. Calendar, readiness, and publication files record
+- Media transformation, per-account capabilities and mention resolution, cryptographic approvals,
+  hosted collaboration, network publishing, click collection, and analytics reporting are outside
+  the 0.14 scope. Calendar, readiness, and publication files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

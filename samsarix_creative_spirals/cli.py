@@ -18,6 +18,7 @@ from .handoff import (
     load_campaign_plan_handoff,
     verify_campaign_plan_handoff,
 )
+from .media_package import collect_campaign_plan_media
 from .models import CampaignBundle, CampaignCheck, ConfigError
 from .policy import ContentPolicy, load_content_policy
 from .plans import (
@@ -66,6 +67,7 @@ from .schema import (
     load_campaign_schema,
     load_content_policy_schema,
     load_handoff_schema,
+    load_media_package_schema,
     load_plan_approval_schema,
     load_plan_schema,
     load_publication_schema,
@@ -405,8 +407,14 @@ def _plan_diff_command(args: argparse.Namespace) -> int:
 
 
 def _plan_approval_create_command(args: argparse.Namespace) -> int:
-    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
     approved_at = parse_approval_timestamp(args.approved_at) if args.approved_at else None
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if args.include_media
+        else None
+    )
     approval = create_campaign_plan_approval(
         bundle,
         approved_by=args.approved_by,
@@ -414,6 +422,7 @@ def _plan_approval_create_command(args: argparse.Namespace) -> int:
         warnings_as_errors=args.warnings_as_errors,
         note=args.note,
         content_policy=_optional_content_policy(args),
+        media=media,
     )
     output = Path(args.output) if args.output else Path(f"{args.plan}.approval.json")
     path = export_campaign_plan_approval(approval, output)
@@ -421,16 +430,29 @@ def _plan_approval_create_command(args: argparse.Namespace) -> int:
         _json_print({"path": str(path), "approval": approval.to_dict()})
     else:
         print(f"Recorded local plan approval for {bundle.plan_id} in {path}")
+        if approval.media is not None:
+            print(
+                f"Exact media: {approval.media.media_id} "
+                f"({approval.media.asset_count} references, {approval.media.total_bytes} bytes)"
+            )
         print("This record is source-bound review metadata, not a digital signature.")
     return 0
 
 
 def _plan_approval_verify_command(args: argparse.Namespace) -> int:
-    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
+    approval = load_campaign_plan_approval(args.approval)
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if approval.media is not None
+        else None
+    )
     result = verify_campaign_plan_approval(
         bundle,
-        load_campaign_plan_approval(args.approval),
+        approval,
         content_policy=_optional_content_policy(args),
+        media=media,
     )
     if args.json:
         _json_print(result.to_dict())
@@ -440,8 +462,14 @@ def _plan_approval_verify_command(args: argparse.Namespace) -> int:
 
 
 def _plan_handoff_create_command(args: argparse.Namespace) -> int:
-    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
     approval = load_campaign_plan_approval(args.approval)
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent)
+        if approval.media is not None
+        else None
+    )
     generated_at = parse_approval_timestamp(args.generated_at) if args.generated_at else None
     path = export_campaign_plan_handoff(
         bundle,
@@ -449,12 +477,18 @@ def _plan_handoff_create_command(args: argparse.Namespace) -> int:
         args.output,
         generated_at=generated_at,
         content_policy=_optional_content_policy(args),
+        media=media,
     )
     packet = load_campaign_plan_handoff(path)
     if args.json:
         _json_print({"path": str(path), "handoff": packet.handoff.to_dict()})
     else:
         print(f"Exported approved handoff {packet.handoff.handoff_id} to {path}")
+        if packet.media is not None:
+            print(
+                f"Packaged exact media: {packet.media.media_id} "
+                f"({len(packet.media.assets)} references, {packet.media.total_bytes} bytes)"
+            )
         print("Checksums provide offline integrity, not signer identity or provenance.")
     return 0
 
@@ -518,11 +552,17 @@ def _plan_publication_verify_command(args: argparse.Namespace) -> int:
 
 
 def _plan_status_command(args: argparse.Namespace) -> int:
-    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
     approval = load_campaign_plan_approval(args.approval) if args.approval else None
     handoff = load_campaign_plan_handoff(args.handoff) if args.handoff else None
     publication = load_campaign_plan_publication(args.publication) if args.publication else None
     assessed_at = parse_approval_timestamp(args.assessed_at) if args.assessed_at else None
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if approval is not None and approval.media is not None and handoff is None
+        else None
+    )
     result = build_campaign_plan_readiness(
         bundle,
         approval=approval,
@@ -532,6 +572,7 @@ def _plan_status_command(args: argparse.Namespace) -> int:
         warnings_as_errors=args.warnings_as_errors,
         require_scheduled=args.require_scheduled,
         content_policy=_optional_content_policy(args),
+        media=media,
     )
     if args.html:
         export_campaign_plan_readiness_html(result, bundle, args.html)
@@ -553,6 +594,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "campaign": load_campaign_schema,
         "content-policy": load_content_policy_schema,
         "handoff": load_handoff_schema,
+        "media-package": load_media_package_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
         "publication": load_publication_schema,
@@ -829,6 +871,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="require a warning-free plan and record that stricter policy",
     )
     plan_approval_create_parser.add_argument(
+        "--include-media",
+        action="store_true",
+        help="inspect and bind exact referenced JPEG/PNG bytes to this approval",
+    )
+    plan_approval_create_parser.add_argument(
         "--output", help="new approval file (default: PLAN.approval.json)"
     )
     plan_approval_create_parser.add_argument(
@@ -955,6 +1002,7 @@ def build_parser() -> argparse.ArgumentParser:
             "publication",
             "adapter",
             "handoff",
+            "media-package",
             "readiness",
         ),
         default="campaign",

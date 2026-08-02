@@ -249,11 +249,25 @@ normalized intended time, and referenced campaign semantics. Reorders appear as 
 the affected positions. The function builds deterministic identities but performs no file or
 network I/O; callers load plan files separately with `load_campaign_plan`.
 
-### `create_campaign_plan_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None, content_policy=None) -> CampaignPlanApproval`
+### `collect_campaign_plan_media(bundle, plan_root) -> CollectedCampaignPlanMedia`
+
+Explicitly resolves every referenced image relative to its campaign beneath one trusted plan root,
+rejects symbolic links and unstable/non-regular reads, validates the bounded static JPEG/PNG
+envelope, deduplicates exact bytes, and returns an immutable `CampaignPlanMedia` index plus captured
+payloads. It performs local file reads but no network access, full decode, transformation, or write.
+
+### `load_campaign_plan_media(path) -> CampaignPlanMedia`
+
+Loads and strictly validates a bounded `samsarix.handoff-media` v1 index, including canonical
+`scm_*` identity, plan/source binding fields, content-addressed packet paths, unique reference
+mapping, file metadata, and total byte accounting. It does not open image paths named by the index.
+
+### `create_campaign_plan_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None, content_policy=None, media=None) -> CampaignPlanApproval`
 
 Re-runs the aggregate plan quality policy and refuses creation when it fails. The approval binds
 the reviewer label, UTC time, built-in warning policy, optional note, plan ID, and full plan source
-hash. When supplied, it stores a `ContentPolicyBinding` rather than policy rules. The plan hash
+hash. When supplied, it stores a `ContentPolicyBinding` rather than policy rules. An optional
+`CampaignPlanMedia` must belong to the exact bundle and adds its exact-byte binding. The plan hash
 covers order, schedule, required platforms, source references, and every normalized referenced
 campaign. The reviewer label is not authenticated.
 
@@ -267,31 +281,33 @@ never replaced, and parent directories are created when needed.
 Reads a bounded UTF-8 JSON object and validates the dedicated plan-approval v1 contract, including
 artifact type, plan identity, timestamp, quality policy, and reviewer metadata.
 
-### `verify_campaign_plan_approval(bundle, approval, *, content_policy=None) -> PlanApprovalCheck`
+### `verify_campaign_plan_approval(bundle, approval, *, content_policy=None, media=None) -> PlanApprovalCheck`
 
 Requires the full plan source hash and plan ID to match, then re-runs the recorded built-in warning
 policy. If the approval has `contentPolicy`, the caller must supply the exact current
-`content_policy`; verification compares its binding and re-runs those supplied rules. Stable issue
-codes distinguish changed source, changed plan ID, missing/changed policy, and quality failure.
+`content_policy`; verification compares its binding and re-runs those supplied rules. A
+media-bound approval similarly requires the exact current `CampaignPlanMedia`. Stable issue codes
+distinguish changed source, changed plan ID, missing/changed policy or media, and quality failure.
 
-### `build_campaign_plan_handoff(bundle, approval, *, generated_at, content_policy=None) -> CampaignPlanHandoff`
+### `build_campaign_plan_handoff(bundle, approval, *, generated_at, content_policy=None, media=None) -> CampaignPlanHandoff`
 
 Re-verifies the approval and recorded aggregate quality policy, requires a timezone-aware handoff
 time at or after approval, renders exact plan-export bytes, and returns deterministic unsigned
 metadata for that input and timestamp. It performs no file or network I/O.
 
-### `export_campaign_plan_handoff(bundle, approval, output_root="handoff-outbox", *, generated_at=None, content_policy=None) -> Path`
+### `export_campaign_plan_handoff(bundle, approval, output_root="handoff-outbox", *, generated_at=None, content_policy=None, media=None) -> Path`
 
 Creates a private temporary directory, writes the embedded approval, optional normalized policy,
-handoff manifest, and exact plan-export artifacts, then renames the complete directory into a
-generated `sch_*` path. It refuses a symbolic-link/non-directory root and never replaces an
-existing packet.
+handoff manifest, and exact plan-export artifacts. Matching `CollectedCampaignPlanMedia` adds
+normalized `media-index.json` and deduplicated content-addressed image files. Export then renames
+the complete directory into a generated `sch_*` path. It refuses a symbolic-link/non-directory
+root and never replaces an existing packet.
 
 ### `load_campaign_plan_handoff(path) -> CampaignPlanHandoffPacket`
 
-Loads bounded handoff, approval, and optional content-policy JSON from a non-symbolic-link
-directory and validates their strict runtime contracts. Artifact content verification remains
-explicit.
+Loads bounded handoff, approval, optional content-policy, and optional media-index JSON from a
+non-symbolic-link directory and validates their strict runtime contracts. Artifact and image-byte
+verification remains explicit.
 
 ### `verify_campaign_plan_handoff(bundle, packet, *, content_policy=None) -> HandoffCheck`
 
@@ -299,7 +315,8 @@ Rechecks current source and approval quality, using the packet's embedded policy
 an explicit policy must match it. It also verifies metadata identity and producer version, fixed
 packet shape, on-disk metadata, and every regenerated artifact size and SHA-256. It rejects
 symbolic links, non-regular files, missing/extra files, and files that change while read. `valid`
-does not claim signer identity or authenticated provenance.
+also requires every content-addressed image to match the approval-bound media index. It does not
+claim signer identity or authenticated provenance.
 
 ### `initialize_campaign_plan_publication(bundle, packet, *, created_at=None, content_policy=None) -> CampaignPlanPublication`
 
@@ -326,12 +343,13 @@ additionally requires every record to be `published` or `skipped`; pending and f
 remain current but incomplete. The function performs no DNS or HTTP request and does not prove
 remote publication.
 
-### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, publication=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False, content_policy=None) -> CampaignPlanReadiness`
+### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, publication=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False, content_policy=None, media=None) -> CampaignPlanReadiness`
 
 Combines the current aggregate quality result, schedule state at a timezone-aware assessment time,
 optional plan approval, optional exact handoff verification, and optional bound publication
-ledger. A handoff supplies its embedded
-approval and policy when explicit values are absent; explicit values must match packet evidence.
+ledger. A handoff supplies its embedded approval, policy, and exact-media index when explicit
+values are absent; explicit values must match packet evidence. A media-bound approval without a
+handoff requires the matching current `CampaignPlanMedia` argument.
 Past or due intended times block readiness. Missing times block only under
 `require_scheduled=True`. Current publication evidence adds invalid/in-progress/complete stages;
 past intended times remain findings but do not mask post-handoff reconciliation. No files are
@@ -400,6 +418,12 @@ Loads the handoff v1 manifest schema. The CLI equivalent is
 `samsarix-campaign schema --kind handoff`; packet and trust-boundary rules are in
 `docs/HANDOFFS.md`.
 
+### `load_media_package_schema() -> dict[str, Any]`
+
+Loads the approval-bound handoff-media v1 index schema. The CLI equivalent is
+`samsarix-campaign schema --kind media-package`; byte limits and trust-boundary rules are in
+`docs/MEDIA.md`.
+
 ### `load_readiness_schema() -> dict[str, Any]`
 
 Loads the plan-readiness v1 report schema. The CLI equivalent is
@@ -441,11 +465,11 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan/approval/handoff/publication/readiness JSON
+The package is pre-1.0. The exported names, campaign/plan/approval/handoff/media-package/publication/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.13.x. Publication v1 is a new optional sidecar. Readiness v1 gains new
-stages and optional publication fields only when the sidecar is supplied; existing calls and
-reports without it retain their prior output.
+compatibility surface for 0.14.x. Media-package v1 and the optional plan-approval/handoff media
+fields are additive; metadata-only calls and artifacts retain their prior output. Publication v1
+remains an optional sidecar.
 Campaign schema v1's optional `linkTracking` remains unchanged; sources without tracking retain
 their prior normalized source and output.
 Content-policy schema v1 and the optional approval/readiness policy fields introduced in 0.11

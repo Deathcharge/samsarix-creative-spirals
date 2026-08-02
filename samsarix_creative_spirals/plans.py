@@ -660,11 +660,11 @@ def _clear_plan_temp(path: Path) -> None:
     if not path.exists():
         return
     for child in path.iterdir():
-        if child.name == "csv" and child.is_dir() and not child.is_symlink():
-            for csv_file in child.iterdir():
-                if not csv_file.is_file() or csv_file.is_symlink():
-                    raise OSError(f"refusing to clean unexpected temporary entry: {csv_file}")
-                csv_file.unlink()
+        if child.name in {"csv", "media"} and child.is_dir() and not child.is_symlink():
+            for artifact in child.iterdir():
+                if not artifact.is_file() or artifact.is_symlink():
+                    raise OSError(f"refusing to clean unexpected temporary entry: {artifact}")
+                artifact.unlink()
             child.rmdir()
         elif child.is_file() and not child.is_symlink():
             child.unlink()

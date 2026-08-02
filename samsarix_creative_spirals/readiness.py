@@ -16,6 +16,7 @@ from .handoff import (
     CampaignPlanHandoffPacket,
     verify_campaign_plan_handoff,
 )
+from .media_package import CampaignPlanMedia
 from .models import ConfigError
 from .policy import ContentPolicy, ContentPolicyBinding
 from .plan_review import CampaignPlanApproval, verify_campaign_plan_approval
@@ -273,6 +274,7 @@ def _assess_evidence(
     handoff: CampaignPlanHandoffPacket | None,
     *,
     content_policy: ContentPolicy | None = None,
+    media: CampaignPlanMedia | None = None,
 ) -> _EvidenceAssessment:
     issues: list[ReadinessIssue] = []
     selected_approval = approval
@@ -296,8 +298,12 @@ def _assess_evidence(
     approval_valid = False
     approval_status: EvidenceStatus = "not-provided"
     if selected_approval is not None:
+        effective_media = handoff.media if handoff is not None else media
         approval_check = verify_campaign_plan_approval(
-            bundle, selected_approval, content_policy=content_policy
+            bundle,
+            selected_approval,
+            content_policy=content_policy,
+            media=effective_media,
         )
         approval_valid = approval_check.valid and not mismatch
         approval_status = "valid" if approval_valid else "invalid"
@@ -434,6 +440,7 @@ def build_campaign_plan_readiness(
     warnings_as_errors: bool = False,
     require_scheduled: bool = False,
     content_policy: ContentPolicy | None = None,
+    media: CampaignPlanMedia | None = None,
 ) -> CampaignPlanReadiness:
     """Assess quality, schedule, approval, handoff, and publication evidence offline."""
     timestamp = assessed_at or datetime.now(timezone.utc)
@@ -448,7 +455,13 @@ def build_campaign_plan_readiness(
         content_policy=effective_policy,
     )
     schedule = _assess_schedule(bundle, timestamp, require_scheduled=require_scheduled)
-    evidence = _assess_evidence(bundle, approval, handoff, content_policy=effective_policy)
+    evidence = _assess_evidence(
+        bundle,
+        approval,
+        handoff,
+        content_policy=effective_policy,
+        media=media,
+    )
     publication_evidence = _assess_publication(
         bundle,
         handoff,

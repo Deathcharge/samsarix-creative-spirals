@@ -37,10 +37,11 @@ plan.json ──confined relative paths──► CampaignConfig (1..100)
 CampaignPlanBundle
     ├──► aggregate quality report
     ├──► deterministic plan diff / source-bound plan approval verification
+    │       └── optional exact media collection ──► approval-bound scm_* snapshot
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
     ├──► exclusive approved handoff packet
             ├── embedded approval.json + optional content-policy.json + handoff.json
-            └── exact regenerated plan-export artifacts
+            └── exact regenerated plan-export artifacts + optional content-addressed images
     └──► point-in-time readiness JSON / exclusive offline HTML board
             └── quality + schedule + approval + handoff + optional publication evidence state
 
@@ -119,12 +120,22 @@ verification checks identity, requires the exact external content policy when on
 re-runs the stored aggregate quality policy. The campaign
 approval v1 contract remains separate so existing consumers do not need to distinguish a union.
 
+### `media_package.py`
+
+Implements the sole opt-in media dereference boundary. A trusted plan root plus normalized campaign
+references resolve to campaign-relative files with no symbolic-link component. One stable bounded
+open captures regular-file bytes, structural JPEG/PNG inspection derives dimensions and normalized
+content type, and SHA-256 content addressing deduplicates packet files. The canonical media index
+binds every source reference, alt text, target set, dimension, size, and checksum to an `scm_*`
+identity. Collection performs no network request, full pixel decode, transformation, or upload.
+
 ### `handoff.py`
 
 Creates an approved plan handoff only after current approval verification and a generation time at
 or after approval. The handoff manifest binds plan identity, producer version, generation time,
 embedded approval, optional normalized approval-bound policy, and fixed rendered artifacts by size
-and SHA-256. Export is exclusive and uses a private temporary sibling plus directory rename.
+and SHA-256. An optional media index is itself a declared artifact and transitively binds every
+content-addressed image. Export is exclusive and uses a private temporary sibling plus directory rename.
 Verification uses the embedded policy by default, regenerates exact bytes from current source,
 rejects unexpected entries, symbolic links, and non-regular files, and checks that files remain
 stable during reads. Hashes are unsigned integrity metadata, not authenticated provenance or
@@ -151,7 +162,8 @@ labels and hashes are unsigned.
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
 dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval,
-handoff, publication, readiness, and adapter schemas help editors and generic validators, while runtime models remain
+media-package, handoff, publication, readiness, and adapter schemas help editors and generic
+validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
 ### `cli.py`
@@ -172,17 +184,19 @@ quality gate uses `3` and its approval/handoff/publication gates use `4`.
 | Campaign fields | Baseline and per-platform text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, canonical/requested platform allowlists, hard platform ceilings. |
 | Link tracking | Common and per-platform query parameter names/values | Lowercase name grammar; parameter/value/count/final-URL bounds; requested-platform checks; existing-name collision rejection; deterministic percent encoding; no URL open or analytics collection. |
 | Content policy | Local JSON, rule phrases, targets, severity, casing | Shared file/nesting limits, 50-rule and 200-character phrase caps, strict fields/IDs, literal matching only, deterministic identity. |
-| Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds, no core dereference. |
+| Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds; no dereference by default. |
+| Exact media collection | Trusted plan root and referenced local image files | Explicit opt-in; campaign-relative containment; no symlink components; stable regular-file read; 2,000,000-byte/file, 36,152,319-pixel, 400-reference, and 100 MB packet bounds; structural JPEG/PNG checks; content addressing. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
-| Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
-| Approved handoff packet | Local directory, metadata, approval/policy evidence, and generated files | Exclusive atomic creation; fixed shape; source, approval, embedded-policy, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
+| Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, optional exact-media binding, aggregate quality re-check; no identity claim. |
+| Approved handoff packet | Local directory, metadata, approval/policy/media evidence, and generated files | Exclusive atomic creation; exact expected shape; source, approval, embedded-policy/media, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Publication ledger | Local outcome JSON, operator labels, times, URLs, and notes | Shared file/nesting bounds; strict state combinations; exact plan/handoff/draft binding; chronology; URL scheme/credential/length checks; no network verification; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
 The package never interprets draft or tracking content as a command, template language, HTML, environment substitution, or filesystem
-path. Media references are explicitly path metadata but core never resolves or opens them. It
+path. Media references are path metadata unless the caller explicitly invokes exact-media
+collection for plan approval; only that bounded operation resolves and opens them. It
 never reads environment variables or logs draft content automatically. A separately permissioned
 adapter that dereferences media crosses a new trust boundary and must enforce the containment,
 symlink, file-type, size, MIME, provider, and authorization controls in `docs/MEDIA.md`.
@@ -208,9 +222,10 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.13 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.14 scope.
 
 ## Dependency and cost model
 
-Runtime uses only the Python standard library. Processing is linear in bounded local input size,
-with no API calls, model tokens, hosted storage, or recurring operational cost.
+Runtime uses only the Python standard library. Processing is linear in bounded local input size;
+exact-media mode may copy up to 100 MB into each handoff. There are no API calls, model tokens,
+hosted storage, or recurring operational costs.
