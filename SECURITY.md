@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.6.x` release line is supported. Earlier pre-productization and
+The latest `0.7.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -35,8 +35,8 @@ files selected by the invoking user. The supported workflow:
 - refuses implicit replacement of existing bundles and symbolic-link targets;
 - prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
   spreadsheet applications treat them as text;
-- binds local approval metadata to the normalized campaign SHA-256 and re-runs its recorded quality
-  policy during verification;
+- binds campaign approvals to the normalized campaign SHA-256 and plan approvals to the normalized
+  plan plus every referenced campaign, then re-runs the recorded quality policy during verification;
 - validates bounded campaign-relative JPEG/PNG path metadata, required alt text, target platforms,
   and case-insensitive uniqueness without resolving or opening a referenced file;
 - writes exact campaign text to deterministic adapter JSON without executing, transmitting, or
@@ -55,7 +55,7 @@ platform, and do not commit private drafts or secrets.
 Consumers that require byte-for-byte source content should use the manifest and campaign source
 rather than stripping the CSV protection.
 
-Approval records do not prove reviewer identity. `approvedBy` is untrusted text, the files are not
-signed, and anyone with filesystem write access can replace campaign and approval data. Use Git
-permissions and protected review workflows, or a separately reviewed signing system, when
-authenticated authorization or non-repudiation is required.
+Campaign and plan approval records do not prove reviewer identity. `approvedBy` is untrusted text,
+the files are not signed, and anyone with filesystem write access can replace source or approval
+data. Use Git permissions and protected review workflows, or a separately reviewed signing system,
+when authenticated authorization or non-repudiation is required.

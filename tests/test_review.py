@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator, FormatChecker
 
 from samsarix_creative_spirals import (
     CampaignApproval,
@@ -15,6 +16,7 @@ from samsarix_creative_spirals import (
     diff_campaigns,
     export_campaign_approval,
     load_campaign_approval,
+    load_approval_schema,
     parse_approval_timestamp,
     verify_campaign_approval,
 )
@@ -224,3 +226,26 @@ def test_approval_record_omits_absent_note(campaign_data: dict[str, Any]) -> Non
     )
 
     assert "note" not in approval.to_dict()
+
+
+def test_campaign_approval_schema_and_runtime_reject_divergent_optional_values() -> None:
+    approval = CampaignApproval(
+        campaign_id="scs_0123456789ab",
+        source_hash="0" * 64,
+        approved_by="Reviewer",
+        approved_at=datetime(2026, 8, 2, tzinfo=timezone.utc),
+    ).to_dict()
+    validator = Draft202012Validator(
+        load_approval_schema(),
+        format_checker=FormatChecker(),
+    )
+
+    whitespace_reviewer = {**approval, "approvedBy": " "}
+    assert validator.is_valid(whitespace_reviewer) is False
+    with pytest.raises(ConfigError, match="approvedBy must not be empty"):
+        CampaignApproval.from_dict(whitespace_reviewer)
+
+    null_note = {**approval, "note": None}
+    assert validator.is_valid(null_note) is False
+    with pytest.raises(ConfigError, match="note must be a string"):
+        CampaignApproval.from_dict(null_note)

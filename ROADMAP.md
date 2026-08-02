@@ -116,6 +116,30 @@ schema v1 gains an optional field; adapter consumers must explicitly migrate fro
 commands, artifact hashes, review disposition, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#06-portable-media-release-evidence).
 
+## Completed milestone — 0.7 whole-plan review
+
+- [x] Add deterministic plan diff output for metadata, required channels, ordered membership,
+  schedules, source references, and nested campaign/draft changes.
+- [x] Add aggregate-quality-gated plan approval metadata bound to the full normalized plan hash.
+- [x] Re-run the stored plan quality policy during verification and invalidate approval when the
+  plan or any referenced campaign changes.
+- [x] Keep campaign approval v1 compatible by publishing a distinct plan-approval v1 schema.
+- [x] Complete hosted release verification and record exact artifact and rollback evidence.
+
+The workflow pattern is grounded in current official Buffer and Sprout Social approval
+documentation and GitHub's stale-review/branch-protection controls. The product remains
+credential-free: reviewer labels are untrusted metadata, while repository controls provide the
+optional authenticated collaboration boundary. Contract details and sources are in
+[`docs/PLAN_REVIEW.md`](docs/PLAN_REVIEW.md).
+
+Technical completion evidence: implementation/review head `37b3898`; 199 tests at 94.66%
+coverage plus clean formatting, lint, strict typing, compilation, and five-schema validation;
+0.7.0 wheel SHA-256 `cc4a268b468d6a3bd037015a51160b275db4c32e1ce65323d395cc60b91aaa36`;
+[hosted Python 3.10/3.13 run 30730784381](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30730784381).
+Rollback is a revert of the eventual PR merge or pinning pre-0.7 commit `1df82d6`. Full commands,
+artifact hashes, review disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#07-whole-plan-review-release-evidence).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

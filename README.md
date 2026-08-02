@@ -4,13 +4,14 @@ Samsarix Creative Spirals is a local-first CLI and typed Python library that tur
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
-source-bound local approval records make exact changes visible before handoff.
+source-bound campaign and plan approval records make exact changes visible before handoff.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.6 alpha.** Federated-platform drafts, campaign-plan quality gates, semantic review,
-> local approvals, portable image metadata, and export are implemented and tested. Automatic
+> Maturity: **0.7 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
+> semantic review and local approvals, portable image metadata, and export are implemented and
+> tested. Automatic
 > publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
 
@@ -119,6 +120,7 @@ Print the bundled JSON Schema for editor or CI integration, or write it to a new
 samsarix-campaign schema
 samsarix-campaign schema --kind plan
 samsarix-campaign schema --kind approval
+samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --output campaign.schema.json
 ```
@@ -191,12 +193,22 @@ Validate every reference, preview the sequence, run the aggregate gate, then exp
 samsarix-campaign plan validate examples/launch-plan.json
 samsarix-campaign plan preview examples/launch-plan.json
 samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan diff launch-plan-before.json examples/launch-plan.json
+samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
+samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
 The plan gate reports missing required channels and campaign-level truncation as errors. Duplicate
 times, out-of-order scheduled items, and ordinary review warnings are visible but non-blocking
 unless `--warnings-as-errors` is set. Unscheduled items are allowed.
+
+Plan diff compares normalized plan metadata and each one-based sequence position. It reports
+schedule, source-reference, membership/order, and nested campaign/draft changes. Plan approval
+binds the complete normalized plan—including order, intended times, required platforms, media, and
+every referenced campaign—to one quality policy. Any of those changes makes verification return
+`4`. See [Plan review and approval](docs/PLAN_REVIEW.md) for the machine-readable contract, CI
+pattern, and trust boundary.
 
 Plan export writes `manifest.json`, `calendar.ics`, and one UTF-8 CSV per used platform. Scheduled
 items become transparent calendar events; unscheduled items become tasks. CSV timestamps are
@@ -223,8 +235,11 @@ samsarix-campaign approval verify CONFIG APPROVAL [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
+samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
+samsarix-campaign plan approval create PLAN --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
+samsarix-campaign plan approval verify PLAN APPROVAL [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|plan|approval|adapter] [--output PATH]
+samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
@@ -280,7 +295,8 @@ console command. The package has no third-party runtime dependencies.
 - `quality.py` evaluates deterministic, machine-readable campaign quality gates.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
-- `schema.py` exposes campaign, plan, and approval JSON Schemas bundled in the wheel.
+- `plan_review.py` reviews and approves complete launch-plan state without publishing it.
+- `schema.py` exposes campaign, plan, approval, and adapter JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -308,7 +324,7 @@ for trust boundaries and failure behavior.
   write them. Use repository permissions, pull-request review, or a separately designed signing
   system when verified identity is required.
 - Media-file processing, per-account capabilities, cryptographic approvals, network publishing,
-  and analytics are outside the 0.6 scope. Calendar files record intent; they do not schedule or
+  and analytics are outside the 0.7 scope. Calendar files record intent; they do not schedule or
   publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "samsarix-creative-spirals"
-version = "0.6.0"
+version = "0.7.0"
 description = "Local-first, reviewable social campaign packaging"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,9 +35,11 @@ dev = [
     "black>=26.3,<27",
     "build>=1.5,<2",
     "flake8>=7.3,<8",
+    "jsonschema>=4.25,<5",
     "mypy>=1.19,<2",
     "pytest>=9,<10",
     "pytest-cov>=7,<8",
+    "types-jsonschema>=4.25.1.20251009,<5",
 ]
 
 [project.scripts]

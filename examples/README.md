@@ -44,9 +44,14 @@ adapter that implements the controls in `docs/MEDIA.md`.
 samsarix-campaign plan validate examples/launch-plan.json
 samsarix-campaign plan preview examples/launch-plan.json
 samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json --json --exit-code
+samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
+samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
 The plan export contains a manifest, v2 adapter JSON, an RFC 5545 calendar, and one
 publisher-neutral CSV for each used platform. It records intended UTC times but never schedules or
-publishes a post.
+publishes a post. The self-diff demonstrates the unchanged exit path; compare against a saved prior
+plan to review schedule, order, required-channel, and referenced campaign changes. Plan approval is
+local source-bound metadata, not an authenticated identity or digital signature.

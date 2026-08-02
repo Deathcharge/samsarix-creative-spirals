@@ -50,9 +50,9 @@ and Discord artifacts, then review a complete sequence with deterministic identi
 quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
-→ validate and preview every platform variant → run deterministic quality gates → compare semantic
-changes → record/verify source-bound local approval → explicitly export review/interchange bundles
-→ hand them to an approved publishing process.
+→ validate and preview every platform variant → run deterministic quality gates → compare campaign
+or complete-plan semantic changes → record/verify source-bound local approval → explicitly export
+review/interchange bundles → hand them to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
@@ -62,9 +62,9 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.6 add bounded plans, interchange, semantic diffs, local
-source-bound review metadata, and portable image handoff without adding a scheduler, account
-connection, or network publisher.
+Helix integrations. Versions 0.4–0.7 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, and portable image handoff without adding a
+scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -198,8 +198,10 @@ No locally actionable P0 remains.
 3. [x] Publish a versioned deterministic adapter contract, schema, and exact export fixture for
    separately permissioned draft importers.
 4. [x] Add media-reference validation without reading or uploading media.
-5. Evaluate optional editor snippets that reference the bundled JSON Schema.
-6. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+5. [x] Add whole-plan semantic review and quality-gated approval tied to schedule, order, required
+   channels, source references, and every campaign.
+6. Evaluate optional editor snippets that reference the bundled JSON Schema.
+7. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -233,6 +235,8 @@ No locally actionable P0 remains.
 - [x] Add deterministic exact-text adapter JSON, bundled schema, and consumer safety guidance.
 - [x] Add portable, platform-targeted media metadata; include it in identity, review, manifests,
   and adapter v2 without reading or uploading referenced files.
+- [x] Add complete-plan diffs and plan approvals without changing campaign approval v1 or adding
+  hosted collaboration state.
 
 ## Release acceptance criteria
 
@@ -486,4 +490,69 @@ Compatibility and rollback:
 Known limits remain explicit: no real provider credential was used, media bytes are not inspected,
 an external adapter must implement the race-safe containment and provider checks in `docs/MEDIA.md`,
 and external-user adoption evidence is still unavailable. PyPI publication remains an
+owner-controlled action.
+
+## 0.7 whole-plan-review release evidence
+
+Implementation and review fixes converge at exact commit
+`37b3898d5de078f389b7b4d1d77d4d4e053a9316`. The release adds deterministic review of complete
+launch state and quality-gated plan approvals bound to metadata, required platforms, ordered
+membership, intended times, source references, media metadata, and every normalized referenced
+campaign. It does not add an account, hosted workflow, scheduler, publisher, or authenticated
+identity claim.
+
+Current local verification on Windows/Python 3.11:
+
+| Command | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 23 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy samsarix_creative_spirals tests` | 0 | No issues in 22 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing -q` | 0 | 199 passed; 94.66% total coverage. |
+| `python -m compileall -q samsarix_creative_spirals` | 0 | All package modules compiled. |
+| Draft 2020-12 validation | 0 | All five bundled schemas and representative campaign, plan, campaign-approval, plan-approval, and adapter payloads passed. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built the 0.7.0 sdist and universal wheel from the exact reviewed commit's sdist. |
+| Installed-wheel plan-review journey | 0 | Version, schema resource, self-diff, approval create/verify, plan export, public API, and `pip check` passed outside the checkout. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Exact locally built artifact digests from the clean detached implementation/review head:
+
+- `samsarix_creative_spirals-0.7.0-py3-none-any.whl` — SHA-256
+  `cc4a268b468d6a3bd037015a51160b275db4c32e1ce65323d395cc60b91aaa36`
+- `samsarix_creative_spirals-0.7.0.tar.gz` — SHA-256
+  `80aa1e445478b480b607c2952c4708f018f77019e70c8b7c41cb2e00932330bb`
+
+GitHub Actions pull-request run
+[`30730784381`](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30730784381)
+passed the complete Linux Python 3.10/3.13 matrix on that exact head. The matrix installs the
+pinned development tools, formats, lints, type-checks, runs tests with coverage, builds from the
+sdist, reinstalls the wheel, and exercises both existing journeys and the new plan-approval schema,
+self-diff, approval creation, and verification commands.
+
+The automated base review posted two actionable comments. Both were validated and fixed: campaign
+and plan approval loaders now reject explicit null notes to match their schemas; their schemas
+reject whitespace-only reviewer labels; generated approval records pass Draft 2020-12 validation
+and runtime round-trip tests; and strict quality failures assert actionable item detail. Both review
+threads are resolved. The incremental follow-up review was service-rate-limited after the fixes;
+hosted CI and the complete local checks passed on the resulting head.
+
+Compatibility and rollback:
+
+- Campaign and plan authoring remain schema version 1; adapter schema version 2 is unchanged.
+- Campaign approval remains schema version 1. Runtime now rejects explicit `note: null` and its
+  schema rejects whitespace-only `approvedBy`; these values were never emitted by the package and
+  were already invalid under the other half of the documented contract.
+- Plan approval is a new, distinct schema version 1 rather than a breaking union in campaign
+  approval v1. The public API only gains typed names.
+- `jsonschema` and its type stubs are pinned development/test dependencies only. Runtime remains
+  standard-library-only with no network, credential, scheduler, database, or publisher behavior.
+- Before publication, rollback is `git revert` of the PR merge. Consumers can pin commit
+  `1df82d6814ee4cb01a090915deda64d7933c079f` to retain package 0.6 behavior. After an owner
+  publication, normal version pinning and a corrective release are required; published artifacts
+  should not be silently replaced.
+
+Known limits remain explicit: approvals are source-bound metadata rather than digital signatures;
+Git or another external control must authenticate reviewers; position-based plan diff represents
+reorders as modifications at affected positions; no provider credential or real publication was
+used; and external-user adoption evidence is still unavailable. PyPI publication remains an
 owner-controlled action.
