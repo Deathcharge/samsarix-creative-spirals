@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.12.0 - 2026-08-02
+
+- Added optional source-level `linkTracking` with bounded common query parameters and explicit
+  per-platform overrides.
+- Applied deterministic UTF-8 percent encoding to the effective baseline or platform-variant link,
+  preserving existing query strings and fragments while rejecting parameter-name collisions.
+- Included tracking configuration and exact rendered URLs in campaign/plan identity, semantic
+  review, approval invalidation, adapters, exports, handoffs, and readiness without changing those
+  downstream schemas.
+- Added the public immutable `LinkTracking` model, campaign-schema constraints, adversarial and
+  end-to-end handoff coverage, an installed-wheel CI journey, and a runnable five-platform example.
+- Documented current Google Analytics, Buffer, and Sprout workflow evidence, migration, privacy,
+  redirect/shortener limits, and the no-network/no-click-collection boundary.
+
 ## 0.11.0 - 2026-08-02
 
 - Added portable content-policy v1 JSON with bounded literal `blockedPhrase` and `requiredPhrase`

@@ -9,7 +9,7 @@ change without notice.
 
 `CampaignConfig.from_dict(mapping)` validates and normalizes a JSON-compatible mapping. It returns
 an immutable dataclass with `schema_version`, `name`, `body`, `platforms`, `title`, `link`,
-`hashtags`, normalized `platform_variants`, `platform_limits`, and `media`.
+`hashtags`, normalized `platform_variants`, `platform_limits`, optional `link_tracking`, and `media`.
 `variant_for(platform)` returns a complete content override or `None`; `limit_for(platform)` returns
 an explicit limit override or the supported default. `to_dict()` returns the normalized JSON shape.
 
@@ -18,6 +18,14 @@ an explicit limit override or the supported default. `to_dict()` returns the nor
 An immutable complete platform content block with canonical `platform`, required `body`, optional
 `title` and `link`, and normalized `hashtags`. `to_dict()` emits the nested campaign-source shape.
 Variants replace baseline content rather than partially merging it; see `docs/VARIANTS.md`.
+
+### `LinkTracking`
+
+An immutable normalized configuration containing canonical common `parameters` and ordered
+`platform_parameters`. `parameters_for(platform)` returns the merged effective map;
+`apply_to(link, platform)` deterministically percent-encodes and appends it before any fragment.
+Existing-name collisions and URLs longer than the supported tracked bound raise `ConfigError`.
+See `docs/TRACKING.md` for source semantics and limitations.
 
 ### `MediaReference`
 
@@ -115,7 +123,8 @@ performed.
 ### `build_campaign(config) -> CampaignBundle`
 
 Accepts a `CampaignConfig` or plain dictionary. It normalizes the source, hashes canonical JSON,
-and formats each requested platform. Media metadata is selected into applicable drafts but no
+and formats each requested platform. Link tracking is applied only to the effective structured
+link; media metadata is selected into applicable drafts but no
 referenced path is opened. Repeated calls with equal normalized input return equal bundles. It
 performs no file or network I/O.
 
@@ -156,14 +165,15 @@ I/O failures raise the relevant `OSError` subclass.
 
 Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
 `name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, and
-media, then compares every generated draft in supported-platform order. Equivalent spelling that
+link tracking and media, then compares every generated draft in supported-platform order. Equivalent spelling that
 normalizes to the same campaign produces `changed=False`. It performs no file or network I/O.
 
 `CampaignDiff.to_dict()` remains schema version 1. Its `fields[].field` value names a normalized
-campaign-source field and is deliberately extensible; package 0.10 can emit `platformVariants` with
-the complete before/after mapping. Consumers that exhaustively enumerate v1 field names must add
-this optional source field, while consumers that display or preserve unknown names continue to work
-unchanged. Generated draft fields and the surrounding diff shape are unchanged.
+campaign-source field and is deliberately extensible; package 0.10 added `platformVariants` and
+package 0.12 adds `linkTracking`, each with the complete normalized before/after mapping. Consumers
+that exhaustively enumerate v1 field names must add these optional source fields, while consumers
+that display or preserve unknown names continue to work unchanged. Generated draft fields and the
+surrounding diff shape are unchanged.
 
 ### `create_campaign_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None, content_policy=None) -> CampaignApproval`
 
@@ -388,9 +398,10 @@ else:
 
 The package is pre-1.0. The exported names, campaign/plan/approval/handoff/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.11.x. Content-policy schema v1 is new; approval and plan-approval v1
-gain an optional `contentPolicy` binding, and readiness v1 gains optional policy identity/rule
-context. Existing sources and evidence behave unchanged when no policy is supplied. Internal
+compatibility surface for 0.12.x. Campaign schema v1 gains optional `linkTracking`; no downstream
+artifact schema changes. Sources without tracking retain their prior normalized source and output.
+Content-policy schema v1 and the optional approval/readiness policy fields introduced in 0.11
+remain unchanged. Internal
 helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

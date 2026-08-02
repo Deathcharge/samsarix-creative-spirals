@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "Attributed product release",
+  "title": "Measure a release without connecting a publisher",
+  "body": "Samsarix Creative Spirals produces consistent, reviewable attribution links before content reaches a social account.",
+  "link": "https://samsarix.com#creative-spirals",
+  "hashtags": ["Samsarix", "ContentOperations"],
+  "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+  "linkTracking": {
+    "parameters": {
+      "utm_campaign": "creative-spirals-0-12",
+      "utm_content": "product-release",
+      "utm_medium": "organic-social"
+    },
+    "platformParameters": {
+      "x": {"utm_source": "x"},
+      "linkedin": {"utm_source": "linkedin"},
+      "bluesky": {"utm_source": "bluesky"},
+      "mastodon": {"utm_source": "mastodon"},
+      "discord": {"utm_source": "discord"}
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.11.x` release line is supported. Earlier pre-productization and
+The latest `0.12.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -26,6 +26,9 @@ files selected by the invoking user. The supported workflow:
 - limits campaign files to 1 MiB and individual body text to 100,000 characters;
 - rejects duplicate JSON fields and excessive nesting before validating allowed fields, platforms,
   complete per-platform content variants, links, hashtags, and control characters;
+- bounds source-controlled link tracking to 20 lowercase parameter names and 200-character
+  values, rejects existing-name collisions, percent-encodes values, and caps tracked URLs at
+  2,000 characters without opening them;
 - constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
   documented instance-specific maximum;
 - evaluates quality gates deterministically without writing files or contacting platforms;
@@ -74,6 +77,12 @@ provider rules, and they cannot prove a post is safe or compliant. Rule phrases 
 embargo markers, required legal language, or other internal policy; protect them like campaign
 source. Policy IDs and SHA-256 bindings detect omission/substitution only when the verifier and
 evidence are trusted—they are not signatures.
+
+Link-tracking parameters are public URL content, not a secret store. Never place access tokens,
+credentials, email addresses, user identifiers, or other personal data in them. The core does not
+open destinations, follow redirects, shorten links, collect clicks, load analytics code, or prove
+that a destination retains or reports parameters. A downstream publisher or redirect can still
+rewrite the reviewed URL; verify that boundary separately.
 
 Approved handoff hashes are also unsigned. They detect stale source and accidental or
 uncoordinated file modification when checked with a trusted verifier, but do not authenticate the

@@ -78,6 +78,66 @@
       "then": {"properties": {"platforms": {"contains": {"const": "discord"}}}}
     },
     {
+      "if": {
+        "required": ["linkTracking"],
+        "properties": {
+          "linkTracking": {
+            "required": ["platformParameters"],
+            "properties": {"platformParameters": {"required": ["x"]}}
+          }
+        }
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "x"}}}}
+    },
+    {
+      "if": {
+        "required": ["linkTracking"],
+        "properties": {
+          "linkTracking": {
+            "required": ["platformParameters"],
+            "properties": {"platformParameters": {"required": ["linkedin"]}}
+          }
+        }
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "linkedin"}}}}
+    },
+    {
+      "if": {
+        "required": ["linkTracking"],
+        "properties": {
+          "linkTracking": {
+            "required": ["platformParameters"],
+            "properties": {"platformParameters": {"required": ["bluesky"]}}
+          }
+        }
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "bluesky"}}}}
+    },
+    {
+      "if": {
+        "required": ["linkTracking"],
+        "properties": {
+          "linkTracking": {
+            "required": ["platformParameters"],
+            "properties": {"platformParameters": {"required": ["mastodon"]}}
+          }
+        }
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "mastodon"}}}}
+    },
+    {
+      "if": {
+        "required": ["linkTracking"],
+        "properties": {
+          "linkTracking": {
+            "required": ["platformParameters"],
+            "properties": {"platformParameters": {"required": ["discord"]}}
+          }
+        }
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "discord"}}}}
+    },
+    {
       "properties": {
         "media": {
           "contains": {"$ref": "#/$defs/appliesToX"},
@@ -197,6 +257,31 @@
         "discord": {"type": "integer", "minimum": 1, "maximum": 2000}
       }
     },
+    "linkTracking": {
+      "type": "object",
+      "description": "Deterministic query parameters appended to the structured link only, with optional requested-platform overrides.",
+      "additionalProperties": false,
+      "anyOf": [
+        {"required": ["parameters"]},
+        {"required": ["platformParameters"]}
+      ],
+      "properties": {
+        "parameters": {"$ref": "#/$defs/trackingParameterMap"},
+        "platformParameters": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 5,
+          "additionalProperties": false,
+          "properties": {
+            "x": {"$ref": "#/$defs/trackingParameterMap"},
+            "linkedin": {"$ref": "#/$defs/trackingParameterMap"},
+            "bluesky": {"$ref": "#/$defs/trackingParameterMap"},
+            "mastodon": {"$ref": "#/$defs/trackingParameterMap"},
+            "discord": {"$ref": "#/$defs/trackingParameterMap"}
+          }
+        }
+      }
+    },
     "media": {
       "type": "array",
       "description": "Portable static-image metadata. Core validates these references but never opens, copies, or uploads the files.",
@@ -206,6 +291,19 @@
     }
   },
   "$defs": {
+    "trackingParameterValue": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+    },
+    "trackingParameterMap": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 20,
+      "propertyNames": {"pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+      "additionalProperties": {"$ref": "#/$defs/trackingParameterValue"}
+    },
     "contentVariant": {
       "type": "object",
       "description": "A complete platform content block; body is required and title, link, and hashtags default to absent or empty.",

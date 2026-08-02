@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import samsarix_creative_spirals as package
 from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.11.0"
+    assert package.__version__ == "0.12.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -36,6 +37,7 @@ def test_public_api_is_deliberate() -> None:
         "HandoffArtifact",
         "HandoffCheck",
         "HandoffIssue",
+        "LinkTracking",
         "MediaReference",
         "PlanApprovalCheck",
         "PlanFieldChange",
@@ -98,6 +100,11 @@ def test_packaged_schema_is_available() -> None:
     assert schema["properties"]["platformLimits"]["properties"]["mastodon"]["maximum"] == 100000
     assert schema["properties"]["media"]["maxItems"] == 20
     assert schema["properties"]["platformVariants"]["maxProperties"] == 5
+    assert schema["$defs"]["trackingParameterMap"]["maxProperties"] == 20
+    assert (
+        schema["properties"]["linkTracking"]["properties"]["platformParameters"]["maxProperties"]
+        == 5
+    )
     assert schema["$defs"]["contentVariant"]["required"] == ["body"]
     assert schema["$defs"]["mediaReference"]["properties"]["altText"]["maxLength"] == 1000
     requested_limit_conditions = {
@@ -122,6 +129,14 @@ def test_packaged_schema_is_available() -> None:
         if "if" in condition and "platformVariants" in condition["if"]["properties"]
     }
     assert requested_variant_conditions == requested_limit_conditions
+    requested_tracking_conditions = {
+        condition["if"]["properties"]["linkTracking"]["properties"]["platformParameters"][
+            "required"
+        ][0]: condition["then"]["properties"]["platforms"]["contains"]["const"]
+        for condition in schema["allOf"]
+        if "if" in condition and "linkTracking" in condition["if"]["properties"]
+    }
+    assert requested_tracking_conditions == requested_limit_conditions
     media_pattern = schema["$defs"]["mediaReference"]["properties"]["path"]["pattern"]
     assert re.fullmatch(media_pattern, "media/launch-dashboard.PNG")
     for invalid in (
@@ -144,7 +159,7 @@ def test_packaged_schema_is_available() -> None:
 def test_campaign_schema_validates_platform_variants() -> None:
     schema = package.load_campaign_schema()
     validator = Draft202012Validator(schema)
-    campaign = {
+    campaign: dict[str, Any] = {
         "schemaVersion": 1,
         "name": "Variant campaign",
         "body": "Baseline copy",
@@ -160,6 +175,26 @@ def test_campaign_schema_validates_platform_variants() -> None:
 
     validator.validate(campaign)
     campaign["platformVariants"] = {"discord": {"body": "Unrequested copy"}}
+
+    assert any("does not contain" in error.message for error in validator.iter_errors(campaign))
+
+
+def test_campaign_schema_validates_link_tracking() -> None:
+    validator = Draft202012Validator(package.load_campaign_schema())
+    campaign: dict[str, Any] = {
+        "schemaVersion": 1,
+        "name": "Tracked campaign",
+        "body": "Tracked copy",
+        "link": "https://example.com/launch",
+        "platforms": ["x", "linkedin"],
+        "linkTracking": {
+            "parameters": {"utm_campaign": "release", "utm_medium": "social"},
+            "platformParameters": {"x": {"utm_source": "x"}},
+        },
+    }
+
+    validator.validate(campaign)
+    campaign["linkTracking"]["platformParameters"] = {"discord": {"utm_source": "discord"}}
 
     assert any("does not contain" in error.message for error in validator.iter_errors(campaign))
 

@@ -62,10 +62,11 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.10 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.12 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
-verification, and offline launch readiness without adding a scheduler, account connection, or
-network publisher.
+verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
+link attribution without adding a scheduler, account connection, analytics collector, or network
+publisher.
 
 ## Product and architecture decisions
 
@@ -905,3 +906,51 @@ Compatibility and rollback:
 - Before publication, roll back by reverting merge commit `77b3e4c` or pinning pre-0.11 main commit
   `3a5c0f5278ffea4a81ca6ab0bae3479318df0da1`. After owner publication, use normal version pinning
   and a corrective release; do not replace published artifacts silently.
+
+## 0.12 deterministic link-tracking working record
+
+### Research and product decision
+
+Campaign attribution is a concrete pre-publish workflow rather than an analytics-dashboard
+expansion:
+
+- Google Analytics documents manual `utm_*` tagging and recommends consistent case-sensitive
+  source, medium, and campaign values:
+  <https://support.google.com/analytics/answer/10917952?hl=en>.
+- Buffer automatically adds campaign parameters for supported channels and reserves customized
+  values for paid plans:
+  <https://support.buffer.com/article/518-understanding-utm-parameters-and-google-analytics>.
+- Sprout Social provides administrator-configured parameter sets, per-network values, URL
+  matching, custom parameters, and a link preview:
+  <https://support.sproutsocial.com/hc/en-us/articles/202703663-How-do-I-use-Link-Tracking>.
+
+The defensible local-first slice is deterministic URL construction before connected publishing.
+The configuration lives inside campaign source because it changes rendered output: this lets
+existing canonical identity, semantic diff, approvals, plans, adapters, exports, handoffs, and
+readiness bind it automatically instead of creating another side-loaded evidence dependency.
+
+### Bounded contract and implementation status
+
+Campaign schema v1 gains optional `linkTracking` with common literal parameters and per-platform
+overrides. Names are lowercase bounded ASCII; normalized values, maps, merged maps, and final URLs
+are bounded. The formatter applies parameters only to the effective structured baseline or
+complete-variant link, sorts names, percent-encodes UTF-8, preserves an existing query and
+fragment, and rejects existing-name collisions instead of guessing whether to keep or replace a
+value. Body/title URL-looking text is intentionally untouched.
+
+Implemented locally: immutable `LinkTracking`, strict runtime and Draft 2020-12 schema validation,
+source hashing and semantic-field coverage, exact rendered propagation, public API/version update,
+a five-platform example, direct campaign/approval/plan/adapter/handoff tests, installed-wheel CI
+assertions, and author/security/migration documentation.
+
+Release acceptance requires clean formatting, lint, strict typing, full tests above the 90%
+coverage floor, compilation, schema metaschema validation, isolated sdist-to-wheel build, an
+installed-wheel tracking-to-handoff journey, hosted Python 3.10/3.13 CI, review disposition, exact
+artifact hashes, merge, and a documented rollback point. Exact evidence will replace this working
+status only after those gates pass.
+
+Compatibility is additive for 0.12.x: campaign schema remains v1 and sources without
+`linkTracking` retain their prior normalized source and generated output. Adapter v2 plus plan,
+approval, handoff, readiness, manifest, and content-policy schemas remain unchanged. Runtime stays
+standard-library-only and performs no URL open, redirect, shortener, analytics, credential,
+publisher, scheduler, database, or telemetry operation.

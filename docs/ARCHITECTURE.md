@@ -8,7 +8,7 @@ scheduler, background process, persistence service, analytics, or dependency on 
 repository.
 
 ```text
-campaign.json + optional platform content overrides + media path metadata
+campaign.json + optional platform content overrides + link tracking + media path metadata
     │ bounded UTF-8 read + strict validation
     ▼
 CampaignConfig
@@ -50,14 +50,17 @@ CampaignPlanBundle
 ### `models.py`
 
 Owns the schema and validation contract. It normalizes line endings and Unicode, rejects unknown
-fields, bounds all collections and large text, restricts links to HTTP(S), and prevents embedded
-URL credentials. Portable media paths and alt text are validated as metadata without touching the
-filesystem. Models are immutable to keep one build internally consistent.
+fields, bounds all collections and large text, restricts links to HTTP(S), prevents embedded URL
+credentials, and validates bounded common/per-platform tracking parameter maps. Portable media
+paths and alt text are validated as metadata without touching the filesystem. Models are
+immutable to keep one build internally consistent.
 
 ### `formatters.py`
 
-Selects a complete platform content override when present, otherwise the campaign baseline, then
-composes title, body, link, and hashtags. X uses its published weighted ranges
+Selects a complete platform content override when present, otherwise the campaign baseline,
+applies deterministic tracking parameters to the effective structured link, then composes title,
+body, link, and hashtags. Existing query strings and fragments are preserved; collisions fail
+source validation instead of being replaced. X uses its published weighted ranges
 and 23-character URL accounting. Truncation keeps URLs atomic, avoids dangling combining marks and
 joiners, preserves suffix metadata where possible, and records any omission. LinkedIn and Discord
 use conservative character limits. Discord broadcast mentions are warnings, not silently altered.
@@ -154,6 +157,7 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
 | Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
 | Campaign fields | Baseline and per-platform text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, canonical/requested platform allowlists, hard platform ceilings. |
+| Link tracking | Common and per-platform query parameter names/values | Lowercase name grammar; parameter/value/count/final-URL bounds; requested-platform checks; existing-name collision rejection; deterministic percent encoding; no URL open or analytics collection. |
 | Content policy | Local JSON, rule phrases, targets, severity, casing | Shared file/nesting limits, 50-rule and 200-character phrase caps, strict fields/IDs, literal matching only, deterministic identity. |
 | Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds, no core dereference. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
@@ -163,7 +167,7 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | Approved handoff packet | Local directory, metadata, approval/policy evidence, and generated files | Exclusive atomic creation; fixed shape; source, approval, embedded-policy, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
-The package never interprets draft content as a command, template language, HTML, or filesystem
+The package never interprets draft or tracking content as a command, template language, HTML, environment substitution, or filesystem
 path. Media references are explicitly path metadata but core never resolves or opens them. It
 never reads environment variables or logs draft content automatically. A separately permissioned
 adapter that dereferences media crosses a new trust boundary and must enforce the containment,
@@ -187,7 +191,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.11 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.12 scope.
 
 ## Dependency and cost model
 
