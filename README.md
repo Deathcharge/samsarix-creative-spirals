@@ -121,7 +121,7 @@ behavior.
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
 | `platformVariants` | no | Complete content overrides keyed by a requested canonical platform. Each requires `body`; omitted `title`, `link`, and `hashtags` do not inherit from the baseline. |
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
-| `linkTracking` | no | Up to 20 deterministic query parameters, with optional requested-platform overrides. Existing-name conflicts are rejected. |
+| `linkTracking` | no | Up to 20 deterministic query parameters in each merged effective requested-platform map, with optional platform overrides. Existing-name conflicts are rejected. |
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
 Media paths are metadata relative to the campaign file. Core validates that metadata but never
@@ -136,8 +136,9 @@ hashtags. Platforms without a variant use the baseline. See
 compatibility, and a runnable example.
 
 Use `linkTracking` to append stable, percent-encoded attribution values to the effective structured
-link before review. Common parameters merge with per-platform values; fragments are preserved and
-existing-name collisions fail validation. Body text is never scanned or rewritten. See
+link before review. Per-platform values add to common parameters and replace common values with the
+same name; fragments are preserved and existing-name collisions fail validation. Body text is never
+scanned or rewritten. See
 [Deterministic link tracking](docs/TRACKING.md) for the contract, current workflow evidence,
 analytics limitations, and a runnable example.
 

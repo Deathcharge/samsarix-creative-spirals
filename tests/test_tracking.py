@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 from typing import Any
 
@@ -174,6 +174,21 @@ def test_campaign_rejects_tracking_without_an_effective_link(
 
     with pytest.raises(ConfigError, match="requires at least one effective campaign link"):
         CampaignConfig.from_dict(campaign_data)
+
+
+def test_campaign_rejects_platform_tracking_without_an_effective_link(
+    campaign_data: dict[str, Any],
+) -> None:
+    source = _with_tracking(campaign_data)
+    source["platformVariants"] = {"x": {"body": "An intentionally link-free X variant."}}
+
+    with pytest.raises(
+        ConfigError,
+        match=(
+            r"linkTracking\.platformParameters\.x is not useful " r"without an effective link for x"
+        ),
+    ):
+        CampaignConfig.from_dict(source)
 
 
 def test_campaign_rejects_existing_parameter_conflicts(

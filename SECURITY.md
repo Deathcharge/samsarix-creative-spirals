@@ -26,9 +26,9 @@ files selected by the invoking user. The supported workflow:
 - limits campaign files to 1 MiB and individual body text to 100,000 characters;
 - rejects duplicate JSON fields and excessive nesting before validating allowed fields, platforms,
   complete per-platform content variants, links, hashtags, and control characters;
-- bounds source-controlled link tracking to 20 lowercase parameter names and 200-character
-  values, rejects existing-name collisions, percent-encodes values, and caps tracked URLs at
-  2,000 characters without opening them;
+- bounds each merged effective requested-platform tracking map to 20 lowercase parameter names
+  with 200-character values, rejects existing-name collisions, percent-encodes values, and caps
+  tracked URLs at 2,000 characters without opening them;
 - constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
   documented instance-specific maximum;
 - evaluates quality gates deterministically without writing files or contacting platforms;

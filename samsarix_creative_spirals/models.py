@@ -291,6 +291,50 @@ class LinkTracking:
         return result
 
 
+def _tracking_platform_parameter_maps(
+    value: object,
+    *,
+    requested_platforms: tuple[str, ...],
+    required: bool,
+    issues: list[str],
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """Parse requested-platform tracking maps in canonical platform order."""
+    if not isinstance(value, Mapping):
+        issues.append("linkTracking.platformParameters must map platforms to parameter objects")
+        return ()
+    platform_parameters: dict[str, tuple[tuple[str, str], ...]] = {}
+    if required and not value:
+        issues.append("linkTracking.platformParameters must contain at least one platform")
+    if len(value) > len(SUPPORTED_PLATFORMS):
+        issues.append(
+            "linkTracking.platformParameters must contain at most "
+            f"{len(SUPPORTED_PLATFORMS)} platforms"
+        )
+    for key, parameter_value in value.items():
+        if not isinstance(key, str) or key not in SUPPORTED_PLATFORMS:
+            issues.append(
+                "linkTracking.platformParameters keys must be canonical platforms: "
+                + ", ".join(SUPPORTED_PLATFORMS)
+            )
+            continue
+        field = f"linkTracking.platformParameters.{key}"
+        if key not in requested_platforms:
+            issues.append(f"{field} is not useful unless {key} is requested")
+        parsed = _tracking_parameter_map(
+            parameter_value,
+            field=field,
+            required=True,
+            issues=issues,
+        )
+        if parsed:
+            platform_parameters[key] = parsed
+    return tuple(
+        (platform, platform_parameters[platform])
+        for platform in SUPPORTED_PLATFORMS
+        if platform in platform_parameters
+    )
+
+
 def _parse_link_tracking(
     value: object,
     *,
@@ -313,54 +357,25 @@ def _parse_link_tracking(
         required="parameters" in value,
         issues=issues,
     )
-    platform_value = value.get("platformParameters", {})
-    platform_parameters: dict[str, tuple[tuple[str, str], ...]] = {}
-    if not isinstance(platform_value, Mapping):
-        issues.append("linkTracking.platformParameters must map platforms to parameter objects")
-    else:
-        if "platformParameters" in value and not platform_value:
-            issues.append("linkTracking.platformParameters must contain at least one platform")
-        if len(platform_value) > len(SUPPORTED_PLATFORMS):
-            issues.append(
-                "linkTracking.platformParameters must contain at most "
-                f"{len(SUPPORTED_PLATFORMS)} platforms"
-            )
-        for key, parameter_value in platform_value.items():
-            if not isinstance(key, str) or key not in SUPPORTED_PLATFORMS:
-                issues.append(
-                    "linkTracking.platformParameters keys must be canonical platforms: "
-                    + ", ".join(SUPPORTED_PLATFORMS)
-                )
-                continue
-            field = f"linkTracking.platformParameters.{key}"
-            if key not in requested_platforms:
-                issues.append(f"{field} is not useful unless {key} is requested")
-            parsed = _tracking_parameter_map(
-                parameter_value,
-                field=field,
-                required=True,
-                issues=issues,
-            )
-            if parsed:
-                platform_parameters[key] = parsed
+    platform_parameters = _tracking_platform_parameter_maps(
+        value.get("platformParameters", {}),
+        requested_platforms=requested_platforms,
+        required="platformParameters" in value,
+        issues=issues,
+    )
 
     if not parameters and not platform_parameters:
         issues.append("linkTracking must define at least one parameter")
         return None
     tracking = LinkTracking(
         parameters=parameters,
-        platform_parameters=tuple(
-            (platform, platform_parameters[platform])
-            for platform in SUPPORTED_PLATFORMS
-            if platform in platform_parameters
-        ),
+        platform_parameters=platform_parameters,
     )
-    for platform in requested_platforms:
-        if len(tracking.parameters_for(platform)) > MAX_TRACKING_PARAMETERS:
-            issues.append(
-                "linkTracking produces more than "
-                f"{MAX_TRACKING_PARAMETERS} parameters for {platform}"
-            )
+    issues.extend(
+        f"linkTracking produces more than {MAX_TRACKING_PARAMETERS} parameters for {platform}"
+        for platform in requested_platforms
+        if len(tracking.parameters_for(platform)) > MAX_TRACKING_PARAMETERS
+    )
     return tracking
 
 
@@ -553,10 +568,16 @@ class CampaignConfig:
         if link_tracking is not None:
             variants_by_platform = {variant.platform: variant for variant in platform_variants}
             linked_platforms = 0
+            tracked_platforms = {platform for platform, _ in link_tracking.platform_parameters}
             for platform in platforms:
                 variant = variants_by_platform.get(platform)
                 effective_link = variant.link if variant is not None else link
                 if effective_link is None:
+                    if platform in tracked_platforms:
+                        issues.append(
+                            f"linkTracking.platformParameters.{platform} is not useful "
+                            f"without an effective link for {platform}"
+                        )
                     continue
                 linked_platforms += 1
                 try:

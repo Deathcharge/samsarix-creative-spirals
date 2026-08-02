@@ -164,8 +164,8 @@ I/O failures raise the relevant `OSError` subclass.
 ### `diff_campaigns(before, after) -> CampaignDiff`
 
 Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
-`name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, and
-link tracking and media, then compares every generated draft in supported-platform order. Equivalent spelling that
+`name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, link
+tracking, and media, then compares every generated draft in supported-platform order. Equivalent spelling that
 normalizes to the same campaign produces `changed=False`. It performs no file or network I/O.
 
 `CampaignDiff.to_dict()` remains schema version 1. Its `fields[].field` value names a normalized

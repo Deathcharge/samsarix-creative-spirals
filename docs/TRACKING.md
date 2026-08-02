@@ -89,7 +89,8 @@ Tracking applies only to the structured `link` field used by the effective conte
 
 - a platform variant with its own `link` receives that platform's parameters;
 - a platform without a variant uses the baseline `link` and its platform parameters;
-- a complete variant that omits `link` intentionally has no tracked link;
+- a complete variant that omits `link` intentionally has no tracked link and cannot have a
+  `platformParameters` entry;
 - URL-looking text inside `body` or `title` is never scanned or rewritten.
 
 At least one requested platform must have an effective link when `linkTracking` is present. If an
