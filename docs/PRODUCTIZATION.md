@@ -62,9 +62,10 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.8 add bounded plans, interchange, campaign and whole-plan
-semantic diffs, source-bound local review metadata, portable image handoff, and exact approved
-packet verification without adding a scheduler, account connection, or network publisher.
+Helix integrations. Versions 0.4–0.9 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
+verification, and offline launch readiness without adding a scheduler, account connection, or
+network publisher.
 
 ## Product and architecture decisions
 
@@ -163,6 +164,23 @@ The resulting 0.8 slice is an exclusive offline-verifiable handoff packet: curre
 embedded approval, exact rendered files, sizes/checksums, and producer version are bound without
 adding credentials, a scheduler, or a false signing claim.
 
+### 0.9 launch-readiness follow-up
+
+- Sprout Social's Publishing Calendar emphasizes one place to see planned messages, filters,
+  notes, and sharable review, while its approval workflow exposes `Needs Approval` and requires
+  rescheduling when approval misses the intended time:
+  <https://support.sproutsocial.com/hc/en-us/articles/360000121343-How-do-I-use-the-Publishing-Calendar>
+  and <https://support.sproutsocial.com/hc/en-us/articles/205974715-Message-Approval-Workflows>.
+- Buffer exposes an `Awaiting Approval` list and its July 13, 2026 update explicitly addresses the
+  friction of finding draft/pending-approval work from the calendar:
+  <https://support.buffer.com/article/665-managing-and-approving-draft-posts> and
+  <https://buffer.com/changelog/access-your-drafts-from-the-calendar>.
+
+The resulting 0.9 slice is a point-in-time, offline readiness report: current quality, future or
+complete schedule policy, approval, and handoff evidence become one stable stage plus an optional
+self-contained HTML board. It adds no hosted calendar, account, notification, publisher action, or
+claim that intent equals publication.
+
 ## Untouched baseline results
 
 Environment: Windows, Python 3.11.9, pip 26.1.1.
@@ -219,8 +237,9 @@ No locally actionable P0 remains.
    channels, source references, and every campaign.
 6. [x] Add an exclusive approved handoff packet that binds current source, approval metadata, and
    exact regenerated artifacts without claiming authenticated provenance.
-7. Evaluate optional editor snippets that reference the bundled JSON Schema.
-8. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+7. [x] Add consolidated point-in-time launch readiness and an offline HTML review board.
+8. Evaluate optional editor snippets that reference the bundled JSON Schema.
+9. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -258,6 +277,8 @@ No locally actionable P0 remains.
   hosted collaboration state.
 - [x] Add offline-verifiable approved-plan handoff packets without credentials, signing claims, or
   automatic publishing.
+- [x] Add time-aware launch-readiness stages, CI gates, JSON Schema, and an escaped offline HTML
+  board without hosted workflow state.
 
 ## Release acceptance criteria
 
@@ -646,3 +667,49 @@ producing package version for byte-exact verification; verification is point-in-
 immediately precede use of the same directory; media remains metadata only; no provider credential
 or real publication was used; and external-user adoption evidence is still unavailable. PyPI
 publication remains an owner-controlled action.
+
+## 0.9 launch-readiness release evidence
+
+Implementation and review fixes converge at exact commit
+`33647ba87cd5e50bb8de7e333963dddd5f3efe06`. The release adds point-in-time quality, schedule,
+approval, and handoff stages; explicit CI gates; readiness v1 JSON; and an exclusive offline HTML
+board. Evidence documentation is a subsequent docs-only commit, so the artifact hashes below
+identify the exact reviewed code tree rather than a self-referential source archive.
+
+| Verification | Exit | Result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | Formatting clean. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | Lint clean. |
+| `python -m mypy` | 0 | Strict typing clean across 27 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 235 passed; 95.18% total coverage and 99% readiness-module coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Compilation clean. |
+| Draft 2020-12 validation | 0 | Readiness metaschema, ready-for-approval, approved, handoff-ready, and synchronized embedded approval contracts passed. |
+| `python -m build --outdir <clean-detached-worktree>/dist <clean-detached-worktree>` | 0 | Built the 0.9.0 sdist and universal wheel from exact commit `33647ba`. |
+| Python 3.11 installed-wheel journey | 0 | Package/version/schema and `pip check` passed outside the checkout; approval → handoff → `handoff-ready` JSON plus 6,569-byte script-free HTML passed. |
+| Hosted GitHub Actions | 0 | [Run 30734396322](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30734396322) passed full Python 3.10 and 3.13 matrices, builds, and installed-wheel status/HTML smoke. |
+| Dependabot | 0 | GitHub reported zero open alerts at review head. |
+
+Clean-tree artifact digests from exact commit `33647ba`:
+
+- `samsarix_creative_spirals-0.9.0-py3-none-any.whl` — SHA-256
+  `b9aef0ede71ea6a7d90b92dc16ab955383bbf53917d30a88657f1a8a6299c5ac`.
+- `samsarix_creative_spirals-0.9.0.tar.gz` — SHA-256
+  `d7bbb9dd7ca4e27c580ab89b1747bf3e3d4ee69f92e739da6690b10504ad9dbd`.
+
+[PR #11](https://github.com/Deathcharge/samsarix-creative-spirals/pull/11) received ten
+CodeRabbit comments. All were dispositioned: deterministic examples, schema coverage and
+portability, concrete test types, approval-only CLI coverage, bounded issue-code normalization,
+orchestrator decomposition, and this evidence record were implemented. The suggested external
+approval `$ref` was not used because readiness v1 must validate offline as a standalone document;
+instead its embedded approval structure is byte-for-structure synchronized with plan-approval v1
+by a direct regression test. All original threads are resolved; the incremental re-review was
+rate-limited after the fixes, while the complete local and hosted gates passed on the resulting
+code head.
+
+Compatibility is additive for 0.9.x: existing campaign, plan, approval, handoff, manifest, and
+adapter contracts do not change. New public names, `plan status`, schema kind `readiness`, and
+readiness schema v1 join the pre-1.0 compatibility surface. HTML is a human artifact rather than a
+machine compatibility contract. Roll back by reverting the PR merge or pinning pre-0.9 main commit
+`8a628e8fdc768196cca7b32845379554389edd43`; existing 0.8 approval and handoff evidence remains
+valid under its documented producer-version rules, while consumers should stop requiring or
+exchanging readiness v1 artifacts.

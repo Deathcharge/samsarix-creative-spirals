@@ -154,6 +154,163 @@ def test_cli_writes_plan_schema_with_kind_aware_message(tmp_path: Path, capsys: 
     assert json.loads(output.read_text(encoding="utf-8"))["title"].endswith("campaign plan")
 
 
+def test_cli_plan_status_supports_evidence_html_and_ci_gates(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    approval = tmp_path / "approval.json"
+    handoff_root = tmp_path / "handoffs"
+    html = tmp_path / "status.html"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Status sequence",
+                "requiredPlatforms": ["x", "linkedin", "discord"],
+                "items": [{"campaign": "campaign.json", "intendedAt": "2026-08-10T13:00:00Z"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["plan", "status", str(plan), "--at", "2026-08-05T12:00:00Z", "--json"]) == 0
+    initial = json.loads(capsys.readouterr().out)
+    assert initial["stage"] == "ready-for-approval"
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-stage",
+                "approval",
+            ]
+        )
+        == 4
+    )
+    capsys.readouterr()
+
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(plan),
+                "--by",
+                "Launch reviewer",
+                "--at",
+                "2026-08-04T12:00:00Z",
+                "--output",
+                str(approval),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--approval",
+                str(approval),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-stage",
+                "approval",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["stage"] == "approved"
+    assert (
+        main(
+            [
+                "plan",
+                "handoff",
+                "create",
+                str(plan),
+                str(approval),
+                "--at",
+                "2026-08-05T10:00:00Z",
+                "--output",
+                str(handoff_root),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    handoff_path = json.loads(capsys.readouterr().out)["path"]
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--handoff",
+                handoff_path,
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-stage",
+                "handoff",
+                "--html",
+                str(html),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    ready = json.loads(capsys.readouterr().out)
+    assert ready["stage"] == "handoff-ready"
+    assert html.is_file()
+
+
+def test_cli_plan_status_quality_gate_and_readiness_schema(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Unscheduled sequence",
+                "items": [{"campaign": "campaign.json"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-scheduled",
+                "--require-stage",
+                "quality",
+                "--json",
+            ]
+        )
+        == 3
+    )
+    assert json.loads(capsys.readouterr().out)["stage"] == "schedule-blocked"
+
+    assert main(["schema", "--kind", "readiness"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["artifactType"]["const"] == "plan-readiness"
+
+
 def test_cli_diff_supports_human_json_and_optional_exit_code(
     tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
 ) -> None:

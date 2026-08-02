@@ -6,14 +6,15 @@ input, applies platform-aware limits, checks complete launch sequences, and expo
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
 source-bound campaign and plan approval records make exact changes visible before handoff.
 Approved handoff packets then bind current source, approval metadata, and exact rendered files for
-offline verification immediately before downstream use.
+offline verification immediately before downstream use. A consolidated readiness command and
+offline HTML board show the current quality, schedule, approval, and handoff stage in one place.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.8 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
+> Maturity: **0.9 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
 > semantic review and local approvals, portable image metadata, approved handoff verification, and
-> export are implemented and tested. Automatic
+> launch-readiness reporting are implemented and tested. Automatic
 > publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
 
@@ -246,6 +247,29 @@ The hashes are unsigned integrity checks. They do not authenticate the reviewer 
 are not cryptographic attestations. See [Approved handoff packets](docs/HANDOFFS.md) for the packet
 contract, CLI/adapter workflow, threat model, and retention guidance.
 
+## Launch readiness
+
+Get a single point-in-time status after quality checks, approval, or handoff creation:
+
+```bash
+samsarix-campaign plan status examples/launch-plan.json --json
+samsarix-campaign plan status examples/launch-plan.json \
+  --handoff handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
+  --require-stage handoff \
+  --html launch-readiness.html
+```
+
+The stable stages distinguish quality and schedule blockers, readiness for approval, stale/current
+approval, and invalid/current handoff evidence. `--at RFC3339` makes a time-aware report
+reproducible; intended times that are due or past require rescheduling. Unscheduled items remain
+visible and become blockers only with `--require-scheduled`.
+
+The HTML board is exclusively created, self-contained, script-free, and usable offline. It includes
+full draft content, so handle it like sensitive campaign source. It is a local snapshot—not hosted
+team state, authenticated approval, a publisher queue, or proof of publication. See
+[Launch readiness reports](docs/READINESS.md) for stages, JSON/schema and CI contracts, current
+workflow research, privacy, and trust boundaries.
+
 ## CLI reference
 
 ```text
@@ -262,20 +286,23 @@ samsarix-campaign approval verify CONFIG APPROVAL [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
+samsarix-campaign plan status PLAN [--approval PATH] [--handoff DIRECTORY] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter|handoff] [--output PATH]
+samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter|handoff|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
 usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
 stderr. Exit `4` means a requested diff detected changes, an approval is stale/invalid, or a
-handoff is not current and intact. Quality, diff, approval, and handoff reports—including
-non-passing JSON reports—stay on stdout for scripts.
+handoff is not current and intact, or a requested approval/handoff readiness stage is unmet.
+`plan status --require-stage quality` uses `3` when its quality/schedule gate is unmet. Without a
+required stage, status is informational. Quality, diff, approval, handoff, and readiness
+reports—including non-passing JSON reports—stay on stdout for scripts.
 
 ## Python API
 
@@ -327,7 +354,8 @@ console command. The package has no third-party runtime dependencies.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
-- `schema.py` exposes campaign, plan, approval, handoff, and adapter JSON Schemas bundled in the wheel.
+- `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
+- `schema.py` exposes campaign, plan, approval, handoff, readiness, and adapter JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -357,9 +385,9 @@ for trust boundaries and failure behavior.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
-- Media-file processing, per-account capabilities, cryptographic approvals, network publishing,
-  and analytics are outside the 0.8 scope. Calendar files record intent; they do not schedule or
-  publish anything.
+- Media-file processing, per-account capabilities, cryptographic approvals, hosted collaboration,
+  network publishing, and analytics are outside the 0.9 scope. Calendar and readiness files record
+  intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
 

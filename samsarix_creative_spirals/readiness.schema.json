@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-readiness-v1.schema.json",
+  "title": "Samsarix Creative Spirals plan readiness report",
+  "description": "Point-in-time local quality, schedule, approval, and handoff readiness for one campaign plan.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "artifactType", "assessedAt", "planId", "sourceHash", "name",
+    "stage", "ready", "qualityPolicy", "schedulePolicy", "qualityPassed",
+    "scheduleComplete", "scheduleReady", "approvalStatus", "approval", "handoffStatus", "handoffId",
+    "counts", "issues", "items"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-readiness"},
+    "assessedAt": {"$ref": "#/$defs/timestamp"},
+    "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+    "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "stage": {
+      "enum": [
+        "quality-blocked", "schedule-blocked", "ready-for-approval", "approval-invalid",
+        "approved", "handoff-invalid", "handoff-ready"
+      ]
+    },
+    "ready": {"type": "boolean"},
+    "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
+    "schedulePolicy": {"enum": ["optional", "required"]},
+    "qualityPassed": {"type": "boolean"},
+    "scheduleComplete": {"type": "boolean"},
+    "scheduleReady": {"type": "boolean"},
+    "approvalStatus": {"$ref": "#/$defs/evidenceStatus"},
+    "approval": {
+      "oneOf": [
+        {"type": "null"},
+        {"$ref": "#/$defs/approval"}
+      ]
+    },
+    "handoffStatus": {"$ref": "#/$defs/evidenceStatus"},
+    "handoffId": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "string", "pattern": "^sch_[0-9a-f]{12}$"}
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "scheduled", "platformDrafts", "issues"],
+      "properties": {
+        "items": {"type": "integer", "minimum": 1, "maximum": 100},
+        "scheduled": {"type": "integer", "minimum": 0, "maximum": 100},
+        "platformDrafts": {"type": "integer", "minimum": 1, "maximum": 500},
+        "issues": {"type": "integer", "minimum": 0, "maximum": 5000}
+      }
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {"$ref": "#/$defs/readinessIssue"}
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {"$ref": "#/$defs/readinessItem"}
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+    },
+    "evidenceStatus": {"enum": ["not-provided", "valid", "invalid"]},
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "artifactType", "planId", "sourceHash", "approvedBy", "approvedAt", "qualityPolicy"],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "artifactType": {"const": "plan"},
+        "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+        "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approvedBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\r\\n\\t\\u0000-\\u001F\\u007F]*$"
+        },
+        "approvedAt": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
+        "note": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "readinessIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "item", "path", "message"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 100, "pattern": "^[a-z0-9-]+$"},
+        "severity": {"enum": ["warning", "error"]},
+        "item": {"oneOf": [{"type": "null"}, {"type": "integer", "minimum": 1, "maximum": 100}]},
+        "path": {"oneOf": [{"type": "null"}, {"type": "string", "minLength": 1, "maxLength": 240}]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "planIssue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "item", "campaignId", "platform", "message"],
+      "properties": {
+        "code": {"type": "string", "minLength": 1, "maxLength": 100},
+        "severity": {"enum": ["warning", "error"]},
+        "item": {"type": "integer", "minimum": 1, "maximum": 100},
+        "campaignId": {"oneOf": [{"type": "null"}, {"type": "string", "pattern": "^scs_[0-9a-f]{12}$"}]},
+        "platform": {"oneOf": [{"type": "null"}, {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]}]},
+        "message": {"type": "string", "minLength": 1, "maxLength": 1000}
+      }
+    },
+    "readinessItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "campaignId", "name", "source", "intendedAt", "platforms", "qualityPassed", "qualityIssues"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1, "maximum": 100},
+        "campaignId": {"type": "string", "pattern": "^scs_[0-9a-f]{12}$"},
+        "name": {"type": "string", "minLength": 1, "maxLength": 120},
+        "source": {"type": "string", "minLength": 1, "maxLength": 240},
+        "intendedAt": {"oneOf": [{"type": "null"}, {"$ref": "#/$defs/timestamp"}]},
+        "platforms": {
+          "type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true,
+          "items": {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]}
+        },
+        "qualityPassed": {"type": "boolean"},
+        "qualityIssues": {"type": "array", "maxItems": 100, "items": {"$ref": "#/$defs/planIssue"}}
+      }
+    }
+  }
+}

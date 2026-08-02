@@ -37,9 +37,11 @@ CampaignPlanBundle
     ├──► aggregate quality report
     ├──► deterministic plan diff / source-bound plan approval verification
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
-    └──► exclusive approved handoff packet
+    ├──► exclusive approved handoff packet
             ├── embedded approval.json + handoff.json
             └── exact regenerated plan-export artifacts
+    └──► point-in-time readiness JSON / exclusive offline HTML board
+            └── quality + schedule + approval + handoff evidence state
 ```
 
 ## Components
@@ -107,20 +109,30 @@ current source, rejects unexpected entries, symbolic links, and non-regular file
 files remain stable during reads. Hashes are unsigned integrity metadata, not authenticated
 provenance or authorization.
 
+### `readiness.py`
+
+Combines existing verification primitives without duplicating or weakening them. It evaluates
+aggregate quality under an explicit policy, compares intended times with one timezone-aware
+assessment time, verifies optional approval/handoff evidence, and assigns one stable stage. The
+pure model emits readiness v1 JSON; an explicit exporter writes a new self-contained, escaped,
+script-free HTML board containing the generated drafts. The report is a snapshot, not persistent
+workflow state or a publication receipt.
+
 ### `schema.py` and bundled JSON Schemas
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
-dictionary to library callers. Campaign, plan, campaign-approval, plan-approval, handoff, and
-adapter schemas help editors and generic validators, while runtime models remain authoritative and
-provide more actionable error messages.
+dictionary to library callers. Campaign, plan, campaign-approval, plan-approval, handoff,
+readiness, and adapter schemas help editors and generic validators, while runtime models remain
+authoritative and provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign, diff, approval, handoff, and nested plan operations. Successful
+Provides the single-campaign, diff, approval, handoff, readiness, and nested plan operations. Successful
 output and valid quality/review reports stay on stdout;
 configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
 quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff results return `4`,
-and success returns `0`.
+and success returns `0`. Readiness is informational unless an explicit stage is required; its
+quality gate uses `3` and its approval/handoff gates use `4`.
 
 ## Trust boundaries
 
@@ -135,6 +147,7 @@ and success returns `0`.
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
 | Approved handoff packet | Local directory, metadata, and generated files | Exclusive atomic creation; fixed shape; source, approval, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
+| Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
 path. Media references are explicitly path metadata but core never resolves or opens them. It
@@ -157,8 +170,10 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Approved handoffs are immutable-by-convention and refuse replacement. Verification must precede
   downstream use of the same packet; it is an integrity boundary rather than a transaction lock or
   signer-authentication system.
+- Readiness reports always record the assessment time and selected policies. Re-run them when time,
+  source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.8 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.9 scope.
 
 ## Dependency and cost model
 
