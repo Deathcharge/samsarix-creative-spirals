@@ -107,6 +107,15 @@ Official platform evidence and the conservative common-envelope decision are rec
 [`docs/MEDIA.md`](docs/MEDIA.md). External pilot evidence remains the active product-validation
 gap; it is not inferred from automated tests.
 
+Technical completion evidence: implementation/review head `b5ecd0a`; 183 tests at 94.38%
+coverage plus clean formatting, lint, strict typing, compilation, and schema validation; exact
+0.6.0 wheel SHA-256 `8953dff532323837a6ddbb6a3d8fc963b947ed28f432fb0976507add93e1f541`;
+[hosted Python 3.10/3.13 run 30729137546](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30729137546).
+Rollback is a revert of the eventual PR merge or pinning pre-0.6 commit `8343c48`. Campaign/plan
+schema v1 gains an optional field; adapter consumers must explicitly migrate from v1 to v2. Full
+commands, artifact hashes, review disposition, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#06-portable-media-release-evidence).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or
