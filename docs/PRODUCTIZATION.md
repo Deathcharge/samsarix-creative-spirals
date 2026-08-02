@@ -714,7 +714,7 @@ machine compatibility contract. Roll back by reverting the PR merge or pinning p
 valid under its documented producer-version rules, while consumers should stop requiring or
 exchanging readiness v1 artifacts.
 
-## 0.10 platform-native variants working record
+## 0.10 platform-native variants release evidence
 
 ### Evidence and product decision
 
@@ -768,3 +768,61 @@ before. Package version advances to 0.10.0 because a new public model and author
 the supported pre-1.0 surface. Runtime remains dependency-free and its operating cost remains local
 compute and storage only. Handoff v1's existing producer-version rule still applies: use 0.9 to
 verify a 0.9-produced packet byte-for-byte, or regenerate approval-dependent evidence with 0.10.
+
+### Release verification and disposition
+
+Implementation and all review fixes converge at exact commit
+`11d483c4c4484850130222b86e4650c11d6bde55`. This evidence section is a subsequent docs-only
+change, so the artifact hashes identify that exact reviewed code tree rather than a
+self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 28 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 27 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing -q` | 0 | 271 passed; 95.37% total coverage and 99% model-module coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
+| Campaign Draft 2020-12 metaschema validation | 0 | The bundled campaign schema, including variant definitions and requested-platform conditions, is valid. |
+| `python -m build` | 0 | Built the 0.10.0 sdist and universal wheel from the reviewed head's sdist. |
+| Python 3.11 isolated installed-wheel journey | 0 | Runtime and distribution metadata reported 0.10.0 from outside the checkout; the public variant model and packaged schema loaded; validate/check/preview produced five drafts; X, LinkedIn, and Discord used overrides; Bluesky and Mastodon used baseline content; the quality report was publishable. |
+| Hosted GitHub Actions | 0 | [Run 30736526946](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30736526946) passed full Python 3.10 and 3.13 matrices, builds, wheel installation, and semantic variant assertions at exact head `11d483c`. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Clean-tree artifact digests from exact commit `11d483c`:
+
+- `samsarix_creative_spirals-0.10.0-py3-none-any.whl` — SHA-256
+  `1d6f8cdbf6c0152c086072534e0e48caac3746dda94ee95e2384a17c85f9d5b8`.
+- `samsarix_creative_spirals-0.10.0.tar.gz` — SHA-256
+  `a83451385937c042099d0cb7e5191de4170b0e0db63417d44e812716039b5e1e`.
+
+[PR #12](https://github.com/Deathcharge/samsarix-creative-spirals/pull/12) received six
+CodeRabbit inline comments. All were validated and fixed: installed-wheel CI now asserts effective
+content instead of only exit codes; release metadata is backed by this exact record; public API
+ordering is canonical; campaign diff v1 explicitly documents the additive field-name vocabulary;
+the new CLI fixture annotation is concrete; and whole-plan approval invalidation has direct variant
+coverage. New validation helpers also gained docstrings. The incremental automated review after
+the fixes was rate-limited; the complete local gates and both hosted matrices passed on the
+resulting head. All original threads were then resolved.
+
+Release disposition: **release candidate with one owner-controlled distribution gate**. The source
+checkout and locally built wheel support the complete declared journey with no known locally
+actionable P0 or P1 defect. Public PyPI publication has not been performed and remains an explicit
+owner action. External-user adoption evidence also remains unavailable; competitor workflow
+evidence demonstrates the problem category, not product-market fit.
+
+Compatibility and rollback:
+
+- Campaign schema remains v1 and gains one optional field. Sources without `platformVariants`
+  normalize and render exactly as before.
+- Campaign diff v1 can emit the additive `platformVariants` source field; strict field-enum
+  consumers must update, while the envelope and generated-draft field contract remain unchanged.
+- Adapter v2 and campaign, plan, approval, handoff, and readiness artifact schemas do not change;
+  changed variant content naturally changes identities and exact rendered bytes.
+- Handoff v1's existing `producerVersion` rule requires 0.9 to verify 0.9-produced packets or fresh
+  approval-dependent evidence under 0.10.
+- Runtime remains standard-library-only with no accounts, credentials, network calls, scheduler,
+  database, publisher, telemetry, or external operating cost.
+- Before publication, roll back by reverting PR #12 or pinning main commit
+  `281d0e6996ccf72f5dd760814122dcca6e301ec7`. After owner publication, use normal version pinning
+  and a corrective release; do not replace published artifacts silently.
