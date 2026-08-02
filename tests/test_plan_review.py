@@ -216,6 +216,24 @@ def test_plan_approval_invalidates_on_schedule_and_campaign_changes(
     assert [issue.code for issue in result.issues] == ["source-changed", "plan-id-changed"]
 
 
+def test_plan_review_propagates_platform_variant_changes(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    before_path = _write_plan(tmp_path / "before", campaign_data)
+    revised = dict(campaign_data)
+    revised["platformVariants"] = {"discord": {"body": "Hello launch community"}}
+    after_path = _write_plan(tmp_path / "after", revised)
+
+    result = diff_campaign_plans(
+        load_campaign_plan(before_path),
+        load_campaign_plan(after_path),
+    )
+
+    assert result.items[0].campaign_diff is not None
+    assert [change.field for change in result.items[0].campaign_diff.fields] == ["platformVariants"]
+    assert [change.platform for change in result.items[0].campaign_diff.drafts] == ["discord"]
+
+
 def test_plan_approval_verification_rechecks_recorded_quality_policy(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:

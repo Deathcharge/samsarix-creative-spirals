@@ -23,6 +23,21 @@ def test_build_is_deterministic(campaign_data: dict[str, Any]) -> None:
     assert len(first.source_hash) == 64
 
 
+def test_variant_content_participates_in_deterministic_identity(
+    campaign_data: dict[str, Any],
+) -> None:
+    baseline = build_campaign(campaign_data)
+    campaign_data["platformVariants"] = {"x": {"body": "  Tailored cafe\u0301 copy  "}}
+    tailored = build_campaign(campaign_data)
+    campaign_data["platformVariants"]["x"]["body"] = "Tailored café copy"
+    equivalent = build_campaign(campaign_data)
+
+    assert tailored == equivalent
+    assert tailored.campaign_id != baseline.campaign_id
+    assert tailored.source_hash != baseline.source_hash
+    assert tailored.drafts[0].content == "Tailored café copy"
+
+
 def test_load_reports_json_location(tmp_path: Path) -> None:
     config_path = tmp_path / "broken.json"
     config_path.write_text('{"schemaVersion":', encoding="utf-8")

@@ -82,6 +82,31 @@ def test_semantic_diff_reports_platform_targeted_media_changes(
     assert result.drafts[0].fields == ("media",)
 
 
+def test_semantic_diff_and_approval_track_platform_variant_changes(
+    campaign_data: dict[str, Any],
+) -> None:
+    original = build_campaign(campaign_data)
+    approval = create_campaign_approval(original, approved_by="Reviewer")
+    revised = dict(campaign_data)
+    revised["platformVariants"] = {"x": {"body": "A purpose-built X announcement"}}
+
+    result = diff_campaigns(campaign_data, revised)
+    approval_result = verify_campaign_approval(build_campaign(revised), approval)
+
+    assert [change.field for change in result.fields] == ["platformVariants"]
+    assert [change.platform for change in result.drafts] == ["x"]
+    assert result.drafts[0].fields == (
+        "content",
+        "characterCount",
+        "originalCharacterCount",
+        "warnings",
+    )
+    assert [issue.code for issue in approval_result.issues] == [
+        "source-changed",
+        "campaign-id-changed",
+    ]
+
+
 def test_create_export_load_and_verify_approval(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:

@@ -53,6 +53,9 @@ jobs:
           samsarix-campaign validate examples/campaign-media.json --json
           samsarix-campaign check examples/campaign-media.json --json
           samsarix-campaign preview examples/campaign-media.json --json
+          samsarix-campaign validate examples/campaign-variants.json --json
+          samsarix-campaign check examples/campaign-variants.json --json
+          samsarix-campaign preview examples/campaign-variants.json --json
           samsarix-campaign plan validate examples/launch-plan.json --json
           samsarix-campaign plan check examples/launch-plan.json --json
           samsarix-campaign plan preview examples/launch-plan.json --json

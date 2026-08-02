@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "name": "Platform-native release",
+  "title": "A reviewable release workflow",
+  "body": "Samsarix Creative Spirals turns one campaign into deterministic, reviewable platform drafts without connecting social accounts.",
+  "link": "https://github.com/Deathcharge/samsarix-creative-spirals",
+  "hashtags": ["Samsarix", "localfirst"],
+  "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+  "platformVariants": {
+    "x": {
+      "body": "Turn campaign copy into deterministic, reviewable social drafts—locally, without connecting an account.",
+      "link": "https://github.com/Deathcharge/samsarix-creative-spirals",
+      "hashtags": ["Samsarix"]
+    },
+    "linkedin": {
+      "title": "A local-first release communications workflow",
+      "body": "Developer advocates and small teams can now tailor campaign copy for LinkedIn while retaining deterministic identity, semantic review, quality gates, approvals, and publisher-neutral handoff artifacts.",
+      "link": "https://github.com/Deathcharge/samsarix-creative-spirals",
+      "hashtags": ["DeveloperRelations", "ContentOperations"]
+    },
+    "discord": {
+      "title": "Release workflow update",
+      "body": "Hey community—our local-first campaign tool now supports deliberate copy for each channel. Review the generated draft before pasting it into your server.",
+      "hashtags": []
+    }
+  }
+}

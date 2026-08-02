@@ -9,8 +9,15 @@ change without notice.
 
 `CampaignConfig.from_dict(mapping)` validates and normalizes a JSON-compatible mapping. It returns
 an immutable dataclass with `schema_version`, `name`, `body`, `platforms`, `title`, `link`,
-`hashtags`, normalized `platform_limits`, and `media`. `limit_for(platform)` returns an explicit override or
-the supported default. `to_dict()` returns the normalized JSON shape.
+`hashtags`, normalized `platform_variants`, `platform_limits`, and `media`.
+`variant_for(platform)` returns a complete content override or `None`; `limit_for(platform)` returns
+an explicit limit override or the supported default. `to_dict()` returns the normalized JSON shape.
+
+### `PlatformContentVariant`
+
+An immutable complete platform content block with canonical `platform`, required `body`, optional
+`title` and `link`, and normalized `hashtags`. `to_dict()` emits the nested campaign-source shape.
+Variants replace baseline content rather than partially merging it; see `docs/VARIANTS.md`.
 
 ### `MediaReference`
 
@@ -128,7 +135,7 @@ I/O failures raise the relevant `OSError` subclass.
 ### `diff_campaigns(before, after) -> CampaignDiff`
 
 Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
-`name`, `title`, `body`, `link`, hashtags, platform order, platform limits, and media, then compares every
+`name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, and media, then compares every
 generated draft in supported-platform order. Equivalent spelling that normalizes to the same
 campaign produces `changed=False`. It performs no file or network I/O.
 
@@ -341,6 +348,8 @@ else:
 
 The package is pre-1.0. The exported names, campaign/plan/approval/handoff/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.9.x. Internal helpers and exact prose in warning
+compatibility surface for 0.10.x. Campaign schema v1 gains the optional `platformVariants` field;
+existing sources behave unchanged, while strict source consumers must load the current schema
+before accepting variants. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

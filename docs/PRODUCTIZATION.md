@@ -62,7 +62,7 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.9 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.10 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, and offline launch readiness without adding a scheduler, account connection, or
 network publisher.
@@ -713,3 +713,57 @@ machine compatibility contract. Roll back by reverting the PR merge or pinning p
 `8a628e8fdc768196cca7b32845379554389edd43`; existing 0.8 approval and handoff evidence remains
 valid under its documented producer-version rules, while consumers should stop requiring or
 exchanging readiness v1 artifacts.
+
+## 0.10 platform-native variants working record
+
+### Evidence and product decision
+
+The 0.9 formatter accepted one baseline title/body/link/hashtag set and applied only structural
+platform formatting. That made the product deterministic, but forced materially different channel
+copy into separate campaigns and obscured their relationship as one reviewed announcement. Current
+official Buffer and Sprout Social composer documentation both treat per-network customization as a
+normal multi-channel workflow:
+
+- <https://support.buffer.com/article/642-scheduling-posts>
+- <https://support.sproutsocial.com/hc/en-us/articles/36494895896589-How-do-I-use-Customize-Post-per-Network-in-Compose>
+
+The smallest defensible response is an optional source-level mapping of complete content overrides.
+It retains one baseline, deterministic offline builds, and existing artifact contracts. It does not
+add provider accounts, mutable drafts, scheduling, AI generation, or network access.
+
+Complete replacement was selected over partial inheritance. A variant requires `body`; omitted
+`title`, `link`, and `hashtags` are intentionally absent. This avoids an ambiguous distinction
+between “inherit,” “remove,” and “forgot to specify,” and mirrors Sprout's documented unique-content
+split. Removing the variant restores baseline behavior.
+
+### Findings and implementation checklist
+
+- P0: none discovered; existing campaigns remain valid and retain identical output.
+- P1: platform-specific copy previously required duplicated campaign files, producing unrelated
+  identities and making whole-announcement review harder. The implemented variant contract closes
+  this gap within one campaign identity.
+- P1: any override must participate in source hashing, semantic review, approval invalidation, plan
+  identity, adapters, handoffs, and readiness. These paths consume normalized campaign source and
+  rendered drafts; direct regression tests cover campaign/plan propagation.
+- P1: variant input is untrusted. Runtime and schema enforce canonical requested keys, strict
+  object fields, required bounded bodies, normalized single-line titles, HTTP(S) links without
+  credentials or whitespace, and bounded unique hashtags.
+- P2: account-resolved mentions, network-specific media/caption overrides, and provider capability
+  discovery remain deferred because they require credentials, volatile external state, or a larger
+  contract. Media targeting remains a separate reviewed concern.
+- P2: external user validation remains required; competitor workflow documentation demonstrates a
+  category need, not demand for this particular local-first implementation.
+
+Implemented locally: `PlatformContentVariant`, strict parsing and schema rules, formatter selection,
+semantic diff coverage, identity and approval propagation, public API/version update, realistic
+example, installed-wheel CI smoke, and author/security/migration documentation. Release acceptance
+requires clean formatting, lint, strict typing, full tests with at least 90% coverage, compilation,
+schema validation, clean sdist-to-wheel build, an installed-wheel variants journey, hosted Python
+3.10/3.13 CI, review disposition, exact artifact hashes, and a documented rollback point. Exact
+release evidence will replace this working status after those gates pass.
+
+Compatibility is intentionally additive: campaign schema remains v1, adapter v2 and all generated
+artifact schemas are unchanged, and campaigns without `platformVariants` normalize exactly as
+before. Package version advances to 0.10.0 because a new public model and authoring capability join
+the supported pre-1.0 surface. Runtime remains dependency-free and its operating cost remains local
+compute and storage only.

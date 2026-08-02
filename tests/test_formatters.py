@@ -56,6 +56,48 @@ def test_discord_flags_broadcast_mentions(campaign_data: dict[str, Any]) -> None
     assert any("broadcast mention" in warning for warning in draft.warnings)
 
 
+def test_platform_variant_replaces_baseline_content_only_for_its_platform(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["platformVariants"] = {
+        "x": {
+            "body": "X-native launch copy",
+            "link": "https://example.com/x",
+            "hashtags": ["x_only"],
+        }
+    }
+    config = CampaignConfig.from_dict(campaign_data)
+
+    x_draft = format_platform(config, "x")
+    linkedin_draft = format_platform(config, "linkedin")
+
+    assert x_draft.content == "X-native launch copy\n\nhttps://example.com/x\n\n#x_only"
+    assert campaign_data["title"] not in x_draft.content
+    assert campaign_data["link"] not in x_draft.content
+    assert campaign_data["body"] in linkedin_draft.content
+    assert campaign_data["title"] in linkedin_draft.content
+    assert "#shipping #localfirst" in linkedin_draft.content
+
+
+def test_variant_drives_platform_specific_warnings_and_truncation(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["platformVariants"] = {
+        "x": {"title": "X heading", "body": "x-native " * 100},
+        "discord": {"body": "Hello @everyone"},
+    }
+    config = CampaignConfig.from_dict(campaign_data)
+
+    x_draft = format_platform(config, "x")
+    discord_draft = format_platform(config, "discord")
+
+    assert x_draft.truncated is True
+    assert x_draft.character_count <= 280
+    assert any("Title is omitted" in warning for warning in x_draft.warnings)
+    assert any("broadcast mention" in warning for warning in discord_draft.warnings)
+    assert campaign_data["link"] not in discord_draft.content
+
+
 def test_discord_uses_conservative_utf16_count(campaign_data: dict[str, Any]) -> None:
     campaign_data.pop("title")
     campaign_data.pop("link")

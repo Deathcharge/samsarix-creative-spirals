@@ -195,6 +195,25 @@ Rollback is a revert of PR #11 or pinning pre-0.9 commit `8a628e8`. Full command
 review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#09-launch-readiness-release-evidence).
 
+## Active milestone — 0.10 platform-native content variants
+
+- [x] Add strict complete content overrides for any requested platform while retaining a reusable
+  baseline for all other platforms.
+- [x] Apply each platform's existing formatter, limit, truncation, hashtag, and warning behavior to
+  the effective content block.
+- [x] Bind variants into deterministic campaign and plan identity, semantic review, approval
+  invalidation, adapters, handoffs, and readiness without changing downstream artifact schemas.
+- [x] Document replacement semantics, current product evidence, privacy boundaries, migration, and
+  a runnable five-platform example.
+- [ ] Complete clean artifact verification, hosted CI, automated review disposition, and exact
+  release evidence.
+
+Buffer's official composer starts with a base post and offers “Customize for each network”; Sprout
+Social likewise makes the content in each network tab unique after customization. Samsarix now
+supports that authoring need without adopting either product's connected-account, scheduling, or
+hosted-state boundary. Contract details and primary sources are in
+[`docs/VARIANTS.md`](docs/VARIANTS.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

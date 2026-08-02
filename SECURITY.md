@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.9.x` release line is supported. Earlier pre-productization and
+The latest `0.10.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -25,7 +25,7 @@ files selected by the invoking user. The supported workflow:
   account access, or remote publishing;
 - limits campaign files to 1 MiB and individual body text to 100,000 characters;
 - rejects duplicate JSON fields and excessive nesting before validating allowed fields, platforms,
-  links, hashtags, and control characters;
+  complete per-platform content variants, links, hashtags, and control characters;
 - constrains limit overrides so hard platform ceilings cannot be raised, except for Mastodon's
   documented instance-specific maximum;
 - evaluates quality gates deterministically without writing files or contacting platforms;
