@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
+import re
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -191,6 +191,20 @@ def test_verify_detects_same_size_artifact_tampering(
     assert {"artifact-content-changed", "artifact-checksum-mismatch"} <= _issue_codes(result)
 
 
+def test_verify_detects_artifact_size_change(tmp_path: Path, campaign_data: dict[str, Any]) -> None:
+    bundle, _, _, packet_path = _export_packet(tmp_path, campaign_data)
+    adapter = packet_path / "adapter.json"
+    adapter.write_bytes(adapter.read_bytes() + b"\n")
+
+    result = verify_campaign_plan_handoff(bundle, load_campaign_plan_handoff(packet_path))
+
+    assert result.valid is False
+    assert any(
+        issue.code == "artifact-size-changed" and issue.path == "adapter.json"
+        for issue in result.issues
+    )
+
+
 def test_verify_detects_missing_and_unexpected_artifacts(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:
@@ -268,7 +282,7 @@ def test_verify_detects_source_and_embedded_approval_changes(
     } <= _issue_codes(result)
 
 
-def test_handoff_parser_rejects_invalid_shape(tmp_path: Path) -> None:
+def test_handoff_parser_rejects_invalid_shape() -> None:
     invalid = {
         "schemaVersion": False,
         "artifactType": "other",
@@ -295,47 +309,41 @@ def test_handoff_parser_rejects_invalid_shape(tmp_path: Path) -> None:
     assert "artifacts must contain between 5 and 9 files" in message
 
 
-def test_handoff_parser_rejects_invalid_artifact_descriptors(
-    tmp_path: Path, campaign_data: dict[str, Any]
+@pytest.mark.parametrize(
+    ("variant", "expected"),
+    [
+        ("artifacts-not-object", "artifacts must be an object"),
+        ("unsupported-path", "unsupported path"),
+        ("descriptor-not-object", "adapter.json must be an object"),
+        ("unknown-descriptor-field", "unknown field"),
+        ("invalid-size", "bytes must be between"),
+        ("invalid-digest", "sha256 must be a lowercase"),
+        ("missing-base", "missing required path"),
+    ],
+)
+def test_handoff_parser_rejects_invalid_artifact_descriptor(
+    tmp_path: Path, campaign_data: dict[str, Any], variant: str, expected: str
 ) -> None:
     bundle, approval, _ = _approved_bundle(tmp_path, campaign_data)
-    valid = build_campaign_plan_handoff(bundle, approval, generated_at=GENERATED_AT).to_dict()
-    variants: list[tuple[dict[str, Any], str]] = []
+    raw = build_campaign_plan_handoff(bundle, approval, generated_at=GENERATED_AT).to_dict()
 
-    artifacts_not_object = deepcopy(valid)
-    artifacts_not_object["artifacts"] = []
-    variants.append((artifacts_not_object, "artifacts must be an object"))
+    if variant == "artifacts-not-object":
+        raw["artifacts"] = []
+    elif variant == "unsupported-path":
+        raw["artifacts"]["csv/other.csv"] = {"bytes": 1, "sha256": "0" * 64}
+    elif variant == "descriptor-not-object":
+        raw["artifacts"]["adapter.json"] = []
+    elif variant == "unknown-descriptor-field":
+        raw["artifacts"]["adapter.json"]["extra"] = True
+    elif variant == "invalid-size":
+        raw["artifacts"]["adapter.json"]["bytes"] = False
+    elif variant == "invalid-digest":
+        raw["artifacts"]["adapter.json"]["sha256"] = "A" * 64
+    else:
+        del raw["artifacts"]["manifest.json"]
 
-    unsupported = deepcopy(valid)
-    unsupported["artifacts"]["csv/other.csv"] = {
-        "bytes": 1,
-        "sha256": "0" * 64,
-    }
-    variants.append((unsupported, "unsupported path"))
-
-    descriptor_not_object = deepcopy(valid)
-    descriptor_not_object["artifacts"]["adapter.json"] = []
-    variants.append((descriptor_not_object, "adapter.json must be an object"))
-
-    unknown_descriptor_field = deepcopy(valid)
-    unknown_descriptor_field["artifacts"]["adapter.json"]["extra"] = True
-    variants.append((unknown_descriptor_field, "unknown field"))
-
-    invalid_size = deepcopy(valid)
-    invalid_size["artifacts"]["adapter.json"]["bytes"] = False
-    variants.append((invalid_size, "bytes must be between"))
-
-    invalid_digest = deepcopy(valid)
-    invalid_digest["artifacts"]["adapter.json"]["sha256"] = "A" * 64
-    variants.append((invalid_digest, "sha256 must be a lowercase"))
-
-    missing_base = deepcopy(valid)
-    del missing_base["artifacts"]["manifest.json"]
-    variants.append((missing_base, "missing required path"))
-
-    for raw, expected in variants:
-        with pytest.raises(ConfigError, match=expected):
-            CampaignPlanHandoff.from_dict(raw)
+    with pytest.raises(ConfigError, match=expected):
+        CampaignPlanHandoff.from_dict(raw)
 
 
 def test_verify_detects_changed_artifact_declarations_and_generation_order(
@@ -354,6 +362,7 @@ def test_verify_detects_changed_artifact_declarations_and_generation_order(
 
     result = verify_campaign_plan_handoff(bundle, load_campaign_plan_handoff(packet_path))
 
+    assert result.valid is False
     assert {
         "handoff-before-approval",
         "artifact-declaration-missing",
@@ -380,7 +389,8 @@ def test_handoff_load_and_verify_reject_missing_or_invalid_file_types(
     assert "artifact-type-invalid" in _issue_codes(result)
 
     (packet_path / "handoff.json").unlink()
-    with pytest.raises(ConfigError, match="handoff handoff.json must be a regular file"):
+    expected = "handoff handoff.json must be a regular file"
+    with pytest.raises(ConfigError, match=re.escape(expected)):
         load_campaign_plan_handoff(packet_path)
 
 

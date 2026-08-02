@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 
 import samsarix_creative_spirals as package
+from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
@@ -170,6 +171,7 @@ def test_packaged_adapter_schema_is_available() -> None:
 def test_packaged_handoff_schema_is_available() -> None:
     schema = package.load_handoff_schema()
 
+    Draft202012Validator.check_schema(schema)
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
     assert schema["properties"]["handoffId"]["pattern"] == "^sch_[0-9a-f]{12}$"

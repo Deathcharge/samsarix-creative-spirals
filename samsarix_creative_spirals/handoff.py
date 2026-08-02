@@ -79,6 +79,70 @@ class HandoffArtifact:
         return {"bytes": self.size, "sha256": self.sha256}
 
 
+def _parse_producer(raw: dict[str, Any], issues: list[str]) -> str:
+    producer_value = raw.get("producer")
+    producer_version = ""
+    if not isinstance(producer_value, dict):
+        issues.append("producer must be an object")
+        return producer_version
+
+    producer_unknown = sorted(str(key) for key in producer_value if key not in _PRODUCER_KEYS)
+    if producer_unknown:
+        issues.append(f"producer has unknown field(s): {', '.join(producer_unknown)}")
+    if producer_value.get("name") != "samsarix-creative-spirals":
+        issues.append("producer.name must be samsarix-creative-spirals")
+    version_value = producer_value.get("version")
+    producer_version = version_value if isinstance(version_value, str) else ""
+    if len(producer_version) > 50 or not _VERSION_RE.fullmatch(producer_version):
+        issues.append("producer.version must be a supported package version")
+    return producer_version
+
+
+def _parse_artifacts(
+    raw: dict[str, Any],
+    issues: list[str],
+) -> dict[str, HandoffArtifact]:
+    artifacts_value = raw.get("artifacts")
+    artifacts_by_path: dict[str, HandoffArtifact] = {}
+    if not isinstance(artifacts_value, dict):
+        issues.append("artifacts must be an object")
+        return artifacts_by_path
+
+    minimum_artifacts = len(_BASE_ARTIFACT_PATHS) + 1
+    maximum_artifacts = len(_ARTIFACT_PATHS)
+    if not minimum_artifacts <= len(artifacts_value) <= maximum_artifacts:
+        issues.append(
+            f"artifacts must contain between {minimum_artifacts} and {maximum_artifacts} files"
+        )
+    for path, artifact_value in artifacts_value.items():
+        if path not in _ARTIFACT_PATHS:
+            issues.append(f"artifacts has unsupported path: {path}")
+            continue
+        if not isinstance(artifact_value, dict):
+            issues.append(f"artifacts.{path} must be an object")
+            continue
+        artifact_unknown = sorted(str(key) for key in artifact_value if key not in _ARTIFACT_KEYS)
+        if artifact_unknown:
+            issues.append(f"artifacts.{path} has unknown field(s): {', '.join(artifact_unknown)}")
+        size_value = artifact_value.get("bytes")
+        size = size_value if isinstance(size_value, int) and not isinstance(size_value, bool) else 0
+        if not 1 <= size <= MAX_HANDOFF_ARTIFACT_BYTES:
+            issues.append(
+                f"artifacts.{path}.bytes must be between 1 and {MAX_HANDOFF_ARTIFACT_BYTES}"
+            )
+        digest_value = artifact_value.get("sha256")
+        digest = digest_value if isinstance(digest_value, str) else ""
+        if not _SHA256_RE.fullmatch(digest):
+            issues.append(f"artifacts.{path}.sha256 must be a lowercase SHA-256 hash")
+        artifacts_by_path[path] = HandoffArtifact(path, size, digest)
+    missing = [path for path in _BASE_ARTIFACT_PATHS if path not in artifacts_by_path]
+    if missing:
+        issues.append(f"artifacts is missing required path(s): {', '.join(missing)}")
+    if not any(path in artifacts_by_path for path in _CSV_ARTIFACT_PATHS):
+        issues.append("artifacts must contain at least one platform CSV")
+    return artifacts_by_path
+
+
 @dataclass(frozen=True, slots=True)
 class CampaignPlanHandoff:
     """Unsigned manifest that binds an approval to exact rendered plan artifacts."""
@@ -156,65 +220,8 @@ class CampaignPlanHandoff:
             field="generatedAt",
             issues=issues,
         )
-        producer_value = raw.get("producer")
-        producer_version = ""
-        if not isinstance(producer_value, dict):
-            issues.append("producer must be an object")
-        else:
-            producer_unknown = sorted(
-                str(key) for key in producer_value if key not in _PRODUCER_KEYS
-            )
-            if producer_unknown:
-                issues.append(f"producer has unknown field(s): {', '.join(producer_unknown)}")
-            if producer_value.get("name") != "samsarix-creative-spirals":
-                issues.append("producer.name must be samsarix-creative-spirals")
-            version_value = producer_value.get("version")
-            producer_version = version_value if isinstance(version_value, str) else ""
-            if len(producer_version) > 50 or not _VERSION_RE.fullmatch(producer_version):
-                issues.append("producer.version must be a supported package version")
-
-        artifacts_value = raw.get("artifacts")
-        artifacts_by_path: dict[str, HandoffArtifact] = {}
-        if not isinstance(artifacts_value, dict):
-            issues.append("artifacts must be an object")
-        else:
-            if not 5 <= len(artifacts_value) <= len(_ARTIFACT_PATHS):
-                issues.append("artifacts must contain between 5 and 9 files")
-            for path, artifact_value in artifacts_value.items():
-                if path not in _ARTIFACT_PATHS:
-                    issues.append(f"artifacts has unsupported path: {path}")
-                    continue
-                if not isinstance(artifact_value, dict):
-                    issues.append(f"artifacts.{path} must be an object")
-                    continue
-                artifact_unknown = sorted(
-                    str(key) for key in artifact_value if key not in _ARTIFACT_KEYS
-                )
-                if artifact_unknown:
-                    issues.append(
-                        f"artifacts.{path} has unknown field(s): {', '.join(artifact_unknown)}"
-                    )
-                size_value = artifact_value.get("bytes")
-                size = (
-                    size_value
-                    if isinstance(size_value, int) and not isinstance(size_value, bool)
-                    else 0
-                )
-                if not 1 <= size <= MAX_HANDOFF_ARTIFACT_BYTES:
-                    issues.append(
-                        f"artifacts.{path}.bytes must be between 1 and "
-                        f"{MAX_HANDOFF_ARTIFACT_BYTES}"
-                    )
-                digest_value = artifact_value.get("sha256")
-                digest = digest_value if isinstance(digest_value, str) else ""
-                if not _SHA256_RE.fullmatch(digest):
-                    issues.append(f"artifacts.{path}.sha256 must be a lowercase SHA-256 hash")
-                artifacts_by_path[path] = HandoffArtifact(path, size, digest)
-            missing = [path for path in _BASE_ARTIFACT_PATHS if path not in artifacts_by_path]
-            if missing:
-                issues.append(f"artifacts is missing required path(s): {', '.join(missing)}")
-            if not any(path in artifacts_by_path for path in _CSV_ARTIFACT_PATHS):
-                issues.append("artifacts must contain at least one platform CSV")
+        producer_version = _parse_producer(raw, issues)
+        artifacts_by_path = _parse_artifacts(raw, issues)
 
         if issues:
             raise ConfigError(issues)
@@ -542,12 +549,11 @@ def _hash_expected_file(
     return digest.hexdigest()
 
 
-def verify_campaign_plan_handoff(
+def _check_handoff_identity_and_order(
     bundle: CampaignPlanBundle,
     packet: CampaignPlanHandoffPacket,
-) -> HandoffCheck:
-    """Verify packet source, approval, shape, and regenerated artifact bytes offline."""
-    issues: list[HandoffIssue] = []
+    issues: list[HandoffIssue],
+) -> bool:
     handoff = packet.handoff
     packet_root_valid = not packet.root.is_symlink() and packet.root.is_dir()
     if not packet_root_valid:
@@ -591,7 +597,15 @@ def verify_campaign_plan_handoff(
                 "handoff.json",
             )
         )
+    return packet_root_valid
 
+
+def _regenerate_and_check_handoff(
+    bundle: CampaignPlanBundle,
+    packet: CampaignPlanHandoffPacket,
+    issues: list[HandoffIssue],
+) -> tuple[dict[str, bytes], CampaignPlanHandoff]:
+    handoff = packet.handoff
     expected_artifacts = _handoff_artifact_payloads(
         bundle,
         packet.approval,
@@ -627,7 +641,14 @@ def verify_campaign_plan_handoff(
                 "handoff.json",
             )
         )
+    return expected_artifacts, expected_handoff
 
+
+def _check_artifact_declarations(
+    handoff: CampaignPlanHandoff,
+    expected_handoff: CampaignPlanHandoff,
+    issues: list[HandoffIssue],
+) -> dict[str, HandoffArtifact]:
     declared = {artifact.path: artifact for artifact in handoff.artifacts}
     expected = {artifact.path: artifact for artifact in expected_handoff.artifacts}
     for relative_path in _ARTIFACT_PATHS:
@@ -657,61 +678,81 @@ def verify_campaign_plan_handoff(
                     relative_path,
                 )
             )
+    return declared
 
-    if packet_root_valid:
-        expected_paths = _expected_packet_paths(expected_artifacts)
-        _check_packet_entries(packet, expected_paths, issues)
-        expected_handoff_payload = _handoff_payload(handoff)
-        actual_handoff_digest = _hash_expected_file(
+
+def _check_handoff_files(
+    packet: CampaignPlanHandoffPacket,
+    expected_artifacts: dict[str, bytes],
+    declared: dict[str, HandoffArtifact],
+    issues: list[HandoffIssue],
+) -> None:
+    expected_paths = _expected_packet_paths(expected_artifacts)
+    _check_packet_entries(packet, expected_paths, issues)
+    expected_handoff_payload = _handoff_payload(packet.handoff)
+    actual_handoff_digest = _hash_expected_file(
+        packet.root,
+        "handoff.json",
+        len(expected_handoff_payload),
+        issues,
+    )
+    if (
+        actual_handoff_digest is not None
+        and actual_handoff_digest != hashlib.sha256(expected_handoff_payload).hexdigest()
+    ):
+        issues.append(
+            HandoffIssue(
+                "handoff-file-changed",
+                "On-disk handoff metadata does not match the loaded canonical record.",
+                "handoff.json",
+            )
+        )
+    for relative_path in _ARTIFACT_PATHS:
+        payload = expected_artifacts.get(relative_path)
+        if payload is None:
+            continue
+        actual_digest = _hash_expected_file(
             packet.root,
-            "handoff.json",
-            len(expected_handoff_payload),
+            relative_path,
+            len(payload),
             issues,
         )
-        if (
-            actual_handoff_digest is not None
-            and actual_handoff_digest != hashlib.sha256(expected_handoff_payload).hexdigest()
-        ):
+        if actual_digest is None:
+            continue
+        expected_digest = hashlib.sha256(payload).hexdigest()
+        if actual_digest != expected_digest:
             issues.append(
                 HandoffIssue(
-                    "handoff-file-changed",
-                    "On-disk handoff metadata does not match the loaded canonical record.",
-                    "handoff.json",
+                    "artifact-content-changed",
+                    "Artifact bytes do not match regenerated current-plan output.",
+                    relative_path,
                 )
             )
-        for relative_path in _ARTIFACT_PATHS:
-            payload = expected_artifacts.get(relative_path)
-            if payload is None:
-                continue
-            actual_digest = _hash_expected_file(
-                packet.root,
-                relative_path,
-                len(payload),
-                issues,
+        declared_artifact = declared.get(relative_path)
+        if declared_artifact is not None and actual_digest != declared_artifact.sha256:
+            issues.append(
+                HandoffIssue(
+                    "artifact-checksum-mismatch",
+                    "Artifact bytes do not match the checksum declared by the packet.",
+                    relative_path,
+                )
             )
-            if actual_digest is None:
-                continue
-            expected_digest = hashlib.sha256(payload).hexdigest()
-            if actual_digest != expected_digest:
-                issues.append(
-                    HandoffIssue(
-                        "artifact-content-changed",
-                        "Artifact bytes do not match regenerated current-plan output.",
-                        relative_path,
-                    )
-                )
-            declared_artifact = declared.get(relative_path)
-            if declared_artifact is not None and actual_digest != declared_artifact.sha256:
-                issues.append(
-                    HandoffIssue(
-                        "artifact-checksum-mismatch",
-                        "Artifact bytes do not match the checksum declared by the packet.",
-                        relative_path,
-                    )
-                )
+
+
+def verify_campaign_plan_handoff(
+    bundle: CampaignPlanBundle,
+    packet: CampaignPlanHandoffPacket,
+) -> HandoffCheck:
+    """Verify packet source, approval, shape, and regenerated artifact bytes offline."""
+    issues: list[HandoffIssue] = []
+    packet_root_valid = _check_handoff_identity_and_order(bundle, packet, issues)
+    expected_artifacts, expected_handoff = _regenerate_and_check_handoff(bundle, packet, issues)
+    declared = _check_artifact_declarations(packet.handoff, expected_handoff, issues)
+    if packet_root_valid:
+        _check_handoff_files(packet, expected_artifacts, declared, issues)
 
     return HandoffCheck(
-        handoff_id=handoff.handoff_id,
+        handoff_id=packet.handoff.handoff_id,
         plan_id=bundle.plan_id,
         valid=not issues,
         issues=tuple(issues),
