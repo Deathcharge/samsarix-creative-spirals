@@ -1057,9 +1057,10 @@ or recurring operating cost was added.
 ### Release verification and disposition
 
 Implementation and all review fixes converge at exact commit
-`63ea1ff85df5d3bc33fcb599dd585c44016bd458`. This evidence section is a subsequent documentation
-change, so artifact hashes identify that exact reviewed code tree rather than a self-referential
-source archive.
+`63ea1ff85df5d3bc33fcb599dd585c44016bd458`; PR #15 merged the evidence-bearing branch to `main`
+as `6462261953ddf2d3ad8fb3fdfbe4c488e5a6e960`. This section's final merge record is a subsequent
+documentation change, so artifact hashes identify the exact reviewed code tree rather than a
+self-referential source archive.
 
 | Verification | Exit | Actual result |
 | --- | ---: | --- |
@@ -1072,6 +1073,7 @@ source archive.
 | Sdist-derived universal-wheel build | 0 | Built the 0.13.0 sdist and then its universal wheel from exact head `63ea1ff`. |
 | Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.13.0, plan `scp_d8a68cdb1054`, handoff `sch_13f6dc1ec82b`, ten published outcomes, publication `scpub_740156792fc2`, `publication-complete`, and both publication/quality gates passed outside the checkout after intended times. |
 | Hosted GitHub Actions | 0 | [Push run 30743663983](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743663983) and [PR run 30743665258](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743665258) each passed the complete Python 3.10/3.13 matrix at exact head `63ea1ff`. |
+| Post-merge GitHub Actions | 0 | [Main run 30743994652](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743994652) passed both complete matrices at merge commit `6462261`. |
 | `git diff --check` | 0 | No whitespace errors; reviewed-head worktree was clean. |
 
 Isolated artifact digests from exact commit `63ea1ff`:
@@ -1089,7 +1091,7 @@ are resolved. Incremental automated re-review was rate-limited, while complete l
 gates passed on the resulting head.
 
 Release disposition: **release candidate with one owner-controlled distribution gate**. The
-reviewed source and isolated wheel support the declared reconciliation journey with no known
+merged source and isolated wheel support the declared reconciliation journey with no known
 locally actionable P0 or P1 defect. Public PyPI publication has not been performed and remains an
 explicit owner action. External-user adoption evidence likewise remains unavailable; competitor
 workflow evidence demonstrates the problem category, not product-market fit.
@@ -1102,6 +1104,7 @@ Compatibility and rollback:
   supplied. Existing no-ledger calls retain their previous shape, stages, and gate behavior.
 - Runtime remains standard-library-only with no URL open, credential, publisher, scheduler,
   database, telemetry, provider query, or external operating cost.
-- Before merge, roll back by abandoning PR #15 or pinning base commit
-  `452e466a0dce87dc7b38d41997a30d7599b145f1`. After merge, revert the merge commit or use normal
-  version pinning and a corrective release; do not replace published artifacts silently.
+- Before public package publication, roll back by reverting merge commit
+  `6462261953ddf2d3ad8fb3fdfbe4c488e5a6e960` or pinning pre-0.13 main commit
+  `452e466a0dce87dc7b38d41997a30d7599b145f1`. After publication, use normal version pinning and a
+  corrective release; do not replace published artifacts silently.

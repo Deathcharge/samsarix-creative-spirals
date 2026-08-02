@@ -293,13 +293,22 @@ disposition, compatibility notes, and limitations are in
 - [x] Add public typed APIs, a bundled schema, adversarial tests, installed-artifact planning, and
   documentation of the operator-assertion trust boundary.
 - [x] Complete hosted CI, review, exact artifact hashes, and pre-merge rollback evidence.
-- [ ] Merge to main, pass post-merge CI, and record the final merge/rollback identity.
+- [x] Merge to main, pass post-merge CI, and record the final merge/rollback identity.
 
 Buffer's Sent history and Sprout Social's Publishing Calendar demonstrate the operational value
 of post-handoff state, while Buffer's notification workflow shows that “Sent” can precede manual
 native publication. Samsarix therefore records an explicit local operator assertion rather than
 fabricating provider verification. Contract details and official sources are in
 [`docs/PUBLICATIONS.md`](docs/PUBLICATIONS.md).
+
+Technical completion evidence: implementation/review head `63ea1ff`; merge commit `6462261`; 338
+tests at 93.70% coverage plus clean formatting, lint, strict typing, compilation, nine schema
+checks, and an isolated installed-wheel handoff-to-publication journey; 0.13.0 wheel SHA-256
+`d40ed9d9551c0f6e2929f86fb9bc2345c83becfeb6a320cba31bcc3a02981e32`; and
+[post-merge Python 3.10/3.13 run 30743994652](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30743994652).
+Rollback is a revert of PR #15's merge or a pin to pre-0.13 main commit `452e466`. Full sdist
+digest, review disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#013-publication-reconciliation-release-evidence).
 
 ## Deliberate exclusions
 
