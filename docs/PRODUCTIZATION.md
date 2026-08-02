@@ -667,3 +667,47 @@ producing package version for byte-exact verification; verification is point-in-
 immediately precede use of the same directory; media remains metadata only; no provider credential
 or real publication was used; and external-user adoption evidence is still unavailable. PyPI
 publication remains an owner-controlled action.
+
+## 0.9 launch-readiness release evidence
+
+Implementation and review fixes converge at exact commit
+`33647ba87cd5e50bb8de7e333963dddd5f3efe06`. The release adds point-in-time quality, schedule,
+approval, and handoff stages; explicit CI gates; readiness v1 JSON; and an exclusive offline HTML
+board. Evidence documentation is a subsequent docs-only commit, so the artifact hashes below
+identify the exact reviewed code tree rather than a self-referential source archive.
+
+| Verification | Exit | Result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | Formatting clean. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | Lint clean. |
+| `python -m mypy` | 0 | Strict typing clean across 27 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 235 passed; 95.18% total coverage and 99% readiness-module coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Compilation clean. |
+| Draft 2020-12 validation | 0 | Readiness metaschema, ready-for-approval, approved, handoff-ready, and synchronized embedded approval contracts passed. |
+| `python -m build --outdir <clean-detached-worktree>/dist <clean-detached-worktree>` | 0 | Built the 0.9.0 sdist and universal wheel from exact commit `33647ba`. |
+| Python 3.11 installed-wheel journey | 0 | Package/version/schema and `pip check` passed outside the checkout; approval → handoff → `handoff-ready` JSON plus 6,569-byte script-free HTML passed. |
+| Hosted GitHub Actions | 0 | [Run 30734396322](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30734396322) passed full Python 3.10 and 3.13 matrices, builds, and installed-wheel status/HTML smoke. |
+| Dependabot | 0 | GitHub reported zero open alerts at review head. |
+
+Clean-tree artifact digests from exact commit `33647ba`:
+
+- `samsarix_creative_spirals-0.9.0-py3-none-any.whl` — SHA-256
+  `b9aef0ede71ea6a7d90b92dc16ab955383bbf53917d30a88657f1a8a6299c5ac`.
+- `samsarix_creative_spirals-0.9.0.tar.gz` — SHA-256
+  `d7bbb9dd7ca4e27c580ab89b1747bf3e3d4ee69f92e739da6690b10504ad9dbd`.
+
+[PR #11](https://github.com/Deathcharge/samsarix-creative-spirals/pull/11) received ten
+CodeRabbit comments. All were dispositioned: deterministic examples, schema coverage and
+portability, concrete test types, approval-only CLI coverage, bounded issue-code normalization,
+orchestrator decomposition, and this evidence record were implemented. The suggested external
+approval `$ref` was not used because readiness v1 must validate offline as a standalone document;
+instead its embedded approval structure is byte-for-structure synchronized with plan-approval v1
+by a direct regression test. The incremental review status passed.
+
+Compatibility is additive for 0.9.x: existing campaign, plan, approval, handoff, manifest, and
+adapter contracts do not change. New public names, `plan status`, schema kind `readiness`, and
+readiness schema v1 join the pre-1.0 compatibility surface. HTML is a human artifact rather than a
+machine compatibility contract. Roll back by reverting the PR merge or pinning pre-0.9 main commit
+`8a628e8fdc768196cca7b32845379554389edd43`; existing 0.8 approval and handoff evidence remains
+valid under its documented producer-version rules, while consumers should stop requiring or
+exchanging readiness v1 artifacts.
