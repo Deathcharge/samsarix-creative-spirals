@@ -186,6 +186,8 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
     source_title = variant.title if variant is not None else config.title
     source_body = variant.body if variant is not None else config.body
     source_link = variant.link if variant is not None else config.link
+    if source_link is not None and config.link_tracking is not None:
+        source_link = config.link_tracking.apply_to(source_link, platform)
     source_hashtags = variant.hashtags if variant is not None else config.hashtags
     title = _format_title(source_title, platform)
     hashtags = [f"#{tag}" for tag in source_hashtags]

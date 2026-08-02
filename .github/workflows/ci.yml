@@ -58,6 +58,9 @@ jobs:
           samsarix-campaign validate examples/campaign-variants.json --json > /tmp/variants-validation.json
           samsarix-campaign check examples/campaign-variants.json --policy examples/content-policy.json --json > /tmp/variants-check.json
           samsarix-campaign preview examples/campaign-variants.json --json > /tmp/variants-preview.json
+          samsarix-campaign validate examples/campaign-tracking.json --json > /tmp/tracking-validation.json
+          samsarix-campaign check examples/campaign-tracking.json --json > /tmp/tracking-check.json
+          samsarix-campaign preview examples/campaign-tracking.json --json > /tmp/tracking-preview.json
           python - <<'PY'
           import json
           from pathlib import Path
@@ -66,6 +69,9 @@ jobs:
           check = json.loads(Path("/tmp/variants-check.json").read_text())
           policy = json.loads(Path("/tmp/policy-validation.json").read_text())
           preview = json.loads(Path("/tmp/variants-preview.json").read_text())
+          tracking_validation = json.loads(Path("/tmp/tracking-validation.json").read_text())
+          tracking_check = json.loads(Path("/tmp/tracking-check.json").read_text())
+          tracking_preview = json.loads(Path("/tmp/tracking-preview.json").read_text())
           drafts = {draft["platform"]: draft["content"] for draft in preview["drafts"]}
           assert validation["valid"] is True
           assert check["publishable"] is True
@@ -77,6 +83,15 @@ jobs:
           assert "turns one campaign into deterministic" in drafts["bluesky"]
           assert "turns one campaign into deterministic" in drafts["mastodon"]
           assert "Turn campaign copy" not in drafts["bluesky"]
+          tracked_drafts = {
+              draft["platform"]: draft["content"] for draft in tracking_preview["drafts"]
+          }
+          assert tracking_validation["valid"] is True
+          assert tracking_check["publishable"] is True
+          for platform, content in tracked_drafts.items():
+              assert "utm_campaign=creative-spirals-0-12" in content
+              assert f"utm_source={platform}" in content
+              assert content.index("utm_source=") < content.index("#creative-spirals")
           PY
           samsarix-campaign plan validate examples/launch-plan.json --json
           samsarix-campaign plan check examples/launch-plan.json --policy examples/content-policy.json --json

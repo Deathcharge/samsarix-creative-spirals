@@ -10,7 +10,7 @@ import unicodedata
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 if TYPE_CHECKING:
     from .policy import ContentPolicyBinding
@@ -28,6 +28,9 @@ MAX_MEDIA_REFERENCES = len(SUPPORTED_PLATFORMS) * MAX_MEDIA_PER_PLATFORM
 MAX_MEDIA_PATH_LENGTH = 240
 MAX_ALT_TEXT_LENGTH = 1_000
 SUPPORTED_MEDIA_SUFFIXES = (".jpg", ".jpeg", ".png")
+MAX_TRACKING_PARAMETERS = 20
+MAX_TRACKING_PARAMETER_VALUE_LENGTH = 200
+MAX_TRACKED_LINK_LENGTH = 2_000
 
 _CAMPAIGN_KEYS = {
     "schemaVersion",
@@ -39,9 +42,11 @@ _CAMPAIGN_KEYS = {
     "platforms",
     "platformVariants",
     "platformLimits",
+    "linkTracking",
     "media",
 }
 _HASHTAG_RE = re.compile(r"^[\w]+$", re.UNICODE)
+_TRACKING_PARAMETER_RE = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 _WINDOWS_RESERVED_NAMES = {
     "con",
     "prn",
@@ -198,6 +203,182 @@ def _content_hashtags(value: object, *, field: str, issues: list[str]) -> list[s
     return hashtags
 
 
+def _tracking_parameter_map(
+    value: object,
+    *,
+    field: str,
+    required: bool,
+    issues: list[str],
+) -> tuple[tuple[str, str], ...]:
+    """Parse one bounded map of canonical tracking parameter names and values."""
+    if not isinstance(value, Mapping):
+        issues.append(f"{field} must be an object mapping parameter names to values")
+        return ()
+    if required and not value:
+        issues.append(f"{field} must contain at least one parameter")
+    if len(value) > MAX_TRACKING_PARAMETERS:
+        issues.append(f"{field} must contain at most {MAX_TRACKING_PARAMETERS} parameters")
+    parameters: dict[str, str] = {}
+    for key, raw_value in value.items():
+        if not isinstance(key, str) or not _TRACKING_PARAMETER_RE.fullmatch(key):
+            issues.append(f"{field} parameter names must match {_TRACKING_PARAMETER_RE.pattern}")
+            continue
+        item_field = f"{field}.{key}"
+        if not isinstance(raw_value, str):
+            issues.append(f"{item_field} must be a string")
+            continue
+        parameter_value = _normalize_text(raw_value).strip()
+        if not parameter_value:
+            issues.append(f"{item_field} must not be empty")
+        elif len(parameter_value) > MAX_TRACKING_PARAMETER_VALUE_LENGTH:
+            issues.append(
+                f"{item_field} must be at most {MAX_TRACKING_PARAMETER_VALUE_LENGTH} characters"
+            )
+        if _has_any_control(parameter_value):
+            issues.append(f"{item_field} must be a single line without control characters")
+        if parameter_value and not _has_any_control(parameter_value):
+            parameters[key] = parameter_value
+    return tuple(sorted(parameters.items()))
+
+
+@dataclass(frozen=True, slots=True)
+class LinkTracking:
+    """Deterministic query parameters applied to structured campaign links."""
+
+    parameters: tuple[tuple[str, str], ...] = ()
+    platform_parameters: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = ()
+
+    def parameters_for(self, platform: str) -> tuple[tuple[str, str], ...]:
+        """Return merged parameters for a platform in canonical name order."""
+        if platform not in SUPPORTED_PLATFORMS:
+            raise ConfigError(f"unsupported platform: {platform}")
+        merged = dict(self.parameters)
+        overrides = dict(self.platform_parameters).get(platform, ())
+        merged.update(dict(overrides))
+        return tuple(sorted(merged.items()))
+
+    def apply_to(self, link: str, platform: str) -> str:
+        """Append encoded parameters before a fragment without replacing existing keys."""
+        parameters = self.parameters_for(platform)
+        try:
+            parsed = urlsplit(link)
+        except ValueError as error:
+            raise ConfigError(f"cannot apply link tracking to invalid URL: {error}") from error
+        existing = {name for name, _ in parse_qsl(parsed.query, keep_blank_values=True)}
+        conflicts = tuple(name for name, _ in parameters if name in existing)
+        if conflicts:
+            raise ConfigError(
+                "link tracking would duplicate existing query parameter(s): " + ", ".join(conflicts)
+            )
+        encoded = urlencode(parameters, quote_via=quote, safe="-._~")
+        query = f"{parsed.query}&{encoded}" if parsed.query else encoded
+        tracked = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, query, parsed.fragment))
+        if len(tracked) > MAX_TRACKED_LINK_LENGTH:
+            raise ConfigError(
+                f"tracked link must be at most {MAX_TRACKED_LINK_LENGTH} characters for {platform}"
+            )
+        return tracked
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return normalized campaign-source representation."""
+        result: dict[str, Any] = {}
+        if self.parameters:
+            result["parameters"] = dict(self.parameters)
+        if self.platform_parameters:
+            result["platformParameters"] = {
+                platform: dict(parameters) for platform, parameters in self.platform_parameters
+            }
+        return result
+
+
+def _tracking_platform_parameter_maps(
+    value: object,
+    *,
+    requested_platforms: tuple[str, ...],
+    required: bool,
+    issues: list[str],
+) -> tuple[tuple[str, tuple[tuple[str, str], ...]], ...]:
+    """Parse requested-platform tracking maps in canonical platform order."""
+    if not isinstance(value, Mapping):
+        issues.append("linkTracking.platformParameters must map platforms to parameter objects")
+        return ()
+    platform_parameters: dict[str, tuple[tuple[str, str], ...]] = {}
+    if required and not value:
+        issues.append("linkTracking.platformParameters must contain at least one platform")
+    if len(value) > len(SUPPORTED_PLATFORMS):
+        issues.append(
+            "linkTracking.platformParameters must contain at most "
+            f"{len(SUPPORTED_PLATFORMS)} platforms"
+        )
+    for key, parameter_value in value.items():
+        if not isinstance(key, str) or key not in SUPPORTED_PLATFORMS:
+            issues.append(
+                "linkTracking.platformParameters keys must be canonical platforms: "
+                + ", ".join(SUPPORTED_PLATFORMS)
+            )
+            continue
+        field = f"linkTracking.platformParameters.{key}"
+        if key not in requested_platforms:
+            issues.append(f"{field} is not useful unless {key} is requested")
+        parsed = _tracking_parameter_map(
+            parameter_value,
+            field=field,
+            required=True,
+            issues=issues,
+        )
+        if parsed:
+            platform_parameters[key] = parsed
+    return tuple(
+        (platform, platform_parameters[platform])
+        for platform in SUPPORTED_PLATFORMS
+        if platform in platform_parameters
+    )
+
+
+def _parse_link_tracking(
+    value: object,
+    *,
+    requested_platforms: tuple[str, ...],
+    issues: list[str],
+) -> LinkTracking | None:
+    """Parse campaign-level defaults and per-platform tracking overrides."""
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        issues.append("linkTracking must be an object")
+        return None
+    unknown = sorted(str(key) for key in value if key not in {"parameters", "platformParameters"})
+    if unknown:
+        issues.append(f"linkTracking has unknown field(s): {', '.join(unknown)}")
+
+    parameters = _tracking_parameter_map(
+        value.get("parameters", {}),
+        field="linkTracking.parameters",
+        required="parameters" in value,
+        issues=issues,
+    )
+    platform_parameters = _tracking_platform_parameter_maps(
+        value.get("platformParameters", {}),
+        requested_platforms=requested_platforms,
+        required="platformParameters" in value,
+        issues=issues,
+    )
+
+    if not parameters and not platform_parameters:
+        issues.append("linkTracking must define at least one parameter")
+        return None
+    tracking = LinkTracking(
+        parameters=parameters,
+        platform_parameters=platform_parameters,
+    )
+    issues.extend(
+        f"linkTracking produces more than {MAX_TRACKING_PARAMETERS} parameters for {platform}"
+        for platform in requested_platforms
+        if len(tracking.parameters_for(platform)) > MAX_TRACKING_PARAMETERS
+    )
+    return tracking
+
+
 @dataclass(frozen=True, slots=True)
 class MediaReference:
     """Portable image metadata that core validates but never dereferences."""
@@ -256,6 +437,7 @@ class CampaignConfig:
     hashtags: tuple[str, ...] = ()
     platform_variants: tuple[PlatformContentVariant, ...] = ()
     platform_limits: tuple[tuple[str, int], ...] = ()
+    link_tracking: LinkTracking | None = None
     media: tuple[MediaReference, ...] = ()
 
     @classmethod
@@ -377,6 +559,35 @@ class CampaignConfig:
                 for platform in SUPPORTED_PLATFORMS
                 if platform in parsed_variants
             )
+
+        link_tracking = _parse_link_tracking(
+            raw.get("linkTracking"),
+            requested_platforms=tuple(platforms),
+            issues=issues,
+        )
+        if link_tracking is not None:
+            variants_by_platform = {variant.platform: variant for variant in platform_variants}
+            linked_platforms = 0
+            tracked_platforms = {platform for platform, _ in link_tracking.platform_parameters}
+            for platform in platforms:
+                variant = variants_by_platform.get(platform)
+                effective_link = variant.link if variant is not None else link
+                if effective_link is None:
+                    if platform in tracked_platforms:
+                        issues.append(
+                            f"linkTracking.platformParameters.{platform} is not useful "
+                            f"without an effective link for {platform}"
+                        )
+                    continue
+                linked_platforms += 1
+                try:
+                    link_tracking.apply_to(effective_link, platform)
+                except ConfigError as error:
+                    issues.extend(
+                        f"linkTracking for {platform}: {message}" for message in error.issues
+                    )
+            if not linked_platforms:
+                issues.append("linkTracking requires at least one effective campaign link")
 
         platform_limits_value = raw.get("platformLimits", {})
         parsed_limits: dict[str, int] = {}
@@ -517,6 +728,7 @@ class CampaignConfig:
                 for platform in SUPPORTED_PLATFORMS
                 if platform in parsed_limits
             ),
+            link_tracking=link_tracking,
             media=tuple(media),
         )
 
@@ -551,6 +763,8 @@ class CampaignConfig:
             }
         if self.platform_limits:
             result["platformLimits"] = dict(self.platform_limits)
+        if self.link_tracking is not None:
+            result["linkTracking"] = self.link_tracking.to_dict()
         if self.media:
             result["media"] = [reference.to_dict() for reference in self.media]
         return result

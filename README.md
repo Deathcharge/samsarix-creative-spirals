@@ -4,8 +4,8 @@ Samsarix Creative Spirals is a local-first CLI and typed Python library that tur
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
-portable content-policy profiles plus source-bound campaign and plan approval records make exact
-changes and guardrails visible before handoff.
+deterministic link attribution, portable content-policy profiles, and source-bound campaign and
+plan approval records make exact changes and guardrails visible before handoff.
 Approved handoff packets then bind current source, approval metadata, and exact rendered files for
 offline verification immediately before downstream use. A consolidated readiness command and
 offline HTML board show the current quality, schedule, approval, and handoff stage in one place.
@@ -13,7 +13,7 @@ offline HTML board show the current quality, schedule, approval, and handoff sta
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.11 alpha.** Portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
+> Maturity: **0.12 alpha.** Deterministic link tracking, portable phrase policies, platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
 > semantic review and local approvals, portable image metadata, approved handoff verification, and
 > launch-readiness reporting are implemented and tested. Automatic
 > publishing,
@@ -97,6 +97,10 @@ behavior.
     }
   },
   "platformLimits": {"mastodon": 1000},
+  "linkTracking": {
+    "parameters": {"utm_campaign": "product-launch", "utm_medium": "social"},
+    "platformParameters": {"x": {"utm_source": "x"}}
+  },
   "media": [
     {
       "path": "media/launch.png",
@@ -117,6 +121,7 @@ behavior.
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
 | `platformVariants` | no | Complete content overrides keyed by a requested canonical platform. Each requires `body`; omitted `title`, `link`, and `hashtags` do not inherit from the baseline. |
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
+| `linkTracking` | no | Up to 20 deterministic query parameters in each merged effective requested-platform map, with optional platform overrides. Existing-name conflicts are rejected. |
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
 Media paths are metadata relative to the campaign file. Core validates that metadata but never
@@ -129,6 +134,13 @@ Use a variant when a channel needs genuinely different copy, mentions, call to a
 hashtags. Platforms without a variant use the baseline. See
 [Platform-native content variants](docs/VARIANTS.md) for replacement semantics, review behavior,
 compatibility, and a runnable example.
+
+Use `linkTracking` to append stable, percent-encoded attribution values to the effective structured
+link before review. Per-platform values add to common parameters and replace common values with the
+same name; fragments are preserved and existing-name collisions fail validation. Body text is never
+scanned or rewritten. See
+[Deterministic link tracking](docs/TRACKING.md) for the contract, current workflow evidence,
+analytics limitations, and a runnable example.
 
 Print the bundled JSON Schema for editor or CI integration, or write it to a new file:
 
@@ -378,7 +390,7 @@ console command. The package has no third-party runtime dependencies.
 ## Architecture and boundaries
 
 - `models.py` validates and normalizes local JSON input.
-- `formatters.py` creates bounded platform drafts without network access.
+- `formatters.py` applies deterministic link attribution and creates bounded platform drafts without network access.
 - `workflow.py` computes deterministic IDs and safely exports review bundles.
 - `quality.py` evaluates deterministic, machine-readable campaign quality gates.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
@@ -417,7 +429,7 @@ for trust boundaries and failure behavior.
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
 - Media-file processing, per-account capabilities and mention resolution, cryptographic approvals,
-  hosted collaboration, network publishing, and analytics are outside the 0.11 scope. Calendar and readiness files record
+  hosted collaboration, network publishing, click collection, and analytics reporting are outside the 0.12 scope. Calendar and readiness files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

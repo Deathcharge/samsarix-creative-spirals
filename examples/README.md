@@ -33,6 +33,16 @@ samsarix-campaign preview examples/campaign-media.json --json
 samsarix-campaign diff examples/campaign.json examples/campaign-media.json --json
 ```
 
+`campaign-tracking.json` demonstrates deterministic campaign defaults plus per-platform source
+parameters. The tracked URL is generated locally and remains visible in preview, diff, approval,
+adapter, and handoff artifacts:
+
+```bash
+samsarix-campaign validate examples/campaign-tracking.json --json
+samsarix-campaign preview examples/campaign-tracking.json --json
+samsarix-campaign check examples/campaign-tracking.json --json
+```
+
 The referenced image files are intentionally not bundled: validation and preview still pass
 because core treats paths as review metadata and never opens them. Replace the paths with real
 campaign-relative JPEG/PNG files only when handing the source tree to a separately permissioned

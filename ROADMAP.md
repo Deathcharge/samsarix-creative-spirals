@@ -252,6 +252,25 @@ Rollback is a revert of PR #13 or a pin to pre-0.11 main commit `3a5c0f5`. Full 
 review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#011-portable-content-policy-release-evidence).
 
+## Active milestone — 0.12 deterministic link tracking
+
+- [x] Add bounded common query parameters and explicit requested-platform overrides to campaign
+  source without introducing templates, environment expansion, or remote state.
+- [x] Apply stable UTF-8 percent encoding to the effective baseline/variant link while preserving
+  existing queries and fragments and rejecting same-name collisions.
+- [x] Propagate tracking through identity, semantic diff, approval invalidation, plans, adapters,
+  exports, handoffs, and readiness without changing downstream artifact schemas.
+- [x] Add schema, public API, realistic example, adversarial tests, installed-wheel CI smoke,
+  migration guidance, and privacy/security boundaries.
+- [ ] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
+  evidence.
+
+Google Analytics recommends consistent manual campaign tags; Buffer and Sprout Social both expose
+automated or reusable link-tracking parameters inside their connected publishing products.
+Samsarix provides a deterministic Git-native attribution step before that boundary, without
+opening URLs, shortening links, collecting clicks, or requiring an analytics account. Contract
+details and official sources are in [`docs/TRACKING.md`](docs/TRACKING.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

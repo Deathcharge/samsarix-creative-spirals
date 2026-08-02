@@ -27,6 +27,7 @@ _DIFF_FIELDS = (
     "platforms",
     "platformVariants",
     "platformLimits",
+    "linkTracking",
     "media",
 )
 _DRAFT_FIELDS = (
@@ -116,6 +117,9 @@ def _semantic_config(config: CampaignConfig) -> dict[str, Any]:
             variant.platform: variant.to_dict() for variant in config.platform_variants
         },
         "platformLimits": dict(config.platform_limits),
+        "linkTracking": (
+            config.link_tracking.to_dict() if config.link_tracking is not None else None
+        ),
         "media": [reference.to_dict() for reference in config.media],
     }
 

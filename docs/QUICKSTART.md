@@ -93,6 +93,27 @@ samsarix-campaign check examples/campaign-variants.json \
 Policy files can block or require phrases per platform. They stay local and deterministic. See
 [POLICIES.md](POLICIES.md) for exact matching, limits, approval binding, and security boundaries.
 
+### Optional: generate consistent attribution links
+
+Add common parameters plus explicit platform values to the campaign source:
+
+```json
+"linkTracking": {
+  "parameters": {
+    "utm_campaign": "product-launch",
+    "utm_medium": "organic-social"
+  },
+  "platformParameters": {
+    "x": {"utm_source": "x"},
+    "linkedin": {"utm_source": "linkedin"}
+  }
+}
+```
+
+Preview shows the exact percent-encoded URL before approval. Tracking changes campaign identity;
+it never collects analytics or contacts the destination. See [TRACKING.md](TRACKING.md) for
+collision handling, platform variants, privacy, and migration.
+
 ## 4. Compare and record local approval
 
 Review a proposed campaign against the previously accepted file:
