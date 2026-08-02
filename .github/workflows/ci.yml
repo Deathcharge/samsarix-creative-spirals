@@ -47,6 +47,9 @@ jobs:
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign check examples/campaign.json --json
           samsarix-campaign preview examples/campaign.json
+          samsarix-campaign validate examples/campaign-media.json --json
+          samsarix-campaign check examples/campaign-media.json --json
+          samsarix-campaign preview examples/campaign-media.json --json
           samsarix-campaign plan validate examples/launch-plan.json --json
           samsarix-campaign plan check examples/launch-plan.json --json
           samsarix-campaign plan preview examples/launch-plan.json --json
