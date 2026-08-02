@@ -292,7 +292,8 @@ disposition, compatibility notes, and limitations are in
   explicit CI gate without changing no-ledger report behavior.
 - [x] Add public typed APIs, a bundled schema, adversarial tests, installed-artifact planning, and
   documentation of the operator-assertion trust boundary.
-- [ ] Complete hosted CI, review, merge, exact artifact hashes, and rollback evidence.
+- [x] Complete hosted CI, review, exact artifact hashes, and pre-merge rollback evidence.
+- [ ] Merge to main, pass post-merge CI, and record the final merge/rollback identity.
 
 Buffer's Sent history and Sprout Social's Publishing Calendar demonstrate the operational value
 of post-handoff state, while Buffer's notification workflow shows that “Sent” can precede manual
