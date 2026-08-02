@@ -107,6 +107,7 @@ def test_export_writes_copy_ready_bundle(tmp_path: Path, campaign_data: dict[str
     assert manifest["drafts"][0]["media"] == [
         {"path": "media/nonexistent.png", "altText": "Release dashboard"}
     ]
+    assert not (destination / "media").exists()
     assert {item["file"] for item in manifest["drafts"]} == {
         "x.md",
         "linkedin.md",

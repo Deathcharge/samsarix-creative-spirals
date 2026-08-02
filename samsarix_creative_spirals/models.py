@@ -74,7 +74,8 @@ def _portable_media_path(value: Any, *, field: str, issues: list[str]) -> str | 
     if not isinstance(value, str):
         issues.append(f"{field} must be a string")
         return None
-    path = _normalize_text(value).strip()
+    normalized_path = _normalize_text(value)
+    path = normalized_path.strip()
     segments = path.split("/")
     invalid_segment = any(
         segment in {"", ".", ".."}
@@ -86,6 +87,7 @@ def _portable_media_path(value: Any, *, field: str, issues: list[str]) -> str | 
     )
     if (
         not path
+        or normalized_path != path
         or len(path) > MAX_MEDIA_PATH_LENGTH
         or path.startswith("/")
         or "\\" in path

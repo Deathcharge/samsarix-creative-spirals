@@ -185,6 +185,7 @@ def test_media_references_are_normalized_without_reading_files(
         ([{"path": "../hero.png", "altText": "Description"}], "portable relative path"),
         ([{"path": "/hero.png", "altText": "Description"}], "portable relative path"),
         ([{"path": "media\\hero.png", "altText": "Description"}], "portable relative path"),
+        ([{"path": " media/hero.png ", "altText": "Description"}], "portable relative path"),
         ([{"path": "media/CON.png", "altText": "Description"}], "portable relative path"),
         ([{"path": "media/CON.data.png", "altText": "Description"}], "portable relative path"),
         ([{"path": "media/.png", "altText": "Description"}], "portable relative path"),
@@ -263,3 +264,15 @@ def test_campaign_accepts_four_platform_specific_images_per_platform(
     config = CampaignConfig.from_dict(campaign_data)
 
     assert len(config.media) == 20
+
+
+def test_equivalent_media_target_spelling_has_one_canonical_identity(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["media"] = [{"path": "media/launch.png", "altText": "Launch dashboard"}]
+    implicit = CampaignConfig.from_dict(campaign_data)
+    campaign_data["media"][0]["platforms"] = ["Discord", "LINKEDIN", "x"]
+    explicit = CampaignConfig.from_dict(campaign_data)
+
+    assert implicit == explicit
+    assert implicit.to_dict() == explicit.to_dict()
