@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import ConfigError
+from .policy import ContentPolicy, ContentPolicyBinding, content_policy_binding_issues
 from .plans import (
     CampaignPlan,
     CampaignPlanBundle,
@@ -41,6 +42,7 @@ _PLAN_APPROVAL_KEYS = {
     "approvedBy",
     "approvedAt",
     "qualityPolicy",
+    "contentPolicy",
     "note",
 }
 _PLAN_ID_RE = re.compile(r"^scp_[0-9a-f]{12}$")
@@ -231,6 +233,7 @@ class CampaignPlanApproval:
     approved_at: datetime
     warnings_as_errors: bool = False
     note: str | None = None
+    content_policy: ContentPolicyBinding | None = None
 
     @property
     def quality_policy(self) -> str:
@@ -248,6 +251,8 @@ class CampaignPlanApproval:
         }
         if self.note is not None:
             result["note"] = self.note
+        if self.content_policy is not None:
+            result["contentPolicy"] = self.content_policy.to_dict()
         return result
 
     @classmethod
@@ -282,6 +287,12 @@ class CampaignPlanApproval:
         if policy not in {"errors-only", "warnings-as-errors"}:
             issues.append("qualityPolicy must be errors-only or warnings-as-errors")
 
+        content_policy = None
+        if "contentPolicy" in raw:
+            content_policy = ContentPolicyBinding.from_dict(
+                raw["contentPolicy"], field="contentPolicy", issues=issues
+            )
+
         note: str | None
         if "note" not in raw:
             note = None
@@ -303,6 +314,7 @@ class CampaignPlanApproval:
             approved_at=approved_at,
             warnings_as_errors=policy == "warnings-as-errors",
             note=note,
+            content_policy=content_policy,
         )
 
 
@@ -343,6 +355,7 @@ def create_campaign_plan_approval(
     approved_at: datetime | None = None,
     warnings_as_errors: bool = False,
     note: str | None = None,
+    content_policy: ContentPolicy | None = None,
 ) -> CampaignPlanApproval:
     """Create plan approval metadata only when the selected quality policy passes."""
     issues: list[str] = []
@@ -365,7 +378,11 @@ def create_campaign_plan_approval(
     timestamp = approved_at or datetime.now(timezone.utc)
     if timestamp.utcoffset() is None:
         issues.append("approved_at must include timezone information")
-    quality = check_campaign_plan(bundle, warnings_as_errors=warnings_as_errors)
+    quality = check_campaign_plan(
+        bundle,
+        warnings_as_errors=warnings_as_errors,
+        content_policy=content_policy,
+    )
     if not quality.publishable:
         issues.append(
             "plan does not pass the selected quality policy: "
@@ -380,6 +397,7 @@ def create_campaign_plan_approval(
         approved_at=timestamp.astimezone(timezone.utc),
         warnings_as_errors=warnings_as_errors,
         note=normalized_note,
+        content_policy=content_policy.binding if content_policy is not None else None,
     )
 
 
@@ -406,6 +424,8 @@ def export_campaign_plan_approval(approval: CampaignPlanApproval, path: str | Pa
 def verify_campaign_plan_approval(
     bundle: CampaignPlanBundle,
     approval: CampaignPlanApproval,
+    *,
+    content_policy: ContentPolicy | None = None,
 ) -> PlanApprovalCheck:
     """Verify plan identity and re-run the approval record's quality policy."""
     issues: list[ApprovalIssue] = []
@@ -415,7 +435,15 @@ def verify_campaign_plan_approval(
         )
     if approval.plan_id != bundle.plan_id:
         issues.append(ApprovalIssue("plan-id-changed", "Plan ID no longer matches the approval."))
-    quality = check_campaign_plan(bundle, warnings_as_errors=approval.warnings_as_errors)
+    issues.extend(
+        ApprovalIssue(code, message)
+        for code, message in content_policy_binding_issues(approval.content_policy, content_policy)
+    )
+    quality = check_campaign_plan(
+        bundle,
+        warnings_as_errors=approval.warnings_as_errors,
+        content_policy=content_policy,
+    )
     if not quality.publishable:
         issues.append(
             ApprovalIssue(

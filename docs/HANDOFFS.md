@@ -49,6 +49,11 @@ Use `--json` for automation. Verification returns `0` only when the packet is cu
 `4` for a well-formed but invalid packet, `1` for malformed input or I/O failure, and `2` for CLI
 usage errors.
 
+If the embedded plan approval binds a portable content policy, supply its exact file with
+`--policy POLICY` during handoff creation and verification. The packet embeds the approval binding
+and covers those bytes; verification also re-runs the current matching policy. Omitting or swapping
+it invalidates the approval and therefore the handoff. See [`POLICIES.md`](POLICIES.md).
+
 ## Packet contract
 
 Each packet has a generated name ending in its `sch_*` handoff ID:
@@ -81,7 +86,8 @@ descriptors; it intentionally excludes itself and its shortened ID.
 
 The verifier:
 
-- reloads current plan source and re-runs the approval's recorded aggregate quality policy;
+- reloads current plan source and re-runs the approval's recorded aggregate quality policy plus
+  the exact external content policy when one was bound;
 - checks current plan ID and full source hash, including order, schedule, required channels,
   source paths, media metadata, and every referenced campaign;
 - regenerates adapter JSON, calendar, plan manifest, and platform CSV bytes with the recorded

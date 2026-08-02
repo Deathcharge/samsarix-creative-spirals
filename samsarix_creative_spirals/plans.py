@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .models import CampaignBundle, CampaignConfig, ConfigError, SUPPORTED_PLATFORMS
+from .policy import ContentPolicy, ContentPolicyBinding
 from .quality import check_campaign
 from .workflow import _load_json_object, _slugify, build_campaign, load_campaign
 
@@ -301,9 +302,10 @@ class PlanIssue:
     message: str
     campaign_id: str | None = None
     platform: str | None = None
+    rule_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "code": self.code,
             "severity": self.severity,
             "item": self.item,
@@ -311,6 +313,9 @@ class PlanIssue:
             "platform": self.platform,
             "message": self.message,
         }
+        if self.rule_id is not None:
+            result["ruleId"] = self.rule_id
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -320,14 +325,18 @@ class CampaignPlanCheck:
     plan_id: str
     publishable: bool
     issues: tuple[PlanIssue, ...]
+    content_policy: ContentPolicyBinding | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "schemaVersion": 1,
             "planId": self.plan_id,
             "publishable": self.publishable,
             "issues": [issue.to_dict() for issue in self.issues],
         }
+        if self.content_policy is not None:
+            result["contentPolicy"] = self.content_policy.to_dict()
+        return result
 
 
 def load_campaign_plan(path: str | Path) -> CampaignPlan:
@@ -383,6 +392,7 @@ def check_campaign_plan(
     bundle: CampaignPlanBundle,
     *,
     warnings_as_errors: bool = False,
+    content_policy: ContentPolicy | None = None,
 ) -> CampaignPlanCheck:
     """Aggregate item quality with sequence- and coverage-level plan checks."""
     issues: list[PlanIssue] = []
@@ -408,6 +418,7 @@ def check_campaign_plan(
         campaign_check = check_campaign(
             item.bundle,
             warnings_as_errors=warnings_as_errors,
+            content_policy=content_policy,
         )
         for campaign_issue in campaign_check.issues:
             issues.append(
@@ -418,6 +429,7 @@ def check_campaign_plan(
                     campaign_id=item.bundle.campaign_id,
                     platform=campaign_issue.platform,
                     message=campaign_issue.message,
+                    rule_id=campaign_issue.rule_id,
                 )
             )
 
@@ -452,6 +464,7 @@ def check_campaign_plan(
         plan_id=bundle.plan_id,
         publishable=not any(issue.severity == "error" for issue in issues),
         issues=tuple(issues),
+        content_policy=content_policy.binding if content_policy is not None else None,
     )
 
 

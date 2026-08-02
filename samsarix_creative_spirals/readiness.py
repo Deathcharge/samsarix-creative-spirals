@@ -17,6 +17,7 @@ from .handoff import (
     verify_campaign_plan_handoff,
 )
 from .models import ConfigError
+from .policy import ContentPolicy, ContentPolicyBinding
 from .plan_review import CampaignPlanApproval, verify_campaign_plan_approval
 from .plans import CampaignPlanBundle, PlanIssue, check_campaign_plan
 
@@ -103,6 +104,7 @@ class CampaignPlanReadiness:
     handoff_id: str | None
     issues: tuple[ReadinessIssue, ...]
     items: tuple[CampaignPlanReadinessItem, ...]
+    content_policy: ContentPolicyBinding | None = None
 
     @property
     def ready(self) -> bool:
@@ -118,7 +120,7 @@ class CampaignPlanReadiness:
         return self.stage == "handoff-ready"
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result: dict[str, Any] = {
             "schemaVersion": 1,
             "artifactType": "plan-readiness",
             "assessedAt": _format_utc(self.assessed_at),
@@ -145,6 +147,9 @@ class CampaignPlanReadiness:
             "issues": [issue.to_dict() for issue in self.issues],
             "items": [item.to_dict() for item in self.items],
         }
+        if self.content_policy is not None:
+            result["contentPolicy"] = self.content_policy.to_dict()
+        return result
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,6 +228,8 @@ def _assess_evidence(
     bundle: CampaignPlanBundle,
     approval: CampaignPlanApproval | None,
     handoff: CampaignPlanHandoffPacket | None,
+    *,
+    content_policy: ContentPolicy | None = None,
 ) -> _EvidenceAssessment:
     issues: list[ReadinessIssue] = []
     selected_approval = approval
@@ -246,7 +253,9 @@ def _assess_evidence(
     approval_valid = False
     approval_status: EvidenceStatus = "not-provided"
     if selected_approval is not None:
-        approval_check = verify_campaign_plan_approval(bundle, selected_approval)
+        approval_check = verify_campaign_plan_approval(
+            bundle, selected_approval, content_policy=content_policy
+        )
         approval_valid = approval_check.valid and not mismatch
         approval_status = "valid" if approval_valid else "invalid"
         issues.extend(
@@ -261,7 +270,7 @@ def _assess_evidence(
     handoff_valid = False
     handoff_status: EvidenceStatus = "not-provided"
     if handoff is not None:
-        handoff_check = verify_campaign_plan_handoff(bundle, handoff)
+        handoff_check = verify_campaign_plan_handoff(bundle, handoff, content_policy=content_policy)
         handoff_valid = handoff_check.valid and approval_valid and not mismatch
         handoff_status = "valid" if handoff_valid else "invalid"
         issues.extend(
@@ -312,6 +321,7 @@ def build_campaign_plan_readiness(
     assessed_at: datetime | None = None,
     warnings_as_errors: bool = False,
     require_scheduled: bool = False,
+    content_policy: ContentPolicy | None = None,
 ) -> CampaignPlanReadiness:
     """Assess current quality, schedule, approval, and handoff evidence offline."""
     timestamp = assessed_at or datetime.now(timezone.utc)
@@ -319,9 +329,13 @@ def build_campaign_plan_readiness(
         raise ConfigError("assessed_at must include timezone information")
     timestamp = timestamp.astimezone(timezone.utc)
 
-    quality = check_campaign_plan(bundle, warnings_as_errors=warnings_as_errors)
+    quality = check_campaign_plan(
+        bundle,
+        warnings_as_errors=warnings_as_errors,
+        content_policy=content_policy,
+    )
     schedule = _assess_schedule(bundle, timestamp, require_scheduled=require_scheduled)
-    evidence = _assess_evidence(bundle, approval, handoff)
+    evidence = _assess_evidence(bundle, approval, handoff, content_policy=content_policy)
     issues = _quality_readiness_issues(quality.issues)
     issues.extend(schedule.issues)
     issues.extend(evidence.issues)
@@ -367,6 +381,7 @@ def build_campaign_plan_readiness(
         handoff_id=evidence.handoff_id,
         issues=tuple(issues),
         items=item_reports,
+        content_policy=content_policy.binding if content_policy is not None else None,
     )
 
 
@@ -433,6 +448,11 @@ def render_campaign_plan_readiness_html(
         if report.approval
         else "Not provided"
     )
+    content_policy_detail = (
+        f"{report.content_policy.name} ({report.content_policy.policy_id})"
+        if report.content_policy
+        else "Not applied"
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -467,6 +487,8 @@ code {{ overflow-wrap: anywhere; }} li {{ margin: .5rem 0; }}
 <p class="fact"><strong>Assessed</strong><br>{_escape(_format_utc(report.assessed_at))}</p>
 <p class="fact"><strong>Quality</strong><br>
 {'Passed' if report.quality_passed else 'Blocked'} ({_escape(report.quality_policy)})</p>
+<p class="fact"><strong>Content policy</strong><br>
+{_escape(content_policy_detail)}</p>
 <p class="fact"><strong>Schedule</strong><br>
 {'Ready' if report.schedule_ready else 'Blocked'};
 {'complete' if report.schedule_complete else 'incomplete'}</p>

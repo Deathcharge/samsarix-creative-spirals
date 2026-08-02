@@ -13,6 +13,25 @@ def _write_campaign(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
+def _write_policy(path: Path, phrase: str = "internal only") -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Release guardrails",
+                "rules": [
+                    {
+                        "id": "no-internal",
+                        "kind": "blockedPhrase",
+                        "phrase": phrase,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_cli_core_journey(tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]) -> None:
     config_path = tmp_path / "campaign.json"
     assert main(["init", str(config_path)]) == 0
@@ -630,3 +649,72 @@ def test_cli_emits_handoff_schema(capsys: Any) -> None:
     assert main(["schema", "--kind", "handoff"]) == 0
     schema = json.loads(capsys.readouterr().out)
     assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
+
+
+def test_cli_content_policy_validation_check_and_bound_approval(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    policy = tmp_path / "policy.json"
+    approval = tmp_path / "approval.json"
+    _write_campaign(campaign, campaign_data)
+    _write_policy(policy)
+
+    assert main(["policy", "validate", str(policy), "--json"]) == 0
+    validated = json.loads(capsys.readouterr().out)
+    assert validated["contentPolicy"]["policyId"].startswith("scpol_")
+
+    assert main(["schema", "--kind", "content-policy"]) == 0
+    assert json.loads(capsys.readouterr().out)["title"].endswith("content policy")
+
+    assert main(["check", str(campaign), "--policy", str(policy), "--json"]) == 0
+    checked = json.loads(capsys.readouterr().out)
+    assert checked["contentPolicy"] == validated["contentPolicy"]
+
+    assert (
+        main(
+            [
+                "approval",
+                "create",
+                str(campaign),
+                "--policy",
+                str(policy),
+                "--by",
+                "Reviewer",
+                "--at",
+                "2026-08-03T12:00:00Z",
+                "--output",
+                str(approval),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    created = json.loads(capsys.readouterr().out)
+    assert created["approval"]["contentPolicy"] == validated["contentPolicy"]
+
+    assert main(["approval", "verify", str(campaign), str(approval), "--json"]) == 4
+    missing = json.loads(capsys.readouterr().out)
+    assert missing["issues"][0]["code"] == "content-policy-required"
+    assert (
+        main(
+            [
+                "approval",
+                "verify",
+                str(campaign),
+                str(approval),
+                "--policy",
+                str(policy),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    assert json.loads(capsys.readouterr().out)["valid"] is True
+
+    _write_policy(policy, phrase="core workflow")
+    assert main(["check", str(campaign), "--policy", str(policy), "--json"]) == 3
+    blocked = json.loads(capsys.readouterr().out)
+    assert blocked["issues"][-1]["ruleId"] == "no-internal"

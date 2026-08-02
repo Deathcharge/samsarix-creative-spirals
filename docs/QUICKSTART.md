@@ -80,6 +80,19 @@ samsarix-campaign schema
 samsarix-campaign schema --output campaign.schema.json
 ```
 
+### Optional: apply a portable content policy
+
+Validate and run the included literal phrase guardrails against final platform drafts:
+
+```bash
+samsarix-campaign policy validate examples/content-policy.json --json
+samsarix-campaign check examples/campaign-variants.json \
+  --policy examples/content-policy.json --json
+```
+
+Policy files can block or require phrases per platform. They stay local and deterministic. See
+[POLICIES.md](POLICIES.md) for exact matching, limits, approval binding, and security boundaries.
+
 ## 4. Compare and record local approval
 
 Review a proposed campaign against the previously accepted file:
@@ -95,6 +108,15 @@ quality gate and human review pass, create and verify source-bound metadata:
 ```bash
 samsarix-campaign approval create campaign.json --by "Release reviewer"
 samsarix-campaign approval verify campaign.json campaign.json.approval.json
+```
+
+If approval used a content policy, supply the exact same file to both commands:
+
+```bash
+samsarix-campaign approval create campaign.json --by "Release reviewer" \
+  --policy content-policy.json
+samsarix-campaign approval verify campaign.json campaign.json.approval.json \
+  --policy content-policy.json
 ```
 
 Any normalized source change makes verification return `4`. The reviewer label is not

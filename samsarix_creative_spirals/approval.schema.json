@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/approval-v1.schema.json",
   "title": "Samsarix Creative Spirals campaign approval",
-  "description": "Non-cryptographic local approval metadata bound to one normalized campaign source hash.",
+  "description": "Non-cryptographic local approval metadata bound to one normalized campaign source hash and, optionally, one content-policy hash.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -39,10 +39,26 @@
     "qualityPolicy": {
       "enum": ["errors-only", "warnings-as-errors"]
     },
+    "contentPolicy": {"$ref": "#/$defs/contentPolicy"},
     "note": {
       "type": "string",
       "minLength": 1,
       "maxLength": 500
+    }
+  },
+  "$defs": {
+    "contentPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyId", "sourceHash", "name"],
+      "properties": {
+        "policyId": {"type": "string", "pattern": "^scpol_[0-9a-f]{12}$"},
+        "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "name": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        }
+      }
     }
   }
 }

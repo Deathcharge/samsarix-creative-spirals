@@ -50,6 +50,18 @@ samsarix-campaign check examples/campaign-variants.json
 Omitted fields inside a variant do not inherit. This lets a channel intentionally omit the baseline
 title, link, or hashtags. See `docs/VARIANTS.md` for the contract and review implications.
 
+`content-policy.json` demonstrates repository-owned literal phrase guardrails:
+
+```bash
+samsarix-campaign policy validate examples/content-policy.json --json
+samsarix-campaign check examples/campaign-variants.json \
+  --policy examples/content-policy.json --json
+```
+
+The example blocks `internal only`, requires `local` in every rendered draft, and emits a
+non-blocking Discord review warning. Pass the same `--policy` path to approval, handoff, and status
+commands when policy identity must remain bound to evidence. See `docs/POLICIES.md`.
+
 `launch-plan.json` references `campaign.json` and `campaign-follow-up.json` as one release sequence:
 
 ```bash

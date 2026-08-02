@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from .models import CampaignBundle, CampaignCheck, QualityIssue
+from .policy import ContentPolicy, evaluate_content_policy
 
 _TRUNCATION_WARNING = "Body was truncated to fit the platform limit."
 
@@ -14,6 +15,7 @@ def check_campaign(
     bundle: CampaignBundle,
     *,
     warnings_as_errors: bool = False,
+    content_policy: ContentPolicy | None = None,
 ) -> CampaignCheck:
     """Evaluate whether a built campaign is ready for review or automation."""
     issues: list[QualityIssue] = []
@@ -38,8 +40,17 @@ def check_campaign(
                     message=warning,
                 )
             )
+    if content_policy is not None:
+        issues.extend(
+            evaluate_content_policy(
+                bundle,
+                content_policy,
+                warnings_as_errors=warnings_as_errors,
+            )
+        )
     return CampaignCheck(
         campaign_id=bundle.campaign_id,
         publishable=not any(issue.severity == "error" for issue in issues),
         issues=tuple(issues),
+        content_policy=content_policy.binding if content_policy is not None else None,
     )

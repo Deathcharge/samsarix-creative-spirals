@@ -223,6 +223,26 @@ Rollback is a revert of PR #12 or pinning pre-0.10 main commit `281d0e6`. Full s
 disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#010-platform-native-variants-release-evidence).
 
+## Completed milestone — 0.11 portable content policies
+
+- [x] Add bounded, reusable literal blocked/required phrase rules with platform targeting,
+  case-sensitive or case-folded matching, and warning/error severity.
+- [x] Evaluate exact final rendered drafts and expose stable rule IDs in campaign, plan, readiness,
+  human, and machine-readable results.
+- [x] Bind normalized policy identity into campaign/plan approvals, requiring the exact current
+  policy through approval, handoff, and readiness verification.
+- [x] Publish CLI/library APIs, a bundled Draft 2020-12 schema, runnable examples, adversarial
+  tests, installed-wheel smoke, migration guidance, and a precise security boundary.
+- [ ] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
+  evidence.
+
+Sprout Social's current approval documentation and 2026 blocked-word integration show demand for
+brand-specific content governance alongside review; Buffer likewise documents role-based draft
+approval. Samsarix provides a portable, Git-native subset before the connected publishing boundary:
+deterministic policy-as-code over rendered drafts, without accounts, remote state, or regex/AI
+execution. Contract details and official sources are in
+[`docs/POLICIES.md`](docs/POLICIES.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

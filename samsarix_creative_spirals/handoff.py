@@ -23,6 +23,7 @@ from .plan_review import (
     load_campaign_plan_approval,
     verify_campaign_plan_approval,
 )
+from .policy import ContentPolicy
 from .plans import (
     CampaignPlanBundle,
     _clear_plan_temp,
@@ -351,6 +352,7 @@ def build_campaign_plan_handoff(
     approval: CampaignPlanApproval,
     *,
     generated_at: datetime,
+    content_policy: ContentPolicy | None = None,
 ) -> CampaignPlanHandoff:
     """Build an unsigned handoff manifest after approval and aggregate quality verification."""
     issues: list[str] = []
@@ -358,7 +360,7 @@ def build_campaign_plan_handoff(
         issues.append("generated_at must include timezone information")
     if approval.approved_at.utcoffset() is None:
         issues.append("approval approved_at must include timezone information")
-    approval_check = verify_campaign_plan_approval(bundle, approval)
+    approval_check = verify_campaign_plan_approval(bundle, approval, content_policy=content_policy)
     if not approval_check.valid:
         details = ", ".join(issue.message for issue in approval_check.issues)
         issues.append(f"cannot create handoff from an invalid plan approval: {details}")
@@ -379,10 +381,16 @@ def export_campaign_plan_handoff(
     output_root: str | Path = "handoff-outbox",
     *,
     generated_at: datetime | None = None,
+    content_policy: ContentPolicy | None = None,
 ) -> Path:
     """Atomically create a new approved handoff packet without overwriting evidence."""
     stamp = generated_at or datetime.now(timezone.utc)
-    handoff = build_campaign_plan_handoff(bundle, approval, generated_at=stamp)
+    handoff = build_campaign_plan_handoff(
+        bundle,
+        approval,
+        generated_at=stamp,
+        content_policy=content_policy,
+    )
     artifacts = _handoff_artifact_payloads(bundle, approval, handoff.generated_at)
 
     root = Path(os.path.abspath(output_root))
@@ -553,6 +561,8 @@ def _check_handoff_identity_and_order(
     bundle: CampaignPlanBundle,
     packet: CampaignPlanHandoffPacket,
     issues: list[HandoffIssue],
+    *,
+    content_policy: ContentPolicy | None = None,
 ) -> bool:
     handoff = packet.handoff
     packet_root_valid = not packet.root.is_symlink() and packet.root.is_dir()
@@ -563,7 +573,9 @@ def _check_handoff_identity_and_order(
                 "Packet root must remain a non-symbolic-link directory.",
             )
         )
-    approval_check = verify_campaign_plan_approval(bundle, packet.approval)
+    approval_check = verify_campaign_plan_approval(
+        bundle, packet.approval, content_policy=content_policy
+    )
     for approval_issue in approval_check.issues:
         issues.append(
             HandoffIssue(
@@ -742,10 +754,14 @@ def _check_handoff_files(
 def verify_campaign_plan_handoff(
     bundle: CampaignPlanBundle,
     packet: CampaignPlanHandoffPacket,
+    *,
+    content_policy: ContentPolicy | None = None,
 ) -> HandoffCheck:
     """Verify packet source, approval, shape, and regenerated artifact bytes offline."""
     issues: list[HandoffIssue] = []
-    packet_root_valid = _check_handoff_identity_and_order(bundle, packet, issues)
+    packet_root_valid = _check_handoff_identity_and_order(
+        bundle, packet, issues, content_policy=content_policy
+    )
     expected_artifacts, expected_handoff = _regenerate_and_check_handoff(bundle, packet, issues)
     declared = _check_artifact_declarations(packet.handoff, expected_handoff, issues)
     if packet_root_valid:

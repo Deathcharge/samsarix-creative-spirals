@@ -56,6 +56,9 @@ samsarix-campaign plan status examples/launch-plan.json \
 
 If both `--approval` and `--handoff` are supplied, the explicit approval must exactly equal the
 record embedded in the packet. The handoff can otherwise supply its embedded approval by itself.
+Add `--policy POLICY` to assess literal phrase rules and to verify any policy binding in approval
+or handoff evidence. The JSON and HTML reports show the applied policy identity. See
+[`POLICIES.md`](POLICIES.md).
 
 ## Stages
 
@@ -93,8 +96,8 @@ samsarix-campaign schema --kind readiness
 ```
 
 The report records the assessment time and policies, stable stage and issue codes, evidence
-status, counts, and one item record per campaign. Version 0.9.x keeps this v1 JSON shape and the
-documented stage/exit meanings compatible.
+status, counts, and one item record per campaign. Version 0.11 adds only optional content-policy
+identity and rule context to this v1 JSON shape; existing reports remain valid.
 
 ## Offline HTML and privacy
 
