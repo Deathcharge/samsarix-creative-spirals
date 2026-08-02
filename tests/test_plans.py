@@ -374,6 +374,13 @@ def test_calendar_rejects_naive_generation_time(
 def test_plan_export_writes_manifest_calendar_and_platform_csv(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:
+    campaign_data["media"] = [
+        {
+            "path": "media/launch.png",
+            "altText": "Launch dashboard",
+            "platforms": ["x"],
+        }
+    ]
     path = _write_plan(tmp_path, campaign_data)
     bundle = build_campaign_plan(load_campaign_plan(path))
     generated_at = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
@@ -384,9 +391,13 @@ def test_plan_export_writes_manifest_calendar_and_platform_csv(
     assert manifest["planId"] == bundle.plan_id
     assert manifest["generatedAt"] == "2026-08-01T12:00:00Z"
     assert manifest["adapter"] == "adapter.json"
+    assert manifest["items"][0]["media"][0]["path"] == "media/launch.png"
     adapter = json.loads((target / "adapter.json").read_text(encoding="utf-8"))
     assert adapter["schemaVersion"] == 2
     assert adapter["contract"] == "samsarix.plan-drafts"
+    assert adapter["items"][0]["drafts"][0]["media"] == [
+        {"path": "media/launch.png", "altText": "Launch dashboard"}
+    ]
     assert adapter["items"][0]["drafts"][0]["content"] == (bundle.items[0].bundle.drafts[0].content)
     assert (target / "calendar.ics").read_bytes().endswith(b"\r\n")
     with (target / "csv" / "x.csv").open(encoding="utf-8", newline="") as csv_file:
