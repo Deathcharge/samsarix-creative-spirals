@@ -110,6 +110,7 @@ def _portable_media_path(value: object, *, field: str, issues: list[str]) -> str
 
 
 def _content_body(value: object, *, field: str, issues: list[str]) -> str:
+    """Normalize one required body and append bounded-content issues."""
     if not isinstance(value, str):
         issues.append(f"{field} must be a string")
         return ""
@@ -124,6 +125,7 @@ def _content_body(value: object, *, field: str, issues: list[str]) -> str:
 
 
 def _content_title(value: object, *, field: str, issues: list[str]) -> str | None:
+    """Normalize an optional single-line title and append validation issues."""
     if value is None:
         return None
     if not isinstance(value, str):
@@ -140,6 +142,7 @@ def _content_title(value: object, *, field: str, issues: list[str]) -> str | Non
 
 
 def _content_link(value: object, *, field: str, issues: list[str]) -> str | None:
+    """Normalize an optional safe HTTP(S) URL and append validation issues."""
     if value is None:
         return None
     if not isinstance(value, str):
@@ -164,6 +167,7 @@ def _content_link(value: object, *, field: str, issues: list[str]) -> str | None
 
 
 def _content_hashtags(value: object, *, field: str, issues: list[str]) -> list[str]:
+    """Normalize a bounded hashtag list and append validation issues."""
     hashtags: list[str] = []
     if not isinstance(value, list):
         issues.append(f"{field} must be an array of strings")
@@ -224,6 +228,7 @@ class PlatformContentVariant:
     hashtags: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
+        """Return the normalized nested campaign-source representation."""
         result: dict[str, Any] = {
             "body": self.body,
             "hashtags": list(self.hashtags),

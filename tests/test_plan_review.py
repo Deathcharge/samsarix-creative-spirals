@@ -215,6 +215,22 @@ def test_plan_approval_invalidates_on_schedule_and_campaign_changes(
     assert result.valid is False
     assert [issue.code for issue in result.issues] == ["source-changed", "plan-id-changed"]
 
+    _write_plan(
+        tmp_path,
+        {
+            **campaign_data,
+            "platformVariants": {"discord": {"body": "Changed community copy"}},
+        },
+    )
+    variant_result = verify_campaign_plan_approval(
+        build_campaign_plan(load_campaign_plan(plan_path)),
+        approval,
+    )
+    assert [issue.code for issue in variant_result.issues] == [
+        "source-changed",
+        "plan-id-changed",
+    ]
+
 
 def test_plan_review_propagates_platform_variant_changes(
     tmp_path: Path, campaign_data: dict[str, Any]

@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from samsarix_creative_spirals.cli import main
 
 
@@ -43,7 +45,9 @@ def test_cli_json_preview(tmp_path: Path, capsys: Any, campaign_data: dict[str, 
 
 
 def test_cli_preview_uses_platform_native_variants(
-    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    campaign_data: dict[str, Any],
 ) -> None:
     campaign_data["platformVariants"] = {
         "linkedin": {

@@ -135,9 +135,15 @@ I/O failures raise the relevant `OSError` subclass.
 ### `diff_campaigns(before, after) -> CampaignDiff`
 
 Accepts two validated `CampaignConfig` values or plain dictionaries. It compares normalized
-`name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, and media, then compares every
-generated draft in supported-platform order. Equivalent spelling that normalizes to the same
-campaign produces `changed=False`. It performs no file or network I/O.
+`name`, `title`, `body`, `link`, hashtags, platform order, platform variants, platform limits, and
+media, then compares every generated draft in supported-platform order. Equivalent spelling that
+normalizes to the same campaign produces `changed=False`. It performs no file or network I/O.
+
+`CampaignDiff.to_dict()` remains schema version 1. Its `fields[].field` value names a normalized
+campaign-source field and is deliberately extensible; package 0.10 can emit `platformVariants` with
+the complete before/after mapping. Consumers that exhaustively enumerate v1 field names must add
+this optional source field, while consumers that display or preserve unknown names continue to work
+unchanged. Generated draft fields and the surrounding diff shape are unchanged.
 
 ### `create_campaign_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None) -> CampaignApproval`
 
