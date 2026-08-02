@@ -89,8 +89,9 @@ Implementation decisions:
   identity until a signing model is designed and reviewed.
 - [x] Publish a versioned deterministic adapter contract, schema, and exact export fixture for
   third-party draft importers.
-- [ ] Run a small pilot using the exact packaged wheel and record observed failures and adoption
-  signals.
+- [x] Run an internal end-to-end scenario using the exact packaged wheel and record technical
+  failures and fixes.
+- [ ] Run an external user pilot and record adoption signals that cannot be inferred from tests.
 
 ## Deliberate exclusions
 

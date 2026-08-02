@@ -401,6 +401,10 @@ Current local verification on Windows/Python 3.11:
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
 | `python -m mypy` | 0 | No issues in 20 source files. |
 | `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 155 passed; 94.29% total coverage. |
+| Draft 2020-12 schema validation | 0 | Campaign, plan, approval, and adapter schemas plus representative payloads passed. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built the `0.5.0` sdist and universal wheel with all four schemas and legal files. |
+| Python 3.11 installed-wheel review journey | 0 | Version, schemas, diff, approval create/verify, plan export, adapter artifact, and public API passed outside the repository. |
+| GitHub Actions Python 3.10/3.13 | 0 | Hosted Linux quality, build, and installed-wheel journeys passed on both versions for commit `7fd2a4a`. |
 
 Known 0.5 boundaries:
 
@@ -409,8 +413,13 @@ Known 0.5 boundaries:
   non-repudiation, or defense against a writer replacing both files.
 - Semantic JSON diff includes complete campaign and generated-draft content. Treat its output as
   sensitive wherever the source is sensitive; the command neither logs nor transmits it itself.
-- A packaged-wheel pilot remains the unreleased 0.5 work. No generic artifact is represented as a
-  direct provider import contract, and no live provider credential was used.
+- The first hosted run exposed Git line-ending normalization in the exact RFC 5545 fixture; the
+  fixture is now explicitly binary in `.gitattributes`, preserving required CRLF bytes on Linux and
+  Windows. The repeated hosted matrix passed.
+- The exact wheel completed an internal review/export scenario without a runtime failure after that
+  fixture fix. External-user adoption signals remain unknown; no live provider credential was used
+  and no generic artifact is represented as a direct provider import contract.
 
-**0.5 coherent feature slice; local quality gates pass.** Packaged-wheel and hosted-CI evidence are
-still required before this milestone can be marked release-candidate or merged.
+**0.5 release candidate; declared local, package, fixture, and hosted-CI gates pass.** Automated pull
+request review remains the merge gate. A real external-user pilot and PyPI publication remain
+owner-controlled follow-ups rather than claims made from tests.
