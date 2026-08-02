@@ -331,6 +331,13 @@ Mastodon exposes instance-specific limits. Samsarix therefore proves one conserv
 without claiming universal provider acceptance. Contract details and official sources are in
 [`docs/MEDIA.md`](docs/MEDIA.md).
 
+Pre-review technical evidence at `ff383de`: 372 tests at 93.57% coverage, clean formatting, lint,
+strict typing, compilation, and ten schema checks; an external Python 3.11 installed-wheel journey
+reached `publication-complete` with media package `scm_25320c1662b1`; wheel SHA-256
+`4631f788f4500955d8b8b06b74b66d713b67d0436cee3880b726e82430ec71c2`; sdist SHA-256
+`c7172b9cb06c40b567bf43ba6ff91c2d30619a318cbbdd29b38653666eca7eff`. Hosted and final merge
+evidence remain open.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

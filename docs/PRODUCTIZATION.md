@@ -1153,14 +1153,42 @@ transform. Packet hashes remain unsigned.
 
 ### Verification and release disposition
 
-Pre-review local implementation evidence currently includes 350 compatibility-plus-feature tests
-before expanded adversarial coverage, followed by 30 focused media tests at 93.11% media-module
-coverage. Final full-suite counts, formatting/lint/type/schema/build results, isolated distribution
-hashes, installed-wheel journey identities, reviewed commit, PR/merge, hosted CI, and rollback
-commit will be recorded after the release branch completes review.
+Pre-review implementation and packaged evidence converge at exact commit
+`ff383de7d7e3d82ffa15d943086e481bd68c20e5`. Hosted review, final merge identity, post-merge CI,
+and final rollback evidence remain pending until the release branch completes review.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 35 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 34 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 372 passed; 93.57% total coverage and 93% media-package coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
+| Draft 2020-12 metaschema validation | 0 | All ten bundled schemas validated. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.14.0 sdist and then its universal wheel from exact head `ff383de`. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.14.0, all ten schemas, plan `scp_9ae2b6c67094`, media package `scm_25320c1662b1`, one exact image, ten handoff artifacts, handoff `sch_2bf154434450`, five published outcomes, publication `scpub_87e41e3247eb`, `publication-complete`, and `pip check` passed outside the checkout. |
+| `git diff --check` | 0 | No whitespace errors at the implementation commit. |
+
+Isolated artifact digests from exact commit `ff383de`:
+
+- `samsarix_creative_spirals-0.14.0-py3-none-any.whl` — SHA-256
+  `4631f788f4500955d8b8b06b74b66d713b67d0436cee3880b726e82430ec71c2`.
+- `samsarix_creative_spirals-0.14.0.tar.gz` — SHA-256
+  `c7172b9cb06c40b567bf43ba6ff91c2d30619a318cbbdd29b38653666eca7eff`.
+
+Release disposition: **pre-review release candidate**. The exact local source and sdist-derived
+wheel support the declared approval-to-publication journey with no known locally actionable P0 or
+P1 defect. This becomes a merged release candidate only after hosted matrices and review pass.
+Public PyPI publication has not been performed and remains an explicit owner action. External-user
+adoption evidence likewise remains unavailable; provider workflow evidence demonstrates the
+operational gap and conservative envelope, not product-market fit.
 
 Compatibility is additive: campaign and adapter contracts are unchanged; plan-approval v1 gains
 optional `media`; handoff v1 permits optional `media-index.json`; readiness's embedded approval
 copy stays synchronized; and metadata-only calls emit their prior shapes. The new media-package v1
 schema and public names join the pre-1.0 surface. PyPI publication and external adoption validation
 remain owner-controlled gates.
+
+Before merge, roll back by abandoning or reverting the release branch and pinning main commit
+`89b5f94f97e859097f68ac7559a2a254c940cae2`. The exact merge commit and post-merge corrective
+path will replace this provisional wording after hosted review.
