@@ -1153,32 +1153,40 @@ transform. Packet hashes remain unsigned.
 
 ### Verification and release disposition
 
-Pre-review implementation and packaged evidence converge at exact commit
-`ff383de7d7e3d82ffa15d943086e481bd68c20e5`. Hosted review, final merge identity, post-merge CI,
+Implementation, accepted review fixes, and packaged evidence converge at exact code commit
+`0cd4d57a06b4498e288f8d51033a58d89ece95a6`. Final hosted reruns, merge identity, post-merge CI,
 and final rollback evidence remain pending until the release branch completes review.
 
 | Verification | Exit | Actual result |
 | --- | ---: | --- |
 | `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 35 files unchanged. |
 | `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
-| `python -m mypy` | 0 | Strict typing passed across 34 source files. |
+| `python -m mypy` | 0 | Strict typing passed across 35 source files. |
 | `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 372 passed; 93.57% total coverage and 93% media-package coverage. |
 | `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
 | Draft 2020-12 metaschema validation | 0 | All ten bundled schemas validated. |
-| Sdist-derived universal-wheel build | 0 | Built the 0.14.0 sdist and then its universal wheel from exact head `ff383de`. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.14.0 sdist and then its universal wheel from exact code head `0cd4d57`. |
 | Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.14.0, all ten schemas, plan `scp_9ae2b6c67094`, media package `scm_25320c1662b1`, one exact image, ten handoff artifacts, handoff `sch_2bf154434450`, five published outcomes, publication `scpub_87e41e3247eb`, `publication-complete`, and `pip check` passed outside the checkout. |
-| `git diff --check` | 0 | No whitespace errors at the implementation commit. |
+| Hosted GitHub Actions before review fixes | 0 | [Push run 30746032018](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746032018) and [PR run 30746043402](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30746043402) each passed the complete Python 3.10/3.13 matrix at pre-review branch head `1e60339`. |
+| `git diff --check` | 0 | No whitespace errors at the reviewed code commit. |
 
-Isolated artifact digests from exact commit `ff383de`:
+Isolated artifact digests from exact code commit `0cd4d57`:
 
 - `samsarix_creative_spirals-0.14.0-py3-none-any.whl` — SHA-256
-  `4631f788f4500955d8b8b06b74b66d713b67d0436cee3880b726e82430ec71c2`.
+  `d6425c5319dc1b823d708e6f51016272901ac048f7f7efdd7cc5ceb4148eb2ea`.
 - `samsarix_creative_spirals-0.14.0.tar.gz` — SHA-256
-  `c7172b9cb06c40b567bf43ba6ff91c2d30619a318cbbdd29b38653666eca7eff`.
+  `7e5a146e11d2931d65eba770b5f11ba143e6196c4f88a2422239ec45c7c74d7b`.
 
-Release disposition: **pre-review release candidate**. The exact local source and sdist-derived
+[PR #16](https://github.com/Deathcharge/samsarix-creative-spirals/pull/16) received four inline
+comments. Three were validated and addressed: the handoff question count and legacy lowercase
+`csv` diagnostic were corrected, and duplicate PNG test construction moved to one parameterized
+helper. The claimed public `__all__` mismatch was rejected because the complete exact-list
+assertion in `tests/test_public_api.py` already matches runtime and passes. Fresh hosted checks on
+the reviewed branch head remain pending.
+
+Release disposition: **reviewed release candidate pending final hosted reruns**. The exact local source and sdist-derived
 wheel support the declared approval-to-publication journey with no known locally actionable P0 or
-P1 defect. This becomes a merged release candidate only after hosted matrices and review pass.
+P1 defect. This becomes a merged release candidate only after the reviewed hosted matrices pass.
 Public PyPI publication has not been performed and remains an explicit owner action. External-user
 adoption evidence likewise remains unavailable; provider workflow evidence demonstrates the
 operational gap and conservative envelope, not product-market fit.
