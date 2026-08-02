@@ -85,6 +85,7 @@ def test_public_api_is_deliberate() -> None:
 def test_packaged_schema_is_available() -> None:
     schema = package.load_campaign_schema()
 
+    Draft202012Validator.check_schema(schema)
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["schemaVersion"]["const"] == 1
     assert "bluesky" in schema["properties"]["platforms"]["items"]["enum"]

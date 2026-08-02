@@ -237,7 +237,7 @@ class PlatformContentVariant:
 
 @dataclass(frozen=True, slots=True)
 class CampaignConfig:
-    """A single source draft and its requested output platforms."""
+    """A baseline, optional platform overrides, and requested output platforms."""
 
     schema_version: int
     name: str

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/campaign-v1.schema.json",
   "title": "Samsarix Creative Spirals campaign",
-  "description": "One approved source draft and its requested social-platform outputs.",
+  "description": "One campaign source with optional complete platform overrides and its requested social-platform outputs.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "name", "body", "platforms"],

@@ -91,4 +91,6 @@ target platform's own composer before publication.
 campaigns and consumers that ignore absent optional fields retain their previous behavior. A
 consumer that rejects every unknown optional source field must update its schema before accepting a
 campaign that uses variants. Adapter v2 and generated draft shapes do not change; they already carry
-the exact rendered content.
+the exact rendered content. As with every package-version change, handoff v1 packets retain their
+recorded `producerVersion`; verify a 0.9-produced packet with 0.9 under the existing byte-exact
+compatibility rule, or regenerate approval-dependent evidence under 0.10.

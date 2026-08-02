@@ -766,4 +766,5 @@ Compatibility is intentionally additive: campaign schema remains v1, adapter v2 
 artifact schemas are unchanged, and campaigns without `platformVariants` normalize exactly as
 before. Package version advances to 0.10.0 because a new public model and authoring capability join
 the supported pre-1.0 surface. Runtime remains dependency-free and its operating cost remains local
-compute and storage only.
+compute and storage only. Handoff v1's existing producer-version rule still applies: use 0.9 to
+verify a 0.9-produced packet byte-for-byte, or regenerate approval-dependent evidence with 0.10.
