@@ -11,6 +11,7 @@ from .models import (
     CampaignConfig,
     ConfigError,
     MediaReference,
+    PlatformContentVariant,
     PlatformDraft,
     QualityIssue,
 )
@@ -118,6 +119,7 @@ __all__ = [
     "PlanItemSnapshot",
     "PlanIssue",
     "PlannedCampaign",
+    "PlatformContentVariant",
     "PlatformDraft",
     "QualityIssue",
     "ReadinessIssue",

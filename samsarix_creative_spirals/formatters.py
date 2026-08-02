@@ -119,12 +119,12 @@ def _text_units(text: str) -> list[str]:
     return units
 
 
-def _format_title(config: CampaignConfig, platform: str) -> str | None:
-    if config.title is None or platform in {"x", "bluesky"}:
+def _format_title(title: str | None, platform: str) -> str | None:
+    if title is None or platform in {"x", "bluesky"}:
         return None
     if platform == "discord":
-        return f"**{config.title}**"
-    return config.title
+        return f"**{title}**"
+    return title
 
 
 def _compose(
@@ -182,16 +182,21 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
             platform != "bluesky" or len(value.encode("utf-8")) <= BLUESKY_MAX_BYTES
         )
 
-    title = _format_title(config, platform)
-    hashtags = [f"#{tag}" for tag in config.hashtags]
+    variant = config.variant_for(platform)
+    source_title = variant.title if variant is not None else config.title
+    source_body = variant.body if variant is not None else config.body
+    source_link = variant.link if variant is not None else config.link
+    source_hashtags = variant.hashtags if variant is not None else config.hashtags
+    title = _format_title(source_title, platform)
+    hashtags = [f"#{tag}" for tag in source_hashtags]
     warnings: list[str] = []
 
     def render(body: str, active_hashtags: list[str] | None = None) -> str:
         return _compose(
-            title, body, config.link, hashtags if active_hashtags is None else active_hashtags
+            title, body, source_link, hashtags if active_hashtags is None else active_hashtags
         )
 
-    original = render(config.body)
+    original = render(source_body)
     original_count = measure(original)
     active_hashtags = list(hashtags)
 
@@ -204,17 +209,17 @@ def format_platform(config: CampaignConfig, platform: str) -> PlatformDraft:
     def render_active(body: str) -> str:
         return render(body, active_hashtags)
 
-    content = render_active(config.body)
+    content = render_active(source_body)
     truncated = False
     if not fits(content):
-        body = _truncate_body(config.body, render_active, fits)
+        body = _truncate_body(source_body, render_active, fits)
         content = render_active(body)
         truncated = True
         warnings.append("Body was truncated to fit the platform limit.")
 
-    if platform in {"x", "bluesky"} and config.title is not None:
+    if platform in {"x", "bluesky"} and source_title is not None:
         warnings.append(f"Title is omitted from the {platform} draft.")
-    if platform == "mastodon" and any(tag.isdecimal() for tag in config.hashtags):
+    if platform == "mastodon" and any(tag.isdecimal() for tag in source_hashtags):
         warnings.append("Mastodon does not recognize hashtags containing only numbers.")
     if platform == "discord" and ("@everyone" in content or "@here" in content):
         warnings.append("Draft contains a broadcast mention; review before pasting into Discord.")

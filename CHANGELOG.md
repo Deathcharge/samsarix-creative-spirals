@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.10.0 - 2026-08-02
+
+- Added optional complete `platformVariants` content overrides for X, LinkedIn, Bluesky, Mastodon,
+  and Discord, with baseline fallback for platforms that have no override.
+- Applied existing normalization, bounds, URL/credential, hashtag, control-character, platform
+  limit, truncation, and warning behavior to every variant.
+- Included normalized variants in deterministic campaign/plan identity, semantic diffs, approval
+  invalidation, adapters, handoffs, readiness, and exports without changing their output schemas.
+- Added the public immutable `PlatformContentVariant` model, campaign-schema constraints,
+  adversarial tests, installed-wheel CI smoke, a realistic example, and full contract/security
+  documentation.
+- Kept campaign schema version 1 as an additive change and retained the no-network,
+  no-credentials, standard-library-only runtime boundary.
+
 ## 0.9.0 - 2026-08-02
 
 - Added consolidated point-in-time plan readiness across quality, future/complete schedule policy,

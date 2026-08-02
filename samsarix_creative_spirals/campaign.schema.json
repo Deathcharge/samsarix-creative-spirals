@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/campaign-v1.schema.json",
   "title": "Samsarix Creative Spirals campaign",
-  "description": "One approved source draft and its requested social-platform outputs.",
+  "description": "One campaign source with optional complete platform overrides and its requested social-platform outputs.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "name", "body", "platforms"],
@@ -39,6 +39,41 @@
       "if": {
         "required": ["platformLimits"],
         "properties": {"platformLimits": {"required": ["discord"]}}
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "discord"}}}}
+    },
+    {
+      "if": {
+        "required": ["platformVariants"],
+        "properties": {"platformVariants": {"required": ["x"]}}
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "x"}}}}
+    },
+    {
+      "if": {
+        "required": ["platformVariants"],
+        "properties": {"platformVariants": {"required": ["linkedin"]}}
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "linkedin"}}}}
+    },
+    {
+      "if": {
+        "required": ["platformVariants"],
+        "properties": {"platformVariants": {"required": ["bluesky"]}}
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "bluesky"}}}}
+    },
+    {
+      "if": {
+        "required": ["platformVariants"],
+        "properties": {"platformVariants": {"required": ["mastodon"]}}
+      },
+      "then": {"properties": {"platforms": {"contains": {"const": "mastodon"}}}}
+    },
+    {
+      "if": {
+        "required": ["platformVariants"],
+        "properties": {"platformVariants": {"required": ["discord"]}}
       },
       "then": {"properties": {"platforms": {"contains": {"const": "discord"}}}}
     },
@@ -137,6 +172,19 @@
         "enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]
       }
     },
+    "platformVariants": {
+      "type": "object",
+      "description": "Optional complete content overrides for requested platforms. Omitted fields do not inherit from the baseline.",
+      "maxProperties": 5,
+      "additionalProperties": false,
+      "properties": {
+        "x": {"$ref": "#/$defs/contentVariant"},
+        "linkedin": {"$ref": "#/$defs/contentVariant"},
+        "bluesky": {"$ref": "#/$defs/contentVariant"},
+        "mastodon": {"$ref": "#/$defs/contentVariant"},
+        "discord": {"$ref": "#/$defs/contentVariant"}
+      }
+    },
     "platformLimits": {
       "type": "object",
       "description": "Optional local limits for requested platforms, useful for instance-specific Mastodon limits.",
@@ -158,6 +206,43 @@
     }
   },
   "$defs": {
+    "contentVariant": {
+      "type": "object",
+      "description": "A complete platform content block; body is required and title, link, and hashtags default to absent or empty.",
+      "additionalProperties": false,
+      "required": ["body"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "pattern": "^[^\\r\\n]*$"
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100000
+        },
+        "link": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 500,
+          "pattern": "^https?://\\S+$"
+        },
+        "hashtags": {
+          "type": "array",
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 51,
+            "description": "Optional leading # followed by letters, numbers, or underscores; runtime validation is Unicode-aware."
+          },
+          "default": []
+        }
+      }
+    },
     "appliesToX": {
       "anyOf": [
         {"not": {"required": ["platforms"]}},

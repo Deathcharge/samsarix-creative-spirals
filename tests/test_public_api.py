@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.9.0"
+    assert package.__version__ == "0.10.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -40,6 +40,7 @@ def test_public_api_is_deliberate() -> None:
         "PlanItemSnapshot",
         "PlanIssue",
         "PlannedCampaign",
+        "PlatformContentVariant",
         "PlatformDraft",
         "QualityIssue",
         "ReadinessIssue",
@@ -84,18 +85,21 @@ def test_public_api_is_deliberate() -> None:
 def test_packaged_schema_is_available() -> None:
     schema = package.load_campaign_schema()
 
+    Draft202012Validator.check_schema(schema)
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["properties"]["schemaVersion"]["const"] == 1
     assert "bluesky" in schema["properties"]["platforms"]["items"]["enum"]
     assert schema["properties"]["platformLimits"]["properties"]["mastodon"]["maximum"] == 100000
     assert schema["properties"]["media"]["maxItems"] == 20
+    assert schema["properties"]["platformVariants"]["maxProperties"] == 5
+    assert schema["$defs"]["contentVariant"]["required"] == ["body"]
     assert schema["$defs"]["mediaReference"]["properties"]["altText"]["maxLength"] == 1000
     requested_limit_conditions = {
         condition["if"]["properties"]["platformLimits"]["required"][0]: condition["then"][
             "properties"
         ]["platforms"]["contains"]["const"]
         for condition in schema["allOf"]
-        if "if" in condition
+        if "if" in condition and "platformLimits" in condition["if"]["properties"]
     }
     assert requested_limit_conditions == {
         "x": "x",
@@ -104,6 +108,14 @@ def test_packaged_schema_is_available() -> None:
         "mastodon": "mastodon",
         "discord": "discord",
     }
+    requested_variant_conditions = {
+        condition["if"]["properties"]["platformVariants"]["required"][0]: condition["then"][
+            "properties"
+        ]["platforms"]["contains"]["const"]
+        for condition in schema["allOf"]
+        if "if" in condition and "platformVariants" in condition["if"]["properties"]
+    }
+    assert requested_variant_conditions == requested_limit_conditions
     media_pattern = schema["$defs"]["mediaReference"]["properties"]["path"]["pattern"]
     assert re.fullmatch(media_pattern, "media/launch-dashboard.PNG")
     for invalid in (
@@ -121,6 +133,29 @@ def test_packaged_schema_is_available() -> None:
     assert all(
         condition["properties"]["media"]["maxContains"] == 4 for condition in media_conditions
     )
+
+
+def test_campaign_schema_validates_platform_variants() -> None:
+    schema = package.load_campaign_schema()
+    validator = Draft202012Validator(schema)
+    campaign = {
+        "schemaVersion": 1,
+        "name": "Variant campaign",
+        "body": "Baseline copy",
+        "platforms": ["x", "linkedin"],
+        "platformVariants": {
+            "x": {
+                "body": "X-native copy",
+                "link": "https://example.com/x",
+                "hashtags": ["Samsarix"],
+            }
+        },
+    }
+
+    validator.validate(campaign)
+    campaign["platformVariants"] = {"discord": {"body": "Unrequested copy"}}
+
+    assert any("does not contain" in error.message for error in validator.iter_errors(campaign))
 
 
 def test_packaged_plan_schema_is_available() -> None:

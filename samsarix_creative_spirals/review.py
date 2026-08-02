@@ -24,6 +24,7 @@ _DIFF_FIELDS = (
     "link",
     "hashtags",
     "platforms",
+    "platformVariants",
     "platformLimits",
     "media",
 )
@@ -109,6 +110,9 @@ def _semantic_config(config: CampaignConfig) -> dict[str, Any]:
         "link": config.link,
         "hashtags": list(config.hashtags),
         "platforms": list(config.platforms),
+        "platformVariants": {
+            variant.platform: variant.to_dict() for variant in config.platform_variants
+        },
         "platformLimits": dict(config.platform_limits),
         "media": [reference.to_dict() for reference in config.media],
     }

@@ -38,6 +38,18 @@ because core treats paths as review metadata and never opens them. Replace the p
 campaign-relative JPEG/PNG files only when handing the source tree to a separately permissioned
 adapter that implements the controls in `docs/MEDIA.md`.
 
+`campaign-variants.json` demonstrates complete X, LinkedIn, and Discord content overrides while
+Bluesky and Mastodon continue to use the baseline:
+
+```bash
+samsarix-campaign validate examples/campaign-variants.json
+samsarix-campaign preview examples/campaign-variants.json
+samsarix-campaign check examples/campaign-variants.json
+```
+
+Omitted fields inside a variant do not inherit. This lets a channel intentionally omit the baseline
+title, link, or hashtags. See `docs/VARIANTS.md` for the contract and review implications.
+
 `launch-plan.json` references `campaign.json` and `campaign-follow-up.json` as one release sequence:
 
 ```bash

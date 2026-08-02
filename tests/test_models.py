@@ -4,7 +4,12 @@ from typing import Any
 
 import pytest
 
-from samsarix_creative_spirals import CampaignConfig, ConfigError, MediaReference
+from samsarix_creative_spirals import (
+    CampaignConfig,
+    ConfigError,
+    MediaReference,
+    PlatformContentVariant,
+)
 
 
 def test_campaign_normalizes_input(campaign_data: dict[str, Any]) -> None:
@@ -141,6 +146,119 @@ def test_campaign_rejects_non_string_platform_limit_key(campaign_data: dict[str,
     campaign_data["platformLimits"] = {42: 10}
 
     with pytest.raises(ConfigError, match="keys must be platform strings"):
+        CampaignConfig.from_dict(campaign_data)
+
+
+def test_platform_variants_are_complete_normalized_content_blocks(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["platformVariants"] = {
+        "discord": {
+            "title": "  Community launch  ",
+            "body": "  Hello @here\r\nSee what changed.  ",
+        },
+        "x": {
+            "body": "  Ship cafe\u0301 workflows  ",
+            "link": "https://example.com/x",
+            "hashtags": ["#Samsarix", "local_first"],
+        },
+    }
+
+    config = CampaignConfig.from_dict(campaign_data)
+
+    assert config.platform_variants == (
+        PlatformContentVariant(
+            platform="x",
+            body="Ship café workflows",
+            link="https://example.com/x",
+            hashtags=("Samsarix", "local_first"),
+        ),
+        PlatformContentVariant(
+            platform="discord",
+            title="Community launch",
+            body="Hello @here\nSee what changed.",
+        ),
+    )
+    assert config.variant_for("linkedin") is None
+    assert config.variant_for("x") == config.platform_variants[0]
+    assert config.to_dict()["platformVariants"] == {
+        "x": {
+            "body": "Ship café workflows",
+            "hashtags": ["Samsarix", "local_first"],
+            "link": "https://example.com/x",
+        },
+        "discord": {
+            "body": "Hello @here\nSee what changed.",
+            "hashtags": [],
+            "title": "Community launch",
+        },
+    }
+
+
+@pytest.mark.parametrize(
+    ("variants", "message"),
+    [
+        ([], "platformVariants must be an object"),
+        ({42: {"body": "Copy"}}, "keys must be platform strings"),
+        ({"X": {"body": "Copy"}}, "canonical platform name"),
+        (
+            {
+                "x": {"body": "Copy"},
+                "linkedin": {"body": "Copy"},
+                "bluesky": {"body": "Copy"},
+                "mastodon": {"body": "Copy"},
+                "discord": {"body": "Copy"},
+                "extra": {"body": "Copy"},
+            },
+            "platformVariants must contain at most 5 entries",
+        ),
+        ({"mastodon": {"body": "Copy"}}, "not useful unless mastodon is requested"),
+        ({"x": "Copy"}, "platformVariants.x must be an object"),
+        ({"x": {}}, "platformVariants.x.body must be a string"),
+        ({"x": {"body": ""}}, "platformVariants.x.body must not be empty"),
+        ({"x": {"body": "x" * 100_001}}, "body must be at most 100000"),
+        ({"x": {"body": "Copy\x00"}}, "body contains unsupported control"),
+        ({"x": {"body": "Copy", "title": 42}}, "title must be a string"),
+        ({"x": {"body": "Copy", "title": ""}}, "title must not be empty"),
+        ({"x": {"body": "Copy", "title": "x" * 201}}, "title must be at most 200"),
+        ({"x": {"body": "Copy", "title": "two\nlines"}}, "title must be a single line"),
+        ({"x": {"body": "Copy", "link": 42}}, "link must be a string"),
+        ({"x": {"body": "Copy", "link": "file:///secret"}}, "absolute http or https"),
+        ({"x": {"body": "Copy", "link": "https://[invalid"}}, "absolute http or https"),
+        (
+            {"x": {"body": "Copy", "link": "https://example.com/" + "x" * 500}},
+            "link must be at most 500",
+        ),
+        (
+            {"x": {"body": "Copy", "link": "https://user:secret@example.com"}},
+            "embedded credentials",
+        ),
+        ({"x": {"body": "Copy", "link": "https://example.com/a b"}}, "whitespace"),
+        ({"x": {"body": "Copy", "hashtags": "tag"}}, "hashtags must be an array"),
+        (
+            {"x": {"body": "Copy", "hashtags": [f"tag{i}" for i in range(11)]}},
+            "hashtags must contain at most 10",
+        ),
+        ({"x": {"body": "Copy", "hashtags": [42]}}, "hashtags\\[0\\] must be a string"),
+        ({"x": {"body": "Copy", "hashtags": ["#"]}}, "hashtags\\[0\\] must not be empty"),
+        (
+            {"x": {"body": "Copy", "hashtags": ["x" * 51]}},
+            "hashtags\\[0\\] must be at most 50",
+        ),
+        ({"x": {"body": "Copy", "hashtags": ["bad tag"]}}, "letters, numbers"),
+        (
+            {"x": {"body": "Copy", "hashtags": ["Tag", "tag"]}},
+            "duplicates an earlier hashtag",
+        ),
+        ({"x": {"body": "Copy", "caption": "nope"}}, "unknown field.*caption"),
+    ],
+)
+def test_campaign_rejects_invalid_platform_variants(
+    campaign_data: dict[str, Any], variants: object, message: str
+) -> None:
+    campaign_data["platformVariants"] = variants
+
+    with pytest.raises(ConfigError, match=message):
         CampaignConfig.from_dict(campaign_data)
 
 

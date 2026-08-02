@@ -34,6 +34,7 @@ _CAMPAIGN_KEYS = {
     "link",
     "hashtags",
     "platforms",
+    "platformVariants",
     "platformLimits",
     "media",
 }
@@ -108,6 +109,92 @@ def _portable_media_path(value: object, *, field: str, issues: list[str]) -> str
     return path
 
 
+def _content_body(value: object, *, field: str, issues: list[str]) -> str:
+    """Normalize one required body and append bounded-content issues."""
+    if not isinstance(value, str):
+        issues.append(f"{field} must be a string")
+        return ""
+    body = _normalize_text(value).strip()
+    if not body:
+        issues.append(f"{field} must not be empty")
+    elif len(body) > 100_000:
+        issues.append(f"{field} must be at most 100000 characters")
+    if _has_forbidden_control(body):
+        issues.append(f"{field} contains unsupported control characters")
+    return body
+
+
+def _content_title(value: object, *, field: str, issues: list[str]) -> str | None:
+    """Normalize an optional single-line title and append validation issues."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        issues.append(f"{field} must be a string when provided")
+        return None
+    title = _normalize_text(value).strip()
+    if not title:
+        issues.append(f"{field} must not be empty when provided")
+    elif len(title) > 200:
+        issues.append(f"{field} must be at most 200 characters")
+    if _has_any_control(title):
+        issues.append(f"{field} must be a single line without control characters")
+    return title
+
+
+def _content_link(value: object, *, field: str, issues: list[str]) -> str | None:
+    """Normalize an optional safe HTTP(S) URL and append validation issues."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        issues.append(f"{field} must be a string when provided")
+        return None
+    link = _normalize_text(value).strip()
+    if len(link) > 500:
+        issues.append(f"{field} must be at most 500 characters")
+    try:
+        parsed = urlsplit(link)
+        valid_http_url = parsed.scheme in {"http", "https"} and bool(parsed.hostname)
+    except ValueError:
+        parsed = None
+        valid_http_url = False
+    if not valid_http_url:
+        issues.append(f"{field} must be an absolute http or https URL")
+    if parsed is not None and (parsed.username is not None or parsed.password is not None):
+        issues.append(f"{field} must not contain embedded credentials")
+    if _has_forbidden_control(link) or any(char.isspace() for char in link):
+        issues.append(f"{field} must not contain whitespace or control characters")
+    return link
+
+
+def _content_hashtags(value: object, *, field: str, issues: list[str]) -> list[str]:
+    """Normalize a bounded hashtag list and append validation issues."""
+    hashtags: list[str] = []
+    if not isinstance(value, list):
+        issues.append(f"{field} must be an array of strings")
+        return hashtags
+    if len(value) > 10:
+        issues.append(f"{field} must contain at most 10 items")
+    seen: set[str] = set()
+    for index, item in enumerate(value):
+        item_field = f"{field}[{index}]"
+        if not isinstance(item, str):
+            issues.append(f"{item_field} must be a string")
+            continue
+        tag = _normalize_text(item).strip().lstrip("#")
+        if not tag:
+            issues.append(f"{item_field} must not be empty")
+        elif len(tag) > 50:
+            issues.append(f"{item_field} must be at most 50 characters")
+        elif not _HASHTAG_RE.fullmatch(tag):
+            issues.append(f"{item_field} may contain only letters, numbers, and underscores")
+        elif tag.casefold() in seen:
+            issues.append(f"{item_field} duplicates an earlier hashtag")
+        else:
+            seen.add(tag.casefold())
+            hashtags.append(tag)
+    return hashtags
+
+
 @dataclass(frozen=True, slots=True)
 class MediaReference:
     """Portable image metadata that core validates but never dereferences."""
@@ -131,8 +218,31 @@ class MediaReference:
 
 
 @dataclass(frozen=True, slots=True)
+class PlatformContentVariant:
+    """A complete content override for one requested platform."""
+
+    platform: str
+    body: str
+    title: str | None = None
+    link: str | None = None
+    hashtags: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return the normalized nested campaign-source representation."""
+        result: dict[str, Any] = {
+            "body": self.body,
+            "hashtags": list(self.hashtags),
+        }
+        if self.title is not None:
+            result["title"] = self.title
+        if self.link is not None:
+            result["link"] = self.link
+        return result
+
+
+@dataclass(frozen=True, slots=True)
 class CampaignConfig:
-    """A single source draft and its requested output platforms."""
+    """A baseline, optional platform overrides, and requested output platforms."""
 
     schema_version: int
     name: str
@@ -141,6 +251,7 @@ class CampaignConfig:
     title: str | None = None
     link: str | None = None
     hashtags: tuple[str, ...] = ()
+    platform_variants: tuple[PlatformContentVariant, ...] = ()
     platform_limits: tuple[tuple[str, int], ...] = ()
     media: tuple[MediaReference, ...] = ()
 
@@ -172,85 +283,10 @@ class CampaignConfig:
             if _has_any_control(name):
                 issues.append("name must be a single line without control characters")
 
-        body_value = raw.get("body")
-        if not isinstance(body_value, str):
-            issues.append("body must be a string")
-            body = ""
-        else:
-            body = _normalize_text(body_value).strip()
-            if not body:
-                issues.append("body must not be empty")
-            elif len(body) > 100_000:
-                issues.append("body must be at most 100000 characters")
-            if _has_forbidden_control(body):
-                issues.append("body contains unsupported control characters")
-
-        title_value = raw.get("title")
-        title: str | None
-        if title_value is None:
-            title = None
-        elif not isinstance(title_value, str):
-            issues.append("title must be a string when provided")
-            title = None
-        else:
-            title = _normalize_text(title_value).strip()
-            if not title:
-                issues.append("title must not be empty when provided")
-            elif len(title) > 200:
-                issues.append("title must be at most 200 characters")
-            if _has_any_control(title):
-                issues.append("title must be a single line without control characters")
-
-        link_value = raw.get("link")
-        link: str | None
-        if link_value is None:
-            link = None
-        elif not isinstance(link_value, str):
-            issues.append("link must be a string when provided")
-            link = None
-        else:
-            link = _normalize_text(link_value).strip()
-            if len(link) > 500:
-                issues.append("link must be at most 500 characters")
-            try:
-                parsed = urlsplit(link)
-                valid_http_url = parsed.scheme in {"http", "https"} and bool(parsed.hostname)
-            except ValueError:
-                parsed = None
-                valid_http_url = False
-            if not valid_http_url:
-                issues.append("link must be an absolute http or https URL")
-            if parsed is not None and (parsed.username is not None or parsed.password is not None):
-                issues.append("link must not contain embedded credentials")
-            if _has_forbidden_control(link) or any(char.isspace() for char in link):
-                issues.append("link must not contain whitespace or control characters")
-
-        hashtags_value = raw.get("hashtags", [])
-        hashtags: list[str] = []
-        if not isinstance(hashtags_value, list):
-            issues.append("hashtags must be an array of strings")
-        else:
-            if len(hashtags_value) > 10:
-                issues.append("hashtags must contain at most 10 items")
-            seen: set[str] = set()
-            for index, value in enumerate(hashtags_value):
-                if not isinstance(value, str):
-                    issues.append(f"hashtags[{index}] must be a string")
-                    continue
-                tag = _normalize_text(value).strip().lstrip("#")
-                if not tag:
-                    issues.append(f"hashtags[{index}] must not be empty")
-                elif len(tag) > 50:
-                    issues.append(f"hashtags[{index}] must be at most 50 characters")
-                elif not _HASHTAG_RE.fullmatch(tag):
-                    issues.append(
-                        f"hashtags[{index}] may contain only letters, numbers, and underscores"
-                    )
-                elif tag.casefold() in seen:
-                    issues.append(f"hashtags[{index}] duplicates an earlier hashtag")
-                else:
-                    seen.add(tag.casefold())
-                    hashtags.append(tag)
+        body = _content_body(raw.get("body"), field="body", issues=issues)
+        title = _content_title(raw.get("title"), field="title", issues=issues)
+        link = _content_link(raw.get("link"), field="link", issues=issues)
+        hashtags = _content_hashtags(raw.get("hashtags", []), field="hashtags", issues=issues)
 
         platforms_value = raw.get("platforms")
         platforms: list[str] = []
@@ -273,6 +309,71 @@ class CampaignConfig:
                 else:
                     seen_platforms.add(platform)
                     platforms.append(platform)
+
+        platform_variants_value = raw.get("platformVariants", {})
+        platform_variants: list[PlatformContentVariant] = []
+        if not isinstance(platform_variants_value, Mapping):
+            issues.append("platformVariants must be an object mapping platforms to content")
+        else:
+            if len(platform_variants_value) > len(SUPPORTED_PLATFORMS):
+                issues.append(
+                    f"platformVariants must contain at most {len(SUPPORTED_PLATFORMS)} entries"
+                )
+            parsed_variants: dict[str, PlatformContentVariant] = {}
+            for key, variant_value in platform_variants_value.items():
+                if not isinstance(key, str):
+                    issues.append("platformVariants keys must be platform strings")
+                    continue
+                field = f"platformVariants.{key}"
+                if key not in SUPPORTED_PLATFORMS:
+                    issues.append(
+                        f"{field} must use a canonical platform name: "
+                        f"{', '.join(SUPPORTED_PLATFORMS)}"
+                    )
+                    continue
+                if key not in platforms:
+                    issues.append(f"{field} is not useful unless {key} is requested")
+                if not isinstance(variant_value, Mapping):
+                    issues.append(f"{field} must be an object")
+                    continue
+
+                unknown_variant = sorted(
+                    str(item_key)
+                    for item_key in variant_value
+                    if item_key not in {"title", "body", "link", "hashtags"}
+                )
+                if unknown_variant:
+                    issues.append(f"{field} has unknown field(s): {', '.join(unknown_variant)}")
+
+                variant_body = _content_body(
+                    variant_value.get("body"), field=f"{field}.body", issues=issues
+                )
+                variant_title = _content_title(
+                    variant_value.get("title"), field=f"{field}.title", issues=issues
+                )
+                variant_link = _content_link(
+                    variant_value.get("link"), field=f"{field}.link", issues=issues
+                )
+                variant_hashtags = _content_hashtags(
+                    variant_value.get("hashtags", []),
+                    field=f"{field}.hashtags",
+                    issues=issues,
+                )
+
+                if variant_body:
+                    parsed_variants[key] = PlatformContentVariant(
+                        platform=key,
+                        title=variant_title,
+                        body=variant_body,
+                        link=variant_link,
+                        hashtags=tuple(variant_hashtags),
+                    )
+
+            platform_variants.extend(
+                parsed_variants[platform]
+                for platform in SUPPORTED_PLATFORMS
+                if platform in parsed_variants
+            )
 
         platform_limits_value = raw.get("platformLimits", {})
         parsed_limits: dict[str, int] = {}
@@ -407,6 +508,7 @@ class CampaignConfig:
             link=link,
             hashtags=tuple(hashtags),
             platforms=tuple(platforms),
+            platform_variants=tuple(platform_variants),
             platform_limits=tuple(
                 (platform, parsed_limits[platform])
                 for platform in SUPPORTED_PLATFORMS
@@ -419,6 +521,13 @@ class CampaignConfig:
         """Return the configured or default character limit for a platform."""
         overrides = dict(self.platform_limits)
         return overrides.get(platform, PLATFORM_LIMITS[platform])
+
+    def variant_for(self, platform: str) -> PlatformContentVariant | None:
+        """Return a complete content override for a platform, when configured."""
+        return next(
+            (variant for variant in self.platform_variants if variant.platform == platform),
+            None,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return the normalized, JSON-compatible configuration."""
@@ -433,6 +542,10 @@ class CampaignConfig:
             result["title"] = self.title
         if self.link is not None:
             result["link"] = self.link
+        if self.platform_variants:
+            result["platformVariants"] = {
+                variant.platform: variant.to_dict() for variant in self.platform_variants
+            }
         if self.platform_limits:
             result["platformLimits"] = dict(self.platform_limits)
         if self.media:

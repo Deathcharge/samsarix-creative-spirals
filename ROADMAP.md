@@ -195,6 +195,34 @@ Rollback is a revert of PR #11 or pinning pre-0.9 commit `8a628e8`. Full command
 review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#09-launch-readiness-release-evidence).
 
+## Completed milestone — 0.10 platform-native content variants
+
+- [x] Add strict complete content overrides for any requested platform while retaining a reusable
+  baseline for all other platforms.
+- [x] Apply each platform's existing formatter, limit, truncation, hashtag, and warning behavior to
+  the effective content block.
+- [x] Bind variants into deterministic campaign and plan identity, semantic review, approval
+  invalidation, adapters, handoffs, and readiness without changing downstream artifact schemas.
+- [x] Document replacement semantics, current product evidence, privacy boundaries, migration, and
+  a runnable five-platform example.
+- [x] Complete clean artifact verification, hosted CI, automated review disposition, and exact
+  release evidence.
+
+Buffer's official composer starts with a base post and offers “Customize for each network”; Sprout
+Social likewise makes the content in each network tab unique after customization. Samsarix now
+supports that authoring need without adopting either product's connected-account, scheduling, or
+hosted-state boundary. Contract details and primary sources are in
+[`docs/VARIANTS.md`](docs/VARIANTS.md).
+
+Technical completion evidence: implementation/review head `11d483c`; 271 tests at 95.37%
+coverage plus clean formatting, lint, strict typing, compilation, campaign-schema metaschema
+validation, and semantic five-platform wheel smoke; 0.10.0 wheel SHA-256
+`1d6f8cdbf6c0152c086072534e0e48caac3746dda94ee95e2384a17c85f9d5b8`;
+[hosted Python 3.10/3.13 run 30736526946](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30736526946).
+Rollback is a revert of PR #12 or pinning pre-0.10 main commit `281d0e6`. Full sdist digest, review
+disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#010-platform-native-variants-release-evidence).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

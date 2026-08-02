@@ -2,7 +2,7 @@
 
 Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
-input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
+input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
 source-bound campaign and plan approval records make exact changes visible before handoff.
 Approved handoff packets then bind current source, approval metadata, and exact rendered files for
@@ -12,7 +12,7 @@ offline HTML board show the current quality, schedule, approval, and handoff sta
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.9 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
+> Maturity: **0.10 alpha.** Platform-native content variants, federated-platform drafts, campaign-plan quality gates, whole-plan
 > semantic review and local approvals, portable image metadata, approved handoff verification, and
 > launch-readiness reporting are implemented and tested. Automatic
 > publishing,
@@ -89,6 +89,12 @@ behavior.
   "link": "https://example.com/launch",
   "hashtags": ["buildinpublic", "product"],
   "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+  "platformVariants": {
+    "x": {
+      "body": "One campaign, five reviewable outputs—without connecting an account.",
+      "hashtags": ["buildinpublic"]
+    }
+  },
   "platformLimits": {"mastodon": 1000},
   "media": [
     {
@@ -108,6 +114,7 @@ behavior.
 | `title` | no | Single line, at most 200 characters; omitted from X and Bluesky output. |
 | `link` | no | Absolute HTTP(S) URL, at most 500 characters, no embedded credentials. |
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
+| `platformVariants` | no | Complete content overrides keyed by a requested canonical platform. Each requires `body`; omitted `title`, `link`, and `hashtags` do not inherit from the baseline. |
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
@@ -116,6 +123,11 @@ resolves, reads, inspects, copies, or uploads the referenced files. References p
 campaign hashes, diffs, approvals, manifests, and adapter v2 output. See
 [Portable media references](docs/MEDIA.md) for targeting, path rules, platform rationale, and the
 filesystem/provider checks required of an external adapter.
+
+Use a variant when a channel needs genuinely different copy, mentions, call to action, link, or
+hashtags. Platforms without a variant use the baseline. See
+[Platform-native content variants](docs/VARIANTS.md) for replacement semantics, review behavior,
+compatibility, and a runnable example.
 
 Print the bundled JSON Schema for editor or CI integration, or write it to a new file:
 
@@ -368,7 +380,7 @@ for trust boundaries and failure behavior.
   credential loading.
 - Input files are capped at 1 MB and content fields are bounded. Duplicate or excessively nested
   JSON, unknown fields, control characters, unsafe URL schemes, URL credentials, duplicate
-  platforms, and invalid hashtags are rejected.
+  platforms, unrequested or non-canonical variant keys, and invalid hashtags are rejected.
 - Plans contain at most 100 items. Referenced campaign paths cannot be absolute, traverse parents,
   use platform-specific separators, or escape through symbolic links.
 - Export paths are generated from a sanitized name plus a content hash. Existing bundles are not
@@ -385,8 +397,8 @@ for trust boundaries and failure behavior.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
-- Media-file processing, per-account capabilities, cryptographic approvals, hosted collaboration,
-  network publishing, and analytics are outside the 0.9 scope. Calendar and readiness files record
+- Media-file processing, per-account capabilities and mention resolution, cryptographic approvals,
+  hosted collaboration, network publishing, and analytics are outside the 0.10 scope. Calendar and readiness files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

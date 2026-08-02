@@ -8,7 +8,7 @@ scheduler, background process, persistence service, analytics, or dependency on 
 repository.
 
 ```text
-campaign.json + optional media path metadata
+campaign.json + optional platform content overrides + media path metadata
     │ bounded UTF-8 read + strict validation
     ▼
 CampaignConfig
@@ -55,7 +55,8 @@ filesystem. Models are immutable to keep one build internally consistent.
 
 ### `formatters.py`
 
-Composes title, body, link, and hashtags for each platform. X uses its published weighted ranges
+Selects a complete platform content override when present, otherwise the campaign baseline, then
+composes title, body, link, and hashtags. X uses its published weighted ranges
 and 23-character URL accounting. Truncation keeps URLs atomic, avoids dangling combining marks and
 joiners, preserves suffix metadata where possible, and records any omission. LinkedIn and Discord
 use conservative character limits. Discord broadcast mentions are warnings, not silently altered.
@@ -140,7 +141,7 @@ quality gate uses `3` and its approval/handoff gates use `4`.
 | --- | --- | --- |
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
 | Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
-| Campaign fields | Text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, allowlists, hard platform ceilings. |
+| Campaign fields | Baseline and per-platform text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, canonical/requested platform allowlists, hard platform ceilings. |
 | Media metadata | Relative path, alt text, target platforms | Portable path allowlist, case-insensitive uniqueness, alt-text/collection bounds, no core dereference. |
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
@@ -173,7 +174,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.9 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.10 scope.
 
 ## Dependency and cost model
 

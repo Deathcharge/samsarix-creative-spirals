@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from samsarix_creative_spirals.cli import main
 
 
@@ -40,6 +42,30 @@ def test_cli_json_preview(tmp_path: Path, capsys: Any, campaign_data: dict[str, 
     assert payload["media"][0]["path"] == "media/launch.png"
     assert payload["drafts"][0]["media"][0]["altText"] == "Launch review dashboard"
     assert len(payload["drafts"]) == 3
+
+
+def test_cli_preview_uses_platform_native_variants(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["platformVariants"] = {
+        "linkedin": {
+            "title": "LinkedIn release",
+            "body": "A detailed release note for professional teams.",
+            "hashtags": ["release_ops"],
+        }
+    }
+    path = tmp_path / "campaign.json"
+    _write_campaign(path, campaign_data)
+
+    assert main(["preview", str(path), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    drafts = {draft["platform"]: draft for draft in payload["drafts"]}
+
+    assert "LinkedIn release" in drafts["linkedin"]["content"]
+    assert "#release_ops" in drafts["linkedin"]["content"]
+    assert campaign_data["body"] in drafts["x"]["content"]
 
 
 def test_cli_reports_validation_failure(
