@@ -153,6 +153,11 @@ def test_readiness_uses_embedded_approval_and_verifies_exact_handoff(
         generated_at=datetime(2026, 8, 5, 10, tzinfo=timezone.utc),
     )
     packet = load_campaign_plan_handoff(packet_path)
+    publication = initialize_campaign_plan_publication(
+        bundle,
+        packet,
+        created_at=datetime(2026, 8, 5, 11, tzinfo=timezone.utc),
+    )
 
     ready = build_campaign_plan_readiness(bundle, handoff=packet, assessed_at=ASSESSMENT)
     mismatch = build_campaign_plan_readiness(
@@ -163,6 +168,12 @@ def test_readiness_uses_embedded_approval_and_verifies_exact_handoff(
     )
     (packet_path / "adapter.json").write_bytes((packet_path / "adapter.json").read_bytes() + b"\n")
     tampered = build_campaign_plan_readiness(bundle, handoff=packet, assessed_at=ASSESSMENT)
+    tampered_with_publication = build_campaign_plan_readiness(
+        bundle,
+        handoff=packet,
+        publication=publication,
+        assessed_at=ASSESSMENT,
+    )
 
     assert ready.stage == "handoff-ready" and ready.ready is True
     assert ready.approval_status == "valid" and ready.handoff_status == "valid"
@@ -173,6 +184,11 @@ def test_readiness_uses_embedded_approval_and_verifies_exact_handoff(
     assert any(issue.code == "approval-handoff-mismatch" for issue in mismatch.issues)
     assert tampered.stage == "handoff-invalid"
     assert any(issue.code.startswith("handoff-artifact-") for issue in tampered.issues)
+    assert tampered_with_publication.stage == "handoff-invalid"
+    assert tampered_with_publication.publication_status == "invalid"
+    assert not any(
+        issue.code.startswith("publication-handoff-") for issue in tampered_with_publication.issues
+    )
 
 
 def test_readiness_tracks_publication_progress_and_completion(

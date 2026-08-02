@@ -131,8 +131,9 @@ Supplying both `--handoff` and `--publication` adds three post-handoff stages:
   or failed; and
 - `publication-complete`: every exact draft is recorded as published or intentionally skipped.
 
-`ready` remains true for a verified handoff in both publication progress states because it means
-the downstream handoff boundary is valid. Only `publication-complete` satisfies
+`ready` remains true for a verified handoff in both current publication progress states because
+the downstream handoff and ledger binding are valid. Invalid publication evidence sets it false.
+Only `publication-complete` satisfies
 `--require-stage publication`. Once current publication evidence is supplied, past intended times
 remain visible as schedule findings but do not mask the post-handoff stage.
 

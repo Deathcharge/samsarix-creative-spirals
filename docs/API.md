@@ -103,7 +103,8 @@ no person or system.
 `CampaignPlanReadiness` is the point-in-time aggregate status. It records the stable stage,
 assessment and policy fields, quality/schedule booleans, approval and handoff evidence status,
 ordered `ReadinessIssue` findings, and `CampaignPlanReadinessItem` summaries. `ready` is true for a
-current verified handoff, including publication-in-progress/complete stages;
+current verified handoff unless supplied publication evidence is invalid, including
+publication-in-progress/complete stages;
 `meets("quality" | "approval" | "handoff" | "publication")` evaluates an explicit automation
 gate. These models are immutable and have stable `to_dict()` output conforming to readiness v1.
 

@@ -120,7 +120,7 @@ class CampaignPlanReadiness:
 
     @property
     def ready(self) -> bool:
-        """Return whether the plan has a current, verified handoff packet."""
+        """Return whether handoff is verified with no invalid supplied publication evidence."""
         return self.stage in {
             "handoff-ready",
             "publication-in-progress",
@@ -381,6 +381,7 @@ def _assess_publication(
             message=issue.message,
         )
         for issue in check.issues
+        if not issue.code.startswith("handoff-")
     )
     return _PublicationAssessment(
         status,

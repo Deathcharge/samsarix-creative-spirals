@@ -91,7 +91,8 @@ The ledger cannot be assessed without its exact handoff packet. See
 | `publication-complete` | Every exact draft is recorded as published or intentionally skipped. |
 
 `handoff-ready`, `publication-in-progress`, and `publication-complete` set JSON `ready` to `true`:
-that boolean means the exact handoff boundary is verified, not that publication is complete.
+that boolean means the exact handoff boundary and any supplied ledger binding are current, not
+that publication is complete.
 Only `publication-complete` meets the explicit `publication` gate. An unscheduled item sets `scheduleComplete` to
 `false`; it is a warning under the default optional policy and a blocker with
 `--require-scheduled`. An intended time equal to or earlier than `assessedAt` is always a blocker
