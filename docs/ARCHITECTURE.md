@@ -36,7 +36,10 @@ plan.json ──confined relative paths──► CampaignConfig (1..100)
 CampaignPlanBundle
     ├──► aggregate quality report
     ├──► deterministic plan diff / source-bound plan approval verification
-    └──► manifest.json + adapter.json + calendar.ics + per-platform CSV
+    ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
+    └──► exclusive approved handoff packet
+            ├── embedded approval.json + handoff.json
+            └── exact regenerated plan-export artifacts
 ```
 
 ## Components
@@ -94,20 +97,30 @@ changes. Plan approval creation gates the whole built sequence and binds the ful
 verification checks identity and re-runs the stored aggregate quality policy. The campaign
 approval v1 contract remains separate so existing consumers do not need to distinguish a union.
 
+### `handoff.py`
+
+Creates an approved plan handoff only after current approval verification and a generation time at
+or after approval. The handoff manifest binds plan identity, producer version, generation time,
+embedded approval, and fixed rendered artifacts by size and SHA-256. Export is exclusive and uses
+a private temporary sibling plus directory rename. Verification regenerates exact bytes from
+current source, rejects unexpected entries, symbolic links, and non-regular files, and checks that
+files remain stable during reads. Hashes are unsigned integrity metadata, not authenticated
+provenance or authorization.
+
 ### `schema.py` and bundled JSON Schemas
 
-Package the authoring contract with the wheel and return a fresh decoded dictionary to library
-callers. Campaign, plan, campaign-approval, plan-approval, and adapter schemas help editors and
-generic validators, while runtime models remain authoritative and provide more actionable error
-messages.
+Package the authoring and interchange contracts with the wheel and return a fresh decoded
+dictionary to library callers. Campaign, plan, campaign-approval, plan-approval, handoff, and
+adapter schemas help editors and generic validators, while runtime models remain authoritative and
+provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign, diff, approval, and nested plan operations. Successful output and
-valid quality/review reports stay on stdout;
+Provides the single-campaign, diff, approval, handoff, and nested plan operations. Successful
+output and valid quality/review reports stay on stdout;
 configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
-quality-gate failures return `3`, semantic-change/stale-approval results return `4`, and success
-returns `0`.
+quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff results return `4`,
+and success returns `0`.
 
 ## Trust boundaries
 
@@ -121,6 +134,7 @@ returns `0`.
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
+| Approved handoff packet | Local directory, metadata, and generated files | Exclusive atomic creation; fixed shape; source, approval, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
 path. Media references are explicitly path metadata but core never resolves or opens them. It
@@ -140,8 +154,11 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
   the manifest as the commit marker.
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
   record intent but trigger no background work.
+- Approved handoffs are immutable-by-convention and refuse replacement. Verification must precede
+  downstream use of the same packet; it is an integrity boundary rather than a transaction lock or
+  signer-authentication system.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.7 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.8 scope.
 
 ## Dependency and cost model
 

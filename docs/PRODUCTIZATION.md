@@ -51,8 +51,8 @@ quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
 → validate and preview every platform variant → run deterministic quality gates → compare campaign
-or complete-plan semantic changes → record/verify source-bound local approval → explicitly export
-review/interchange bundles → hand them to an approved publishing process.
+or complete-plan semantic changes → record/verify source-bound local approval → create and verify
+an exact approved handoff packet → hand it to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
@@ -62,9 +62,9 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.7 add bounded plans, interchange, campaign and whole-plan
-semantic diffs, source-bound local review metadata, and portable image handoff without adding a
-scheduler, account connection, or network publisher.
+Helix integrations. Versions 0.4–0.8 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, portable image handoff, and exact approved
+packet verification without adding a scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -146,6 +146,23 @@ agency review, and privacy-sensitive drafting. The 0.3 slice adds federated plat
 instance limits, and a CI-safe quality report without adding credentials, hosted state, or runtime
 dependencies.
 
+### 0.8 approved-handoff follow-up
+
+- Buffer documents approval as a transition toward its publishing queue or schedule and requires
+  posting access to make that transition. This supports an explicit artifact boundary between
+  review and a separately authorized publishing system:
+  <https://support.buffer.com/article/665-managing-and-approving-draft-posts> and
+  <https://support.buffer.com/article/656-saving-and-scheduling-draft-posts>.
+- GitHub defines artifact attestations as cryptographically signed claims and warns verifiers to
+  validate signatures, timestamps, and signer identity. A plain digest therefore must not be
+  marketed as authenticated provenance:
+  <https://docs.github.com/en/actions/concepts/security/artifact-attestations> and
+  <https://docs.github.com/en/rest/repos/attestations>.
+
+The resulting 0.8 slice is an exclusive offline-verifiable handoff packet: current plan source,
+embedded approval, exact rendered files, sizes/checksums, and producer version are bound without
+adding credentials, a scheduler, or a false signing claim.
+
 ## Untouched baseline results
 
 Environment: Windows, Python 3.11.9, pip 26.1.1.
@@ -200,8 +217,10 @@ No locally actionable P0 remains.
 4. [x] Add media-reference validation without reading or uploading media.
 5. [x] Add whole-plan semantic review and quality-gated approval tied to schedule, order, required
    channels, source references, and every campaign.
-6. Evaluate optional editor snippets that reference the bundled JSON Schema.
-7. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+6. [x] Add an exclusive approved handoff packet that binds current source, approval metadata, and
+   exact regenerated artifacts without claiming authenticated provenance.
+7. Evaluate optional editor snippets that reference the bundled JSON Schema.
+8. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -237,6 +256,8 @@ No locally actionable P0 remains.
   and adapter v2 without reading or uploading referenced files.
 - [x] Add complete-plan diffs and plan approvals without changing campaign approval v1 or adding
   hosted collaboration state.
+- [x] Add offline-verifiable approved-plan handoff packets without credentials, signing claims, or
+  automatic publishing.
 
 ## Release acceptance criteria
 
@@ -276,6 +297,9 @@ No locally actionable P0 remains.
 - The owner selected MPL-2.0, but formal legal advice and ownership-chain review remain prudent,
   especially for any contribution created before Samsarix LLC owned the project. This is not a
   blocker created by conflicting repository terms anymore.
+- Approval and handoff hashes are unsigned. A writer who controls all source/evidence files can
+  replace them consistently; authenticated provenance requires protected external controls or a
+  separately reviewed signing/attestation layer.
 
 ## Final verification results
 

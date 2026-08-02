@@ -3,6 +3,8 @@
 
 """Local-first, reviewable social campaign packaging by Samsarix."""
 
+from ._version import __version__
+
 from .models import (
     CampaignBundle,
     CampaignCheck,
@@ -54,18 +56,29 @@ from .plan_review import (
     load_campaign_plan_approval,
     verify_campaign_plan_approval,
 )
+from .handoff import (
+    CampaignPlanHandoff,
+    CampaignPlanHandoffPacket,
+    HandoffArtifact,
+    HandoffCheck,
+    HandoffIssue,
+    build_campaign_plan_handoff,
+    export_campaign_plan_handoff,
+    load_campaign_plan_handoff,
+    verify_campaign_plan_handoff,
+)
 from .schema import (
     load_adapter_schema,
     load_approval_schema,
     load_campaign_schema,
+    load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
 )
 from .workflow import build_campaign, export_campaign, load_campaign
 
-__version__ = "0.7.0"
-
 __all__ = [
+    "__version__",
     "ApprovalCheck",
     "ApprovalIssue",
     "CampaignApproval",
@@ -80,8 +93,13 @@ __all__ = [
     "CampaignPlanBundle",
     "CampaignPlanCheck",
     "CampaignPlanDiff",
+    "CampaignPlanHandoff",
+    "CampaignPlanHandoffPacket",
     "CampaignPlanItem",
     "ConfigError",
+    "HandoffArtifact",
+    "HandoffCheck",
+    "HandoffIssue",
     "MediaReference",
     "PlanApprovalCheck",
     "PlanFieldChange",
@@ -93,6 +111,7 @@ __all__ = [
     "QualityIssue",
     "build_campaign",
     "build_campaign_plan",
+    "build_campaign_plan_handoff",
     "check_campaign",
     "check_campaign_plan",
     "create_campaign_approval",
@@ -103,18 +122,22 @@ __all__ = [
     "export_campaign_approval",
     "export_campaign_plan",
     "export_campaign_plan_approval",
+    "export_campaign_plan_handoff",
     "load_adapter_schema",
     "load_approval_schema",
     "load_campaign",
     "load_campaign_approval",
     "load_campaign_plan",
     "load_campaign_plan_approval",
+    "load_campaign_plan_handoff",
     "load_campaign_schema",
-    "load_plan_schema",
+    "load_handoff_schema",
     "load_plan_approval_schema",
+    "load_plan_schema",
     "parse_approval_timestamp",
     "render_plan_adapter",
     "render_plan_calendar",
     "verify_campaign_approval",
     "verify_campaign_plan_approval",
+    "verify_campaign_plan_handoff",
 ]

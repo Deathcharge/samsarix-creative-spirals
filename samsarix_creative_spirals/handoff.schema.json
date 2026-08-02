@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-handoff-v1.schema.json",
+  "title": "Samsarix Creative Spirals approved plan handoff",
+  "description": "Unsigned local integrity metadata for one approved, fully rendered campaign-plan handoff packet.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "handoffId",
+    "handoffHash",
+    "planId",
+    "sourceHash",
+    "approval",
+    "generatedAt",
+    "producer",
+    "artifacts"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-handoff"},
+    "handoffId": {
+      "type": "string",
+      "pattern": "^sch_[0-9a-f]{12}$"
+    },
+    "handoffHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "planId": {
+      "type": "string",
+      "pattern": "^scp_[0-9a-f]{12}$"
+    },
+    "sourceHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "approval": {"const": "approval.json"},
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "samsarix-creative-spirals"},
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[A-Za-z0-9.+-]*)?$"
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "minProperties": 5,
+      "maxProperties": 9,
+      "propertyNames": {
+        "enum": [
+          "adapter.json",
+          "approval.json",
+          "calendar.ics",
+          "manifest.json",
+          "csv/x.csv",
+          "csv/linkedin.csv",
+          "csv/bluesky.csv",
+          "csv/mastodon.csv",
+          "csv/discord.csv"
+        ]
+      },
+      "additionalProperties": {"$ref": "#/$defs/artifact"},
+      "required": ["adapter.json", "approval.json", "calendar.ics", "manifest.json"]
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bytes", "sha256"],
+      "properties": {
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000000
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

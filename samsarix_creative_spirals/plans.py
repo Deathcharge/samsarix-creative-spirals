@@ -609,6 +609,40 @@ def render_plan_adapter(bundle: CampaignPlanBundle) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
+def _plan_artifact_payloads(
+    bundle: CampaignPlanBundle,
+    generated_at: datetime,
+) -> dict[str, bytes]:
+    """Render the exact portable files shared by plan exports and approved handoffs."""
+    artifacts = {
+        f"csv/{platform}.csv": _csv_payload(bundle, platform).encode("utf-8")
+        for platform in _used_platforms(bundle)
+    }
+    artifacts.update(
+        {
+            "calendar.ics": render_plan_calendar(bundle, generated_at=generated_at).encode("utf-8"),
+            "adapter.json": render_plan_adapter(bundle).encode("utf-8"),
+            "manifest.json": (
+                json.dumps(
+                    _plan_manifest(bundle, generated_at),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n"
+            ).encode("utf-8"),
+        }
+    )
+    return artifacts
+
+
+def _write_plan_artifacts(root: Path, artifacts: dict[str, bytes]) -> None:
+    """Write internally generated portable artifact names beneath a prepared directory."""
+    for portable_path, payload in artifacts.items():
+        destination = root.joinpath(*portable_path.split("/"))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(payload)
+
+
 def _clear_plan_temp(path: Path) -> None:
     if not path.exists():
         return
@@ -680,30 +714,8 @@ def export_campaign_plan(
     temporary = root / f".{bundle_name}.{uuid.uuid4().hex}.tmp"
     temporary.mkdir(mode=0o700)
     try:
+        _write_plan_artifacts(temporary, _plan_artifact_payloads(bundle, stamp))
         csv_dir = temporary / "csv"
-        csv_dir.mkdir()
-        platforms = _used_platforms(bundle)
-        for platform in platforms:
-            (csv_dir / f"{platform}.csv").write_text(
-                _csv_payload(bundle, platform),
-                encoding="utf-8",
-                newline="",
-            )
-        (temporary / "calendar.ics").write_text(
-            render_plan_calendar(bundle, generated_at=stamp),
-            encoding="utf-8",
-            newline="",
-        )
-        (temporary / "adapter.json").write_text(
-            render_plan_adapter(bundle),
-            encoding="utf-8",
-            newline="\n",
-        )
-        (temporary / "manifest.json").write_text(
-            json.dumps(_plan_manifest(bundle, stamp), ensure_ascii=False, indent=2) + "\n",
-            encoding="utf-8",
-            newline="\n",
-        )
 
         if not target.exists():
             temporary.replace(target)

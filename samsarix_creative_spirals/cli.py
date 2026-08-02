@@ -12,6 +12,12 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
+from .handoff import (
+    HandoffCheck,
+    export_campaign_plan_handoff,
+    load_campaign_plan_handoff,
+    verify_campaign_plan_handoff,
+)
 from .models import CampaignBundle, CampaignCheck, ConfigError
 from .plans import (
     CampaignPlanBundle,
@@ -45,6 +51,7 @@ from .schema import (
     load_adapter_schema,
     load_approval_schema,
     load_campaign_schema,
+    load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
 )
@@ -157,6 +164,14 @@ def _print_plan_approval_check(result: PlanApprovalCheck) -> None:
     )
     for issue in result.issues:
         print(f"error: {issue.message}")
+
+
+def _print_handoff_check(result: HandoffCheck) -> None:
+    status = "valid" if result.valid else "invalid"
+    print(f"Approved handoff {status} for {result.plan_id}: {result.handoff_id}")
+    for issue in result.issues:
+        location = f" [{issue.path}]" if issue.path else ""
+        print(f"error:{location} {issue.message}")
 
 
 def _init_command(args: argparse.Namespace) -> int:
@@ -347,11 +362,44 @@ def _plan_approval_verify_command(args: argparse.Namespace) -> int:
     return 0 if result.valid else 4
 
 
+def _plan_handoff_create_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    approval = load_campaign_plan_approval(args.approval)
+    generated_at = parse_approval_timestamp(args.generated_at) if args.generated_at else None
+    path = export_campaign_plan_handoff(
+        bundle,
+        approval,
+        args.output,
+        generated_at=generated_at,
+    )
+    packet = load_campaign_plan_handoff(path)
+    if args.json:
+        _json_print({"path": str(path), "handoff": packet.handoff.to_dict()})
+    else:
+        print(f"Exported approved handoff {packet.handoff.handoff_id} to {path}")
+        print("Checksums provide offline integrity, not signer identity or provenance.")
+    return 0
+
+
+def _plan_handoff_verify_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    result = verify_campaign_plan_handoff(
+        bundle,
+        load_campaign_plan_handoff(args.handoff),
+    )
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_handoff_check(result)
+    return 0 if result.valid else 4
+
+
 def _schema_command(args: argparse.Namespace) -> int:
     schema_loaders = {
         "adapter": load_adapter_schema,
         "approval": load_approval_schema,
         "campaign": load_campaign_schema,
+        "handoff": load_handoff_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
     }
@@ -582,12 +630,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_approval_verify_parser.set_defaults(handler=_plan_approval_verify_command)
 
+    plan_handoff_parser = plan_subparsers.add_parser(
+        "handoff", help="create or verify an approved offline handoff packet"
+    )
+    plan_handoff_subparsers = plan_handoff_parser.add_subparsers(dest="plan_handoff_command")
+    plan_handoff_create_parser = plan_handoff_subparsers.add_parser(
+        "create", help="verify approval and export an integrity-checked handoff"
+    )
+    plan_handoff_create_parser.add_argument("plan")
+    plan_handoff_create_parser.add_argument("approval")
+    plan_handoff_create_parser.add_argument(
+        "--at", dest="generated_at", help="explicit RFC 3339 handoff time (default: now)"
+    )
+    plan_handoff_create_parser.add_argument(
+        "--output", default="handoff-outbox", help="output root (default: handoff-outbox)"
+    )
+    plan_handoff_create_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_handoff_create_parser.set_defaults(handler=_plan_handoff_create_command)
+
+    plan_handoff_verify_parser = plan_handoff_subparsers.add_parser(
+        "verify", help="verify current source, approval, packet shape, and exact artifact bytes"
+    )
+    plan_handoff_verify_parser.add_argument("plan")
+    plan_handoff_verify_parser.add_argument("handoff")
+    plan_handoff_verify_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_handoff_verify_parser.set_defaults(handler=_plan_handoff_verify_command)
+
     schema_parser = subparsers.add_parser(
         "schema", help="print or write a bundled authoring or adapter JSON Schema"
     )
     schema_parser.add_argument(
         "--kind",
-        choices=("campaign", "plan", "approval", "plan-approval", "adapter"),
+        choices=("campaign", "plan", "approval", "plan-approval", "adapter", "handoff"),
         default="campaign",
         help="schema to emit",
     )

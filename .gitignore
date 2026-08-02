@@ -10,3 +10,5 @@ dist/
 .pytest_cache/
 htmlcov/
 outbox/
+plan-outbox/
+handoff-outbox/

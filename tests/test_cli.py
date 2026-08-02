@@ -362,3 +362,88 @@ def test_cli_emits_plan_approval_schema(capsys: Any) -> None:
     assert main(["schema", "--kind", "plan-approval"]) == 0
     schema = json.loads(capsys.readouterr().out)
     assert schema["properties"]["artifactType"]["const"] == "plan"
+
+
+def test_cli_creates_and_verifies_approved_handoff(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    approval = tmp_path / "plan.approval.json"
+    outbox = tmp_path / "handoff-outbox"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Release sequence",
+                "requiredPlatforms": ["x", "linkedin", "discord"],
+                "items": [
+                    {
+                        "campaign": "campaign.json",
+                        "intendedAt": "2026-08-10T13:00:00Z",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(plan),
+                "--by",
+                "Launch reviewer",
+                "--at",
+                "2026-08-03T14:15:00Z",
+                "--output",
+                str(approval),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        main(
+            [
+                "plan",
+                "handoff",
+                "create",
+                str(plan),
+                str(approval),
+                "--at",
+                "2026-08-04T09:30:00Z",
+                "--output",
+                str(outbox),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    created = json.loads(capsys.readouterr().out)
+    packet = Path(created["path"])
+    assert created["handoff"]["artifactType"] == "plan-handoff"
+    assert packet.is_dir()
+
+    assert main(["plan", "handoff", "verify", str(plan), str(packet), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["valid"] is True
+
+    adapter = packet / "adapter.json"
+    payload = adapter.read_bytes()
+    adapter.write_bytes(payload.replace(b"{", b"[", 1))
+    assert main(["plan", "handoff", "verify", str(plan), str(packet)]) == 4
+    assert "Approved handoff invalid" in capsys.readouterr().out
+    assert main(["plan", "handoff", "verify", str(plan), str(packet), "--json"]) == 4
+    invalid = json.loads(capsys.readouterr().out)
+    assert any(issue["code"] == "artifact-content-changed" for issue in invalid["issues"])
+
+
+def test_cli_emits_handoff_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "handoff"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["artifactType"]["const"] == "plan-handoff"

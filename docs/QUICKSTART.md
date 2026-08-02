@@ -165,6 +165,35 @@ Use `adapter.json` for programmatic importers that need exact draft text; its bu
 available with `samsarix-campaign schema --kind adapter`. The core package does not authenticate or
 publish on an adapter's behalf.
 
+## 7. Create and verify the approved handoff
+
+Use the plan approval to create an exclusive packet for a manual or separately permissioned
+publisher workflow:
+
+```bash
+samsarix-campaign plan handoff create \
+  examples/launch-plan.json \
+  examples/launch-plan.json.approval.json \
+  --output handoff-outbox
+```
+
+The command prints the generated `sch_*` packet path. Verify that exact directory immediately
+before downstream use:
+
+```bash
+samsarix-campaign plan handoff verify \
+  examples/launch-plan.json \
+  handoff-outbox/local-first-release-sequence-sch_<handoff-id>
+```
+
+Verification returns `4` when current source or approval is stale, a rendered file changed, a file
+is missing or unexpected, or the producer version differs. A packet contains `handoff.json`, the
+embedded `approval.json`, and the same manifest, adapter, calendar, and platform CSV files as plan
+export. It is never overwritten in place.
+
+These checksums are unsigned integrity metadata, not authenticated reviewer/producer provenance.
+Read [HANDOFFS.md](HANDOFFS.md) before connecting a downstream adapter.
+
 ## Troubleshooting
 
 - `unknown field(s)`: fix the spelling or remove unsupported keys.
@@ -180,5 +209,7 @@ publish on an adapter's behalf.
   approval file; existing records are intentionally not overwritten.
 - `Plan approval invalid`: run `plan diff` against the reviewed plan, repeat review of the complete
   sequence, and create a new plan approval file.
+- `Approved handoff invalid`: stop downstream use, inspect the stable issue codes, then re-check
+  source and approval. Create a new packet instead of editing or replacing the existing one.
 - `samsarix-campaign: command not found`: activate the environment where the package was installed,
   or run `python -m samsarix_creative_spirals` with the same arguments.
