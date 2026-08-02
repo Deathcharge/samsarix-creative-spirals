@@ -62,8 +62,9 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.5 add bounded plans, interchange, semantic diffs, and local
-source-bound review metadata without adding a scheduler, account connection, or network publisher.
+Helix integrations. Versions 0.4–0.6 add bounded plans, interchange, semantic diffs, local
+source-bound review metadata, and portable image handoff without adding a scheduler, account
+connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -196,7 +197,7 @@ No locally actionable P0 remains.
    identity.
 3. [x] Publish a versioned deterministic adapter contract, schema, and exact export fixture for
    separately permissioned draft importers.
-4. Add media-reference validation without reading or uploading media.
+4. [x] Add media-reference validation without reading or uploading media.
 5. Evaluate optional editor snippets that reference the bundled JSON Schema.
 6. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
@@ -230,6 +231,8 @@ No locally actionable P0 remains.
 - [x] Add quality-gated approval metadata tied to the full campaign source hash.
 - [x] Document that local approval labels are neither authenticated nor cryptographically signed.
 - [x] Add deterministic exact-text adapter JSON, bundled schema, and consumer safety guidance.
+- [x] Add portable, platform-targeted media metadata; include it in identity, review, manifests,
+  and adapter v2 without reading or uploading referenced files.
 
 ## Release acceptance criteria
 
@@ -424,3 +427,63 @@ Known 0.5 boundaries:
 review status passed but reported a service rate limit and posted no detailed comments; the local
 adversarial pass found and fixed the stale calendar product version. A real external-user pilot and
 PyPI publication remain owner-controlled follow-ups rather than claims made from tests.
+
+## 0.6 portable-media release evidence
+
+Implementation and review fixes converge at exact commit
+`b5ecd0aa39753c674bca005a4f88223070bd130c`. The release adds metadata-only JPEG/PNG references,
+platform applicability, alt text, identity/review propagation, and adapter schema v2. Core never
+resolves or opens a referenced file.
+
+Current local verification on Windows/Python 3.11:
+
+| Command | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 21 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy samsarix_creative_spirals tests` | 0 | No issues in 20 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing -q` | 0 | 183 passed; 94.38% total coverage. |
+| `python -m compileall -q samsarix_creative_spirals` | 0 | All package modules compiled. |
+| Draft 2020-12 validation | 0 | All four bundled schemas plus campaign, plan, approval, adapter v2, media path, and four-applicable-image cases passed. |
+| `python -m build --outdir <isolated-dir>/dist` | 0 | Built the 0.6.0 sdist and universal wheel from the sdist. |
+| Installed-wheel media journey | 0 | Version/schema, platform selection, missing-file non-dereference, and manifest export passed outside the checkout. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Exact locally built artifact digests:
+
+- `samsarix_creative_spirals-0.6.0-py3-none-any.whl` — SHA-256
+  `8953dff532323837a6ddbb6a3d8fc963b947ed28f432fb0976507add93e1f541`
+- `samsarix_creative_spirals-0.6.0.tar.gz` — SHA-256
+  `f9dabd7c7f30cbaf6cf7d6a316e8f0960c5eca8027f37fab7a2bf3eee2e99fde`
+
+GitHub Actions run
+[`30729137546`](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30729137546)
+passed the complete Linux Python 3.10/3.13 matrix for the exact implementation/review head. That
+matrix installs development dependencies, formats, lints, type-checks, tests with coverage, builds
+the distributions, reinstalls the wheel, and exercises the CLI including the media-bearing example.
+
+The full automated base review posted nine comments. Eight produced code or documentation fixes;
+the request to raise adapter draft media from four to twenty was intentionally not applied because
+runtime validation rejects more than four applicable images for a platform. Instead, the campaign
+schema now enforces that same applicability limit, while the adapter retains the safer exact
+`maxItems: 4` invariant. The final incremental automated review was rate limited; it did not post
+additional findings.
+
+Compatibility and rollback:
+
+- Campaign and plan authoring remain schema version 1. `media` is optional, and existing files
+  retain their prior deterministic identity and output text.
+- Public immutable models gain defaulted media fields and the package adds `MediaReference`.
+- `samsarix.plan-drafts` advances from schema version 1 to 2 because item and draft `media` arrays
+  are required, including explicit empty arrays. V1 consumers must migrate or reject v2.
+- No runtime dependency, credential, network call, media read, upload, scheduler, or publisher was
+  added.
+- Before publication, rollback is `git revert` of the PR merge. Consumers can pin commit
+  `8343c480b42f9361acfe191e7ebe0c589872bea0` to retain package 0.5 and adapter v1. After an owner
+  publication, normal version pinning and a corrective release are required; published artifacts
+  should not be silently replaced.
+
+Known limits remain explicit: no real provider credential was used, media bytes are not inspected,
+an external adapter must implement the race-safe containment and provider checks in `docs/MEDIA.md`,
+and external-user adoption evidence is still unavailable. PyPI publication remains an
+owner-controlled action.

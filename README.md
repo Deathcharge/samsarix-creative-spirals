@@ -3,14 +3,15 @@
 Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
-publisher-neutral CSV, and portable calendars. Semantic diffs and source-bound local approval
-records make exact changes visible before handoff.
+publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
+source-bound local approval records make exact changes visible before handoff.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.5 alpha.** Federated-platform drafts, campaign-plan quality gates, semantic review,
-> local approvals, and portable export are implemented and tested. Automatic publishing,
+> Maturity: **0.6 alpha.** Federated-platform drafts, campaign-plan quality gates, semantic review,
+> local approvals, portable image metadata, and export are implemented and tested. Automatic
+> publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
 
 ## Fastest successful path
@@ -84,7 +85,13 @@ behavior.
   "link": "https://example.com/launch",
   "hashtags": ["buildinpublic", "product"],
   "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
-  "platformLimits": {"mastodon": 1000}
+  "platformLimits": {"mastodon": 1000},
+  "media": [
+    {
+      "path": "media/launch.png",
+      "altText": "Campaign review dashboard showing five platform drafts"
+    }
+  ]
 }
 ```
 
@@ -98,6 +105,13 @@ behavior.
 | `link` | no | Absolute HTTP(S) URL, at most 500 characters, no embedded credentials. |
 | `hashtags` | no | Up to 10 unique values containing letters, numbers, or underscores. |
 | `platformLimits` | no | Stricter per-platform limits, or a Mastodon instance limit up to 100,000. Keys must also appear in `platforms`. |
+| `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
+
+Media paths are metadata relative to the campaign file. Core validates that metadata but never
+resolves, reads, inspects, copies, or uploads the referenced files. References participate in
+campaign hashes, diffs, approvals, manifests, and adapter v2 output. See
+[Portable media references](docs/MEDIA.md) for targeting, path rules, platform rationale, and the
+filesystem/provider checks required of an external adapter.
 
 Print the bundled JSON Schema for editor or CI integration, or write it to a new file:
 
@@ -189,8 +203,8 @@ items become transparent calendar events; unscheduled items become tasks. CSV ti
 explicit UTC values and the stable columns are publisher-neutral—they are intended for review and
 spreadsheet workflows, not presented as a drop-in template for every publisher.
 
-It also writes deterministic `adapter.json`, which preserves exact draft text in a versioned JSON
-contract for separately permissioned importers. See [ADAPTERS.md](docs/ADAPTERS.md) for schema,
+It also writes deterministic `adapter.json`, which preserves exact draft text and media references
+in a versioned JSON contract for separately permissioned importers. See [ADAPTERS.md](docs/ADAPTERS.md) for schema,
 identity, idempotency, authorization, and compatibility rules.
 
 ## CLI reference
@@ -293,8 +307,9 @@ for trust boundaries and failure behavior.
 - Local approval labels are not authenticated and approval files are forgeable by anyone who can
   write them. Use repository permissions, pull-request review, or a separately designed signing
   system when verified identity is required.
-- Media, per-account capabilities, cryptographic approvals, network publishing, and analytics are
-  outside the 0.5 scope. Calendar files record intent; they do not schedule or publish anything.
+- Media-file processing, per-account capabilities, cryptographic approvals, network publishing,
+  and analytics are outside the 0.6 scope. Calendar files record intent; they do not schedule or
+  publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
 

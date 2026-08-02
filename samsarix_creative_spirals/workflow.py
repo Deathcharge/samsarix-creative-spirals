@@ -109,6 +109,7 @@ def build_campaign(config: CampaignConfig | dict[str, Any]) -> CampaignBundle:
         source_hash=source_hash,
         name=normalized.name,
         drafts=drafts,
+        media=normalized.media,
     )
 
 
@@ -131,6 +132,7 @@ def _manifest(bundle: CampaignBundle, exported_at: datetime) -> dict[str, Any]:
                 "characterLimit": draft.character_limit,
                 "truncated": draft.truncated,
                 "warnings": list(draft.warnings),
+                "media": [reference.to_attachment_dict() for reference in draft.media],
             }
         )
     return {
@@ -138,6 +140,7 @@ def _manifest(bundle: CampaignBundle, exported_at: datetime) -> dict[str, Any]:
         "campaignId": bundle.campaign_id,
         "sourceHash": bundle.source_hash,
         "name": bundle.name,
+        "media": [reference.to_dict() for reference in bundle.media],
         "exportedAt": exported_at.astimezone(timezone.utc).isoformat().replace("+00:00", "Z"),
         "drafts": drafts,
     }

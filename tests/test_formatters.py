@@ -171,3 +171,30 @@ def test_every_supported_platform_respects_its_default(campaign_data: dict[str, 
     for platform in config.platforms:
         draft = format_platform(config, platform)
         assert draft.character_count <= draft.character_limit
+
+
+def test_formatter_selects_only_media_targeted_to_platform(
+    campaign_data: dict[str, Any],
+) -> None:
+    campaign_data["media"] = [
+        {"path": "media/all.png", "altText": "Shared visual"},
+        {
+            "path": "media/discord.jpg",
+            "altText": "Discord visual",
+            "platforms": ["discord"],
+        },
+    ]
+    config = CampaignConfig.from_dict(campaign_data)
+
+    x_draft = format_platform(config, "x")
+    discord_draft = format_platform(config, "discord")
+
+    assert [reference.path for reference in x_draft.media] == ["media/all.png"]
+    assert [reference.path for reference in discord_draft.media] == [
+        "media/all.png",
+        "media/discord.jpg",
+    ]
+    assert discord_draft.to_dict()["media"][1] == {
+        "path": "media/discord.jpg",
+        "altText": "Discord visual",
+    }

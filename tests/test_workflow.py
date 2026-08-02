@@ -85,6 +85,7 @@ def test_load_rejects_oversized_input(tmp_path: Path) -> None:
 
 
 def test_export_writes_copy_ready_bundle(tmp_path: Path, campaign_data: dict[str, Any]) -> None:
+    campaign_data["media"] = [{"path": "media/nonexistent.png", "altText": "Release dashboard"}]
     bundle = build_campaign(campaign_data)
     exported_at = datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc)
 
@@ -96,6 +97,17 @@ def test_export_writes_copy_ready_bundle(tmp_path: Path, campaign_data: dict[str
     manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["campaignId"] == bundle.campaign_id
     assert manifest["exportedAt"] == "2026-07-28T12:00:00Z"
+    assert manifest["media"] == [
+        {
+            "path": "media/nonexistent.png",
+            "altText": "Release dashboard",
+            "platforms": ["x", "linkedin", "discord"],
+        }
+    ]
+    assert manifest["drafts"][0]["media"] == [
+        {"path": "media/nonexistent.png", "altText": "Release dashboard"}
+    ]
+    assert not (destination / "media").exists()
     assert {item["file"] for item in manifest["drafts"]} == {
         "x.md",
         "linkedin.md",

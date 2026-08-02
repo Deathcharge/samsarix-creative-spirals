@@ -26,6 +26,18 @@ python examples/library_usage.py
 
 This script writes an `outbox/` directory. It does not use the network or publish content.
 
+`campaign-media.json` demonstrates campaign-wide and LinkedIn-only image metadata:
+
+```bash
+samsarix-campaign preview examples/campaign-media.json --json
+samsarix-campaign diff examples/campaign.json examples/campaign-media.json --json
+```
+
+The referenced image files are intentionally not bundled: validation and preview still pass
+because core treats paths as review metadata and never opens them. Replace the paths with real
+campaign-relative JPEG/PNG files only when handing the source tree to a separately permissioned
+adapter that implements the controls in `docs/MEDIA.md`.
+
 `launch-plan.json` references `campaign.json` and `campaign-follow-up.json` as one release sequence:
 
 ```bash
@@ -35,5 +47,6 @@ samsarix-campaign plan check examples/launch-plan.json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
-The plan export contains a manifest, an RFC 5545 calendar, and one publisher-neutral CSV for each
-used platform. It records intended UTC times but never schedules or publishes a post.
+The plan export contains a manifest, v2 adapter JSON, an RFC 5545 calendar, and one
+publisher-neutral CSV for each used platform. It records intended UTC times but never schedules or
+publishes a post.

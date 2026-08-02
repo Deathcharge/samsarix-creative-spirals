@@ -30,12 +30,15 @@ def test_cli_core_journey(tmp_path: Path, capsys: Any, campaign_data: dict[str, 
 
 
 def test_cli_json_preview(tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]) -> None:
+    campaign_data["media"] = [{"path": "media/launch.png", "altText": "Launch review dashboard"}]
     path = tmp_path / "campaign.json"
     _write_campaign(path, campaign_data)
 
     assert main(["preview", str(path), "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["campaignId"].startswith("scs_")
+    assert payload["media"][0]["path"] == "media/launch.png"
+    assert payload["drafts"][0]["media"][0]["altText"] == "Launch review dashboard"
     assert len(payload["drafts"]) == 3
 
 
@@ -247,4 +250,5 @@ def test_cli_emits_approval_schema(capsys: Any) -> None:
 def test_cli_emits_adapter_schema(capsys: Any) -> None:
     assert main(["schema", "--kind", "adapter"]) == 0
     schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["schemaVersion"]["const"] == 2
     assert schema["properties"]["contract"]["const"] == "samsarix.plan-drafts"
