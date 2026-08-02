@@ -360,5 +360,6 @@ Known 0.4 boundaries:
 - Intended times are metadata. There is no timer, daemon, retry loop, credential, or delivery side
   effect in this package.
 
-**0.4 release candidate; all declared technical gates pass.** Automated review remains the merge
-gate. Public package publication remains a separate owner-controlled action.
+**0.4 release candidate; all declared technical gates pass.** Initial automated review completed;
+all nine comments were addressed and the follow-up status passed (the service reported its detailed
+re-review was rate limited). Public package publication remains a separate owner-controlled action.
