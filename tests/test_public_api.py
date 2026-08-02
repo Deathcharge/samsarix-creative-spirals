@@ -3,11 +3,13 @@ from __future__ import annotations
 import re
 
 import samsarix_creative_spirals as package
+from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.7.0"
+    assert package.__version__ == "0.8.0"
     assert package.__all__ == [
+        "__version__",
         "ApprovalCheck",
         "ApprovalIssue",
         "CampaignApproval",
@@ -22,8 +24,13 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanBundle",
         "CampaignPlanCheck",
         "CampaignPlanDiff",
+        "CampaignPlanHandoff",
+        "CampaignPlanHandoffPacket",
         "CampaignPlanItem",
         "ConfigError",
+        "HandoffArtifact",
+        "HandoffCheck",
+        "HandoffIssue",
         "MediaReference",
         "PlanApprovalCheck",
         "PlanFieldChange",
@@ -35,6 +42,7 @@ def test_public_api_is_deliberate() -> None:
         "QualityIssue",
         "build_campaign",
         "build_campaign_plan",
+        "build_campaign_plan_handoff",
         "check_campaign",
         "check_campaign_plan",
         "create_campaign_approval",
@@ -45,20 +53,24 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_approval",
         "export_campaign_plan",
         "export_campaign_plan_approval",
+        "export_campaign_plan_handoff",
         "load_adapter_schema",
         "load_approval_schema",
         "load_campaign",
         "load_campaign_approval",
         "load_campaign_plan",
         "load_campaign_plan_approval",
+        "load_campaign_plan_handoff",
         "load_campaign_schema",
-        "load_plan_schema",
+        "load_handoff_schema",
         "load_plan_approval_schema",
+        "load_plan_schema",
         "parse_approval_timestamp",
         "render_plan_adapter",
         "render_plan_calendar",
         "verify_campaign_approval",
         "verify_campaign_plan_approval",
+        "verify_campaign_plan_handoff",
     ]
 
 
@@ -153,4 +165,17 @@ def test_packaged_adapter_schema_is_available() -> None:
     assert schema["$defs"]["draft"]["properties"]["media"]["maxItems"] == 4
     assert schema["$defs"]["mediaPath"]["pattern"] == (
         package.load_campaign_schema()["$defs"]["mediaReference"]["properties"]["path"]["pattern"]
+    )
+
+
+def test_packaged_handoff_schema_is_available() -> None:
+    schema = package.load_handoff_schema()
+
+    Draft202012Validator.check_schema(schema)
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
+    assert schema["properties"]["handoffId"]["pattern"] == "^sch_[0-9a-f]{12}$"
+    assert schema["properties"]["artifacts"]["minProperties"] == 5
+    assert schema["properties"]["producer"]["properties"]["name"]["const"] == (
+        "samsarix-creative-spirals"
     )

@@ -5,13 +5,15 @@ drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It
 input, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
 source-bound campaign and plan approval records make exact changes visible before handoff.
+Approved handoff packets then bind current source, approval metadata, and exact rendered files for
+offline verification immediately before downstream use.
 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.7 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
-> semantic review and local approvals, portable image metadata, and export are implemented and
-> tested. Automatic
+> Maturity: **0.8 alpha.** Federated-platform drafts, campaign-plan quality gates, whole-plan
+> semantic review and local approvals, portable image metadata, approved handoff verification, and
+> export are implemented and tested. Automatic
 > publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
 
@@ -122,6 +124,7 @@ samsarix-campaign schema --kind plan
 samsarix-campaign schema --kind approval
 samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind adapter
+samsarix-campaign schema --kind handoff
 samsarix-campaign schema --output campaign.schema.json
 ```
 
@@ -219,6 +222,30 @@ It also writes deterministic `adapter.json`, which preserves exact draft text an
 in a versioned JSON contract for separately permissioned importers. See [ADAPTERS.md](docs/ADAPTERS.md) for schema,
 identity, idempotency, authorization, and compatibility rules.
 
+## Approved downstream handoff
+
+After the complete plan is approved, create one non-overwriting packet that contains the embedded
+approval and exact plan-export artifacts:
+
+```bash
+samsarix-campaign plan handoff create \
+  examples/launch-plan.json \
+  examples/launch-plan.json.approval.json \
+  --output handoff-outbox
+samsarix-campaign plan handoff verify \
+  examples/launch-plan.json \
+  handoff-outbox/RELEASE-SEQUENCE-SCH_ID
+```
+
+Verification rechecks current source and the recorded quality policy, regenerates every expected
+artifact, checks byte lengths and SHA-256 values, and rejects missing, substituted, symbolic-link,
+or extra files. The packet is the safe input boundary for a manual workflow or separately
+permissioned adapter; it does not connect an account, queue, schedule, or publish anything.
+
+The hashes are unsigned integrity checks. They do not authenticate the reviewer or producer and
+are not cryptographic attestations. See [Approved handoff packets](docs/HANDOFFS.md) for the packet
+contract, CLI/adapter workflow, threat model, and retention guidance.
+
 ## CLI reference
 
 ```text
@@ -238,14 +265,17 @@ samsarix-campaign plan check PLAN [--warnings-as-errors] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--json]
+samsarix-campaign plan handoff create PLAN APPROVAL [--at RFC3339] [--output DIRECTORY] [--json]
+samsarix-campaign plan handoff verify PLAN HANDOFF [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter] [--output PATH]
+samsarix-campaign schema [--kind campaign|plan|approval|plan-approval|adapter|handoff] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
 usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
-stderr. Exit `4` means a requested diff detected changes or an approval is stale/invalid. Quality,
-diff, and approval reports—including non-passing JSON reports—stay on stdout for scripts.
+stderr. Exit `4` means a requested diff detected changes, an approval is stale/invalid, or a
+handoff is not current and intact. Quality, diff, approval, and handoff reports—including
+non-passing JSON reports—stay on stdout for scripts.
 
 ## Python API
 
@@ -296,7 +326,8 @@ console command. The package has no third-party runtime dependencies.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
-- `schema.py` exposes campaign, plan, approval, and adapter JSON Schemas bundled in the wheel.
+- `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
+- `schema.py` exposes campaign, plan, approval, handoff, and adapter JSON Schemas bundled in the wheel.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -323,8 +354,11 @@ for trust boundaries and failure behavior.
 - Local approval labels are not authenticated and approval files are forgeable by anyone who can
   write them. Use repository permissions, pull-request review, or a separately designed signing
   system when verified identity is required.
+- Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
+  prove signer identity or authenticated provenance, and verification should occur immediately
+  before a downstream consumer uses the same packet directory.
 - Media-file processing, per-account capabilities, cryptographic approvals, network publishing,
-  and analytics are outside the 0.7 scope. Calendar files record intent; they do not schedule or
+  and analytics are outside the 0.8 scope. Calendar files record intent; they do not schedule or
   publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

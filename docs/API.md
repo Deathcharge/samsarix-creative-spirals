@@ -66,6 +66,14 @@ has compact before/after `PlanItemSnapshot` values and, when referenced campaign
 a nested `CampaignDiff`. `CampaignPlanApproval` is full-plan source-bound metadata;
 `PlanApprovalCheck` reports whether it still matches plan identity and quality.
 
+### Approved-handoff models
+
+`CampaignPlanHandoff` is the strict unsigned handoff v1 manifest. It contains the `sch_*` identity,
+full metadata hash, plan identity, UTC generation time, producer version, and ordered
+`HandoffArtifact` descriptors. `CampaignPlanHandoffPacket` pairs that metadata and its embedded
+`CampaignPlanApproval` with the packet root. `HandoffIssue` and `HandoffCheck` provide stable
+machine-readable verification results. These hashes authenticate no person or system.
+
 ### `ConfigError`
 
 Subclasses `ValueError`. `issues` is a tuple of one or more actionable validation messages. File
@@ -198,6 +206,30 @@ artifact type, plan identity, timestamp, quality policy, and reviewer metadata.
 Requires the full plan source hash and plan ID to match, then re-runs the stored quality policy.
 Stable issue codes distinguish changed source, changed plan ID, and a current policy failure.
 
+### `build_campaign_plan_handoff(bundle, approval, *, generated_at) -> CampaignPlanHandoff`
+
+Re-verifies the approval and recorded aggregate quality policy, requires a timezone-aware handoff
+time at or after approval, renders exact plan-export bytes, and returns deterministic unsigned
+metadata for that input and timestamp. It performs no file or network I/O.
+
+### `export_campaign_plan_handoff(bundle, approval, output_root="handoff-outbox", *, generated_at=None) -> Path`
+
+Creates a private temporary directory, writes the embedded approval, handoff manifest, and exact
+plan-export artifacts, then renames the complete directory into a generated `sch_*` path. It
+refuses a symbolic-link/non-directory root and never replaces an existing packet.
+
+### `load_campaign_plan_handoff(path) -> CampaignPlanHandoffPacket`
+
+Loads bounded handoff and approval JSON from a non-symbolic-link directory and validates both
+strict runtime contracts. Artifact content verification remains explicit.
+
+### `verify_campaign_plan_handoff(bundle, packet) -> HandoffCheck`
+
+Rechecks current source and approval quality, metadata identity and producer version, fixed packet
+shape, on-disk metadata, and every regenerated artifact size and SHA-256. It rejects symbolic
+links, non-regular files, missing/extra files, and files that change while read. `valid` does not
+claim signer identity or authenticated provenance.
+
 ### `render_plan_calendar(bundle, *, generated_at) -> str`
 
 Returns an RFC 5545 calendar using UTC date-times, CRLF lines, and UTF-8-safe 75-octet folding.
@@ -238,6 +270,12 @@ The CLI equivalent is `samsarix-campaign schema --kind plan-approval`.
 Loads the versioned `samsarix.plan-drafts` adapter schema. The CLI equivalent is
 `samsarix-campaign schema --kind adapter`; operational consumer rules are in `docs/ADAPTERS.md`.
 
+### `load_handoff_schema() -> dict[str, Any]`
+
+Loads the handoff v1 manifest schema. The CLI equivalent is
+`samsarix-campaign schema --kind handoff`; packet and trust-boundary rules are in
+`docs/HANDOFFS.md`.
+
 ## Example
 
 ```python
@@ -267,8 +305,8 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan JSON `schemaVersion: 1`, adapter
-`schemaVersion: 2`, manifest shape, and documented CLI behavior are the compatibility surface for
-0.7.x. Internal helpers and exact prose in warning
+The package is pre-1.0. The exported names, campaign/plan/approval/handoff JSON
+`schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
+compatibility surface for 0.8.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

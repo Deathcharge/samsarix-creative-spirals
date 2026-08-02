@@ -140,6 +140,34 @@ Rollback is a revert of the eventual PR merge or pinning pre-0.7 commit `1df82d6
 artifact hashes, review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#07-whole-plan-review-release-evidence).
 
+## Completed milestone — 0.8 approved handoff packets
+
+- [x] Require a current, quality-valid plan approval before handoff creation.
+- [x] Package the approval with exact adapter JSON, calendar, plan manifest, and per-platform CSV
+  bytes in a new non-overwriting directory.
+- [x] Bind plan identity, generation time, producer version, fixed artifact paths, sizes, and
+  SHA-256 values in a strict handoff v1 manifest and bundled schema.
+- [x] Verify current source, approval policy, metadata hash/ID, directory shape, regular-file type,
+  exact regenerated content, and stable reads without network or credentials.
+- [x] Keep the trust claim precise: checksums are unsigned integrity metadata, not authenticated
+  provenance, signatures, authorization, or non-repudiation.
+- [x] Complete hosted release verification and record the exact reviewed artifact and rollback
+  evidence.
+
+Buffer's official workflow moves approved drafts toward the publishing queue, while GitHub's
+artifact-attestation documentation makes clear that authenticated provenance requires signed
+claims and identity-aware verification. Samsarix fills the local boundary between those concepts:
+an approved packet that can be verified offline before a separately authorized downstream step.
+Contract details and primary sources are in [`docs/HANDOFFS.md`](docs/HANDOFFS.md).
+
+Technical completion evidence: implementation/review head `2bf35aa`; 224 tests at 94.86%
+coverage plus clean formatting, lint, strict typing, compilation, and six-schema validation;
+0.8.0 wheel SHA-256 `3b0391e2036790385f53dd1092211fda003014e4de0a1032d4f6bae1107a13bb`;
+[hosted Python 3.10/3.13 run 30732657643](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30732657643).
+Rollback is a revert of the eventual PR merge or pinning pre-0.8 commit `ba174ef`. Full commands,
+artifact hashes, review disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#08-approved-handoff-release-evidence).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

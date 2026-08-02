@@ -1,6 +1,6 @@
 # Productization record
 
-Last updated: 2026-08-01
+Last updated: 2026-08-02
 
 ## Repository assessment
 
@@ -51,8 +51,8 @@ quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
 → validate and preview every platform variant → run deterministic quality gates → compare campaign
-or complete-plan semantic changes → record/verify source-bound local approval → explicitly export
-review/interchange bundles → hand them to an approved publishing process.
+or complete-plan semantic changes → record/verify source-bound local approval → create and verify
+an exact approved handoff packet → hand it to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
@@ -62,9 +62,9 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.7 add bounded plans, interchange, campaign and whole-plan
-semantic diffs, source-bound local review metadata, and portable image handoff without adding a
-scheduler, account connection, or network publisher.
+Helix integrations. Versions 0.4–0.8 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, portable image handoff, and exact approved
+packet verification without adding a scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 
@@ -146,6 +146,23 @@ agency review, and privacy-sensitive drafting. The 0.3 slice adds federated plat
 instance limits, and a CI-safe quality report without adding credentials, hosted state, or runtime
 dependencies.
 
+### 0.8 approved-handoff follow-up
+
+- Buffer documents approval as a transition toward its publishing queue or schedule and requires
+  posting access to make that transition. This supports an explicit artifact boundary between
+  review and a separately authorized publishing system:
+  <https://support.buffer.com/article/665-managing-and-approving-draft-posts> and
+  <https://support.buffer.com/article/656-saving-and-scheduling-draft-posts>.
+- GitHub defines artifact attestations as cryptographically signed claims and warns verifiers to
+  validate signatures, timestamps, and signer identity. A plain digest therefore must not be
+  marketed as authenticated provenance:
+  <https://docs.github.com/en/actions/concepts/security/artifact-attestations> and
+  <https://docs.github.com/en/rest/repos/attestations>.
+
+The resulting 0.8 slice is an exclusive offline-verifiable handoff packet: current plan source,
+embedded approval, exact rendered files, sizes/checksums, and producer version are bound without
+adding credentials, a scheduler, or a false signing claim.
+
 ## Untouched baseline results
 
 Environment: Windows, Python 3.11.9, pip 26.1.1.
@@ -200,8 +217,10 @@ No locally actionable P0 remains.
 4. [x] Add media-reference validation without reading or uploading media.
 5. [x] Add whole-plan semantic review and quality-gated approval tied to schedule, order, required
    channels, source references, and every campaign.
-6. Evaluate optional editor snippets that reference the bundled JSON Schema.
-7. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+6. [x] Add an exclusive approved handoff packet that binds current source, approval metadata, and
+   exact regenerated artifacts without claiming authenticated provenance.
+7. Evaluate optional editor snippets that reference the bundled JSON Schema.
+8. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -237,6 +256,8 @@ No locally actionable P0 remains.
   and adapter v2 without reading or uploading referenced files.
 - [x] Add complete-plan diffs and plan approvals without changing campaign approval v1 or adding
   hosted collaboration state.
+- [x] Add offline-verifiable approved-plan handoff packets without credentials, signing claims, or
+  automatic publishing.
 
 ## Release acceptance criteria
 
@@ -276,6 +297,9 @@ No locally actionable P0 remains.
 - The owner selected MPL-2.0, but formal legal advice and ownership-chain review remain prudent,
   especially for any contribution created before Samsarix LLC owned the project. This is not a
   blocker created by conflicting repository terms anymore.
+- Approval and handoff hashes are unsigned. A writer who controls all source/evidence files can
+  replace them consistently; authenticated provenance requires protected external controls or a
+  separately reviewed signing/attestation layer.
 
 ## Final verification results
 
@@ -556,3 +580,69 @@ Git or another external control must authenticate reviewers; position-based plan
 reorders as modifications at affected positions; no provider credential or real publication was
 used; and external-user adoption evidence is still unavailable. PyPI publication remains an
 owner-controlled action.
+
+## 0.8 approved-handoff release evidence
+
+Implementation and review fixes converge at exact commit
+`2bf35aa079bd983873cdfd1a5db7c904f7499b81`. The release adds exclusive approved-plan handoff
+packets that embed the approval and exact rendered plan artifacts, then verify current source,
+recorded quality policy, generation ordering, producer version, metadata identity, fixed directory
+shape, sizes, SHA-256 values, exact regenerated bytes, regular-file types, and stable reads. It
+does not add signing, authenticated provenance, credentials, scheduling, or publishing.
+
+Current local verification on Windows/Python 3.11:
+
+| Command | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | 26 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | No issues in 25 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing -q` | 0 | 224 passed; 94.86% total coverage and 96% handoff-module coverage. |
+| `python -m compileall -q samsarix_creative_spirals` | 0 | All package modules compiled. |
+| Draft 2020-12 validation | 0 | All six bundled schemas, handoff metaschema validity, generated handoff payload, and runtime round trip passed. |
+| `python -m build --outdir <clean-detached-worktree>/dist` | 0 | Built the 0.8.0 sdist and universal wheel from the exact reviewed commit's sdist. |
+| Python 3.11 installed-wheel handoff journey | 0 | Version/metadata, public schema, `pip check`, plan approval create/verify, handoff create/verify, and ten-file packet inspection passed outside the checkout. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Exact locally built artifact digests from the clean detached implementation/review head:
+
+- `samsarix_creative_spirals-0.8.0-py3-none-any.whl` — SHA-256
+  `3b0391e2036790385f53dd1092211fda003014e4de0a1032d4f6bae1107a13bb`
+- `samsarix_creative_spirals-0.8.0.tar.gz` — SHA-256
+  `da762fc439d05b4d1f1b7b9014c2c4ee19a939f9db281a6d4336a52b909878de`
+
+GitHub Actions pull-request run
+[`30732657643`](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30732657643)
+passed the complete Linux Python 3.10/3.13 matrix on that exact head. The matrix installs pinned
+development tools, formats, lints, type-checks, runs tests with coverage, builds and reinstalls the
+wheel, and exercises schema output plus approval-to-handoff creation and verification.
+
+The automated base review posted ten actionable comments. All were validated and fixed: package
+version metadata now reads the sole `_version.py` literal; dense parser and verifier paths are
+decomposed into focused helpers; artifact bounds derive from path constants; malformed descriptor
+tests run independently; size mismatches, invalid-result state, literal regex matching, and
+handoff-schema metaschema validity have direct assertions; and an unused fixture was removed. All
+threads are resolved. The incremental follow-up review was service-rate-limited after the fixes;
+the complete hosted matrix and local gates passed on the resulting head.
+
+Compatibility and rollback:
+
+- Campaign and plan authoring, campaign approval, and plan approval remain schema version 1;
+  adapter schema version 2 is unchanged. Handoff schema version 1 is a new additive contract.
+- Public API and CLI surfaces only gain typed names and nested commands. Existing plan export bytes
+  remain covered by and pass the exact adapter v2 fixture.
+- Packaging now reads version dynamically from the sole `_version.py` literal; built distribution
+  metadata and runtime `__version__` both report 0.8.0.
+- Runtime remains standard-library-only with no network, credential, signing, scheduler, database,
+  or publisher behavior.
+- Before publication, rollback is `git revert` of the PR merge. Consumers can pin commit
+  `ba174ef1af74276da49afe626f703cd9b40f1efa` to retain package 0.7 behavior. After an owner
+  publication, normal version pinning and a corrective release are required; published artifacts
+  should not be silently replaced.
+
+Known limits remain explicit: handoff and approval hashes are unsigned; anyone controlling all
+source/evidence files can replace them consistently; old packets intentionally require the
+producing package version for byte-exact verification; verification is point-in-time and should
+immediately precede use of the same directory; media remains metadata only; no provider credential
+or real publication was used; and external-user adoption evidence is still unavailable. PyPI
+publication remains an owner-controlled action.
