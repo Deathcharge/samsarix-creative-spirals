@@ -223,17 +223,17 @@ Rollback is a revert of PR #12 or pinning pre-0.10 main commit `281d0e6`. Full s
 disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#010-platform-native-variants-release-evidence).
 
-## Active milestone — 0.11 portable content policies
+## Completed milestone — 0.11 portable content policies
 
 - [x] Add bounded, reusable literal blocked/required phrase rules with platform targeting,
   case-sensitive or case-folded matching, and warning/error severity.
 - [x] Evaluate exact final rendered drafts and expose stable rule IDs in campaign, plan, readiness,
   human, and machine-readable results.
-- [x] Bind normalized policy identity into campaign/plan approvals, requiring the exact current
-  policy through approval, handoff, and readiness verification.
+- [x] Bind normalized policy identity into campaign/plan approvals and embed normalized policy
+  source in approved handoffs for standalone verification and readiness assessment.
 - [x] Publish CLI/library APIs, a bundled Draft 2020-12 schema, runnable examples, adversarial
   tests, installed-wheel smoke, migration guidance, and a precise security boundary.
-- [ ] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
+- [x] Complete clean artifact verification, hosted CI, review disposition, merge, and exact release
   evidence.
 
 Sprout Social's current approval documentation and 2026 blocked-word integration show demand for
@@ -242,6 +242,15 @@ approval. Samsarix provides a portable, Git-native subset before the connected p
 deterministic policy-as-code over rendered drafts, without accounts, remote state, or regex/AI
 execution. Contract details and official sources are in
 [`docs/POLICIES.md`](docs/POLICIES.md).
+
+Technical completion evidence: implementation/review head `b2aa49e`; merge commit `77b3e4c`; 295
+tests at 94.50% coverage plus clean formatting, lint, strict typing, compilation, eight installed
+schema checks, and a self-contained installed-wheel handoff journey; 0.11.0 wheel SHA-256
+`a2489f3b84c4157495c026cdc4153c9fb3ec37ffa1b1fe3abb9623d7f70b80a1`; and
+[post-merge Python 3.10/3.13 run 30739761175](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30739761175).
+Rollback is a revert of PR #13 or a pin to pre-0.11 main commit `3a5c0f5`. Full sdist digest,
+review disposition, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#011-portable-content-policy-release-evidence).
 
 ## Deliberate exclusions
 

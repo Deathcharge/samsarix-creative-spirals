@@ -826,3 +826,82 @@ Compatibility and rollback:
 - Before publication, roll back by reverting PR #12 or pinning main commit
   `281d0e6996ccf72f5dd760814122dcca6e301ec7`. After owner publication, use normal version pinning
   and a corrective release; do not replace published artifacts silently.
+
+## 0.11 portable content-policy release evidence
+
+### Evidence and product decision
+
+Current Sprout Social and Buffer documentation demonstrates two related operating needs: review
+before publishing and organization-specific language guardrails. The bounded Samsarix response is
+a repository-owned literal phrase policy evaluated against exact final platform drafts. It stays
+useful without accounts, hosted roles, provider credentials, regex execution, or model-based
+moderation. The official sources and deliberately narrower contract are recorded in
+[`POLICIES.md`](POLICIES.md).
+
+Version 1 supports blocked and required literal phrases, platform targeting, case-sensitive or
+Unicode case-folded matching, and warning/error severity. The normalized policy receives a full
+SHA-256 identity and a short `scpol_*` display ID. Campaign and plan approvals bind that identity;
+policy-bound handoffs additionally embed normalized `content-policy.json` as a size- and
+checksum-covered artifact so later handoff verification and readiness assessment remain
+self-contained. Supplying an external policy at that boundary is an optional equality check.
+
+### Release verification and disposition
+
+Implementation and all review fixes converge at exact commit
+`b2aa49e0851f89912ff02be81fa13a5a4b8d9341`; PR #13 merged that head to `main` as
+`77b3e4ca9ba466c10eb6ef1746b990a319522f87`. This evidence section is a subsequent docs-only
+change, so the artifact hashes identify the exact reviewed code tree rather than a
+self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 30 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 29 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 295 passed; 94.50% total coverage, 96% handoff coverage, and 99% readiness coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
+| Installed-wheel Draft 2020-12 metaschema validation | 0 | All eight packaged schemas validated outside the checkout. |
+| `python -m build --outdir <isolated-directory>` | 0 | Built the 0.11.0 sdist and universal wheel from the reviewed head's sdist. |
+| Python 3.11 isolated installed-wheel journey | 0 | Distribution/runtime version 0.11.0, policy schema output, policy ID `scpol_e8d14e4edbfa`, policy-bound plan approval, embedded-policy handoff `sch_262c3f70762e`, handoff verification without an external policy, and `handoff-ready` status all passed outside the checkout. |
+| Hosted GitHub Actions | 0 | [Push run 30739570520](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30739570520) and [PR run 30739572808](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30739572808) each passed the full Python 3.10/3.13 matrix at exact head `b2aa49e`. |
+| Post-merge GitHub Actions | 0 | [Main run 30739761175](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/30739761175) passed both complete matrices at merge commit `77b3e4c`. |
+| `git diff --check` | 0 | No whitespace errors. |
+
+Isolated artifact digests from exact commit `b2aa49e`:
+
+- `samsarix_creative_spirals-0.11.0-py3-none-any.whl` — SHA-256
+  `a2489f3b84c4157495c026cdc4153c9fb3ec37ffa1b1fe3abb9623d7f70b80a1`.
+- `samsarix_creative_spirals-0.11.0.tar.gz` — SHA-256
+  `7a66d4681c22945ceac0208e8b7827e803abd82df6e17b0375edf0e31c0e420e`.
+
+[PR #13](https://github.com/Deathcharge/samsarix-creative-spirals/pull/13) received ten
+CodeRabbit inline comments. All were validated and addressed: approval-binding documentation and
+the architecture flow were corrected; milestone status and human readiness output were aligned;
+standalone schema copies gained a synchronization regression test; policy parsing was decomposed;
+message formatting, HTML escaping, and exception-test structure were cleaned up; and policy-bound
+handoffs became self-contained with direct tamper and mismatch coverage. All ten threads are
+resolved. The incremental automated re-review was rate-limited, while both hosted matrices and the
+complete local gates passed on the resulting head.
+
+Release disposition: **release candidate with one owner-controlled distribution gate**. The merged
+source and isolated wheel support the complete declared journey with no known locally actionable
+P0 or P1 defect. Public PyPI publication has not been performed and remains an explicit owner
+action. External-user adoption evidence likewise remains unavailable; competitor workflow
+evidence demonstrates the problem category, not product-market fit.
+
+Compatibility and rollback:
+
+- Content-policy schema v1 is new. Campaign, plan, manifest, and adapter source/artifact contracts
+  remain unchanged.
+- Campaign-approval and plan-approval v1 gain only optional `contentPolicy` bindings. Readiness v1
+  gains optional policy identity and rule context. Existing files behave as before when no policy
+  is supplied.
+- Handoff v1 gains one optional `content-policy.json` artifact and permits ten rather than nine
+  declared artifacts. Policy-free packets retain their prior shape; the producer-version rule
+  continues to require the producing package for exact byte verification.
+- Runtime remains standard-library-only with no accounts, credentials, network calls, regex
+  execution, model moderation, scheduler, database, publisher, telemetry, or external operating
+  cost.
+- Before publication, roll back by reverting merge commit `77b3e4c` or pinning pre-0.11 main commit
+  `3a5c0f5278ffea4a81ca6ab0bae3479318df0da1`. After owner publication, use normal version pinning
+  and a corrective release; do not replace published artifacts silently.
