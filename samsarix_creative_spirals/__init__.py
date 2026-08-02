@@ -67,6 +67,14 @@ from .handoff import (
     load_campaign_plan_handoff,
     verify_campaign_plan_handoff,
 )
+from .readiness import (
+    CampaignPlanReadiness,
+    CampaignPlanReadinessItem,
+    ReadinessIssue,
+    build_campaign_plan_readiness,
+    export_campaign_plan_readiness_html,
+    render_campaign_plan_readiness_html,
+)
 from .schema import (
     load_adapter_schema,
     load_approval_schema,
@@ -74,6 +82,7 @@ from .schema import (
     load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
+    load_readiness_schema,
 )
 from .workflow import build_campaign, export_campaign, load_campaign
 
@@ -96,6 +105,8 @@ __all__ = [
     "CampaignPlanHandoff",
     "CampaignPlanHandoffPacket",
     "CampaignPlanItem",
+    "CampaignPlanReadiness",
+    "CampaignPlanReadinessItem",
     "ConfigError",
     "HandoffArtifact",
     "HandoffCheck",
@@ -109,9 +120,11 @@ __all__ = [
     "PlannedCampaign",
     "PlatformDraft",
     "QualityIssue",
+    "ReadinessIssue",
     "build_campaign",
     "build_campaign_plan",
     "build_campaign_plan_handoff",
+    "build_campaign_plan_readiness",
     "check_campaign",
     "check_campaign_plan",
     "create_campaign_approval",
@@ -123,6 +136,7 @@ __all__ = [
     "export_campaign_plan",
     "export_campaign_plan_approval",
     "export_campaign_plan_handoff",
+    "export_campaign_plan_readiness_html",
     "load_adapter_schema",
     "load_approval_schema",
     "load_campaign",
@@ -134,7 +148,9 @@ __all__ = [
     "load_handoff_schema",
     "load_plan_approval_schema",
     "load_plan_schema",
+    "load_readiness_schema",
     "parse_approval_timestamp",
+    "render_campaign_plan_readiness_html",
     "render_plan_adapter",
     "render_plan_calendar",
     "verify_campaign_approval",

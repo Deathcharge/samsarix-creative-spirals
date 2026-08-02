@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.9.0 - 2026-08-02
+
+- Added consolidated point-in-time plan readiness across quality, future/complete schedule policy,
+  source-bound approval, and exact approved handoff verification.
+- Added stable readiness stages, issue codes, automation gates, and exit codes through
+  `plan status`, including explicit assessment times and optional schedule completeness.
+- Added an exclusive, self-contained offline HTML status board with escaped campaign-controlled
+  content, copy-ready drafts, restrictive CSP/no-referrer metadata, and no scripts or remote
+  resources.
+- Added typed readiness models and functions plus a bundled Draft 2020-12 plan-readiness v1 JSON
+  Schema available through the public API and `schema --kind readiness`.
+- Documented current calendar/approval workflow evidence, exact semantics, CI use, sensitive-report
+  handling, compatibility, and the boundary between readiness intent and actual publication.
+
 ## 0.8.0 - 2026-08-02
 
 - Added exclusive approved-plan handoff packets containing the embedded approval and exact plan

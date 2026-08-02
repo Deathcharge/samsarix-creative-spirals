@@ -168,6 +168,25 @@ Rollback is a revert of the eventual PR merge or pinning pre-0.8 commit `ba174ef
 artifact hashes, review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#08-approved-handoff-release-evidence).
 
+## Implemented milestone — 0.9 launch readiness
+
+- [x] Consolidate plan quality, time-aware schedule policy, current approval, and exact handoff
+  verification into one stable stage and machine-readable report.
+- [x] Distinguish informational status from explicit quality, approval, and handoff CI gates with
+  documented exit codes.
+- [x] Write an exclusive, self-contained, escaped, script-free offline HTML board with complete
+  copy-ready drafts and no remote resources.
+- [x] Publish typed readiness APIs and a bundled readiness v1 JSON Schema without adding runtime
+  dependencies, credentials, or hosted state.
+- [ ] Complete hosted release verification and record exact reviewed artifacts and rollback
+  evidence.
+
+Sprout Social and Buffer both make calendar visibility and awaiting-approval state first-class;
+Buffer's July 2026 update specifically addresses the friction of locating drafts from the
+calendar. Samsarix provides the corresponding local snapshot for credential-free and Git-native
+workflows, while deliberately excluding notifications, shared mutable state, and provider actions.
+Contract details and official sources are in [`docs/READINESS.md`](docs/READINESS.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

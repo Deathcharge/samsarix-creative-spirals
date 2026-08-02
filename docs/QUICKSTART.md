@@ -194,6 +194,25 @@ export. It is never overwritten in place.
 These checksums are unsigned integrity metadata, not authenticated reviewer/producer provenance.
 Read [HANDOFFS.md](HANDOFFS.md) before connecting a downstream adapter.
 
+## 8. Assess launch readiness
+
+Use the packet's embedded approval to check the complete local launch state and create a reviewable
+offline board:
+
+```bash
+samsarix-campaign plan status \
+  examples/launch-plan.json \
+  --handoff handoff-outbox/local-first-release-sequence-sch_<handoff-id> \
+  --require-scheduled \
+  --require-stage handoff \
+  --html launch-readiness.html \
+  --json
+```
+
+The report compares scheduled times with the current clock. Use `--at RFC3339` for a reproducible
+CI snapshot. The HTML contains the complete drafts and should be protected like the campaign
+source. It does not schedule or publish anything; see [READINESS.md](READINESS.md).
+
 ## Troubleshooting
 
 - `unknown field(s)`: fix the spelling or remove unsupported keys.
@@ -211,5 +230,8 @@ Read [HANDOFFS.md](HANDOFFS.md) before connecting a downstream adapter.
   sequence, and create a new plan approval file.
 - `Approved handoff invalid`: stop downstream use, inspect the stable issue codes, then re-check
   source and approval. Create a new packet instead of editing or replacing the existing one.
+- `Launch readiness: ... blocked/invalid`: inspect the reported quality, schedule, approval, and
+  handoff issues. Reschedule due items or create new approval/handoff evidence instead of editing
+  immutable evidence in place.
 - `samsarix-campaign: command not found`: activate the environment where the package was installed,
   or run `python -m samsarix_creative_spirals` with the same arguments.

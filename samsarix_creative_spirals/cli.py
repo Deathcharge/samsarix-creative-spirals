@@ -37,6 +37,11 @@ from .plan_review import (
     verify_campaign_plan_approval,
 )
 from .quality import check_campaign
+from .readiness import (
+    CampaignPlanReadiness,
+    build_campaign_plan_readiness,
+    export_campaign_plan_readiness_html,
+)
 from .review import (
     ApprovalCheck,
     CampaignDiff,
@@ -54,6 +59,7 @@ from .schema import (
     load_handoff_schema,
     load_plan_approval_schema,
     load_plan_schema,
+    load_readiness_schema,
 )
 from .templates import starter_campaign
 from .workflow import build_campaign, export_campaign, load_campaign
@@ -172,6 +178,19 @@ def _print_handoff_check(result: HandoffCheck) -> None:
     for issue in result.issues:
         location = f" [{issue.path}]" if issue.path else ""
         print(f"error:{location} {issue.message}")
+
+
+def _print_plan_readiness(result: CampaignPlanReadiness) -> None:
+    print(f"Launch readiness: {result.stage.replace('-', ' ')} for {result.plan_id}")
+    print(
+        f"Quality: {'passed' if result.quality_passed else 'blocked'}; "
+        f"schedule: {'ready' if result.schedule_ready else 'blocked'}; "
+        f"approval: {result.approval_status}; handoff: {result.handoff_status}"
+    )
+    for issue in result.issues:
+        location = f" item {issue.item}" if issue.item is not None else ""
+        path = f" [{issue.path}]" if issue.path else ""
+        print(f"{issue.severity}:{location}{path} {issue.message}")
 
 
 def _init_command(args: argparse.Namespace) -> int:
@@ -394,6 +413,32 @@ def _plan_handoff_verify_command(args: argparse.Namespace) -> int:
     return 0 if result.valid else 4
 
 
+def _plan_status_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    approval = load_campaign_plan_approval(args.approval) if args.approval else None
+    handoff = load_campaign_plan_handoff(args.handoff) if args.handoff else None
+    assessed_at = parse_approval_timestamp(args.assessed_at) if args.assessed_at else None
+    result = build_campaign_plan_readiness(
+        bundle,
+        approval=approval,
+        handoff=handoff,
+        assessed_at=assessed_at,
+        warnings_as_errors=args.warnings_as_errors,
+        require_scheduled=args.require_scheduled,
+    )
+    if args.html:
+        export_campaign_plan_readiness_html(result, bundle, args.html)
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_plan_readiness(result)
+        if args.html:
+            print(f"Wrote offline readiness report to {args.html}")
+    if args.require_stage is None or result.meets(args.require_stage):
+        return 0
+    return 3 if args.require_stage == "quality" else 4
+
+
 def _schema_command(args: argparse.Namespace) -> int:
     schema_loaders = {
         "adapter": load_adapter_schema,
@@ -402,6 +447,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "handoff": load_handoff_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
+        "readiness": load_readiness_schema,
     }
     schema = schema_loaders[args.kind]()
     if args.output is None:
@@ -558,6 +604,38 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_check_parser.set_defaults(handler=_plan_check_command)
 
+    plan_status_parser = plan_subparsers.add_parser(
+        "status", help="assess launch readiness and optionally write an offline HTML board"
+    )
+    plan_status_parser.add_argument("plan")
+    plan_status_parser.add_argument("--approval", help="optional source-bound plan approval JSON")
+    plan_status_parser.add_argument("--handoff", help="optional approved handoff packet directory")
+    plan_status_parser.add_argument(
+        "--at", dest="assessed_at", help="explicit RFC 3339 assessment time (default: now)"
+    )
+    plan_status_parser.add_argument(
+        "--warnings-as-errors",
+        action="store_true",
+        help="apply the strict warning-free quality policy to this status view",
+    )
+    plan_status_parser.add_argument(
+        "--require-scheduled",
+        action="store_true",
+        help="treat every unscheduled plan item as a blocker",
+    )
+    plan_status_parser.add_argument(
+        "--require-stage",
+        choices=("quality", "approval", "handoff"),
+        help="return a nonzero CI exit code unless this readiness gate is met",
+    )
+    plan_status_parser.add_argument(
+        "--html", help="write a new self-contained, offline HTML status board"
+    )
+    plan_status_parser.add_argument(
+        "--json", action="store_true", help="emit the readiness JSON contract"
+    )
+    plan_status_parser.set_defaults(handler=_plan_status_command)
+
     plan_export_parser = plan_subparsers.add_parser(
         "export", help="write a plan manifest, calendar, and per-platform CSV files"
     )
@@ -665,7 +743,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     schema_parser.add_argument(
         "--kind",
-        choices=("campaign", "plan", "approval", "plan-approval", "adapter", "handoff"),
+        choices=(
+            "campaign",
+            "plan",
+            "approval",
+            "plan-approval",
+            "adapter",
+            "handoff",
+            "readiness",
+        ),
         default="campaign",
         help="schema to emit",
     )

@@ -74,6 +74,14 @@ full metadata hash, plan identity, UTC generation time, producer version, and or
 `CampaignPlanApproval` with the packet root. `HandoffIssue` and `HandoffCheck` provide stable
 machine-readable verification results. These hashes authenticate no person or system.
 
+### Launch-readiness models
+
+`CampaignPlanReadiness` is the point-in-time aggregate status. It records the stable stage,
+assessment and policy fields, quality/schedule booleans, approval and handoff evidence status,
+ordered `ReadinessIssue` findings, and `CampaignPlanReadinessItem` summaries. `ready` is true only
+for `handoff-ready`; `meets("quality" | "approval" | "handoff")` evaluates an explicit automation
+gate. These models are immutable and have stable `to_dict()` output conforming to readiness v1.
+
 ### `ConfigError`
 
 Subclasses `ValueError`. `issues` is a tuple of one or more actionable validation messages. File
@@ -230,6 +238,26 @@ shape, on-disk metadata, and every regenerated artifact size and SHA-256. It rej
 links, non-regular files, missing/extra files, and files that change while read. `valid` does not
 claim signer identity or authenticated provenance.
 
+### `build_campaign_plan_readiness(bundle, *, approval=None, handoff=None, assessed_at=None, warnings_as_errors=False, require_scheduled=False) -> CampaignPlanReadiness`
+
+Combines the current aggregate quality result, schedule state at a timezone-aware assessment time,
+optional plan approval, and optional exact handoff verification. A handoff supplies its embedded
+approval when no explicit approval is given; if both are given, they must be exactly equal. Past
+or due intended times block readiness. Missing times block only under `require_scheduled=True`.
+No files are written and no network calls are made.
+
+### `render_campaign_plan_readiness_html(report, bundle) -> str`
+
+Returns a self-contained, script-free HTML status board with full generated drafts. All
+campaign-controlled text is escaped. The output has a restrictive CSP and no-referrer metadata and
+does not load remote resources.
+
+### `export_campaign_plan_readiness_html(report, bundle, path) -> Path`
+
+Writes the offline status board to a new path, creates parents when needed, and refuses to replace
+an existing file. Reports contain potentially sensitive draft content and should be protected like
+campaign source.
+
 ### `render_plan_calendar(bundle, *, generated_at) -> str`
 
 Returns an RFC 5545 calendar using UTC date-times, CRLF lines, and UTF-8-safe 75-octet folding.
@@ -276,6 +304,12 @@ Loads the handoff v1 manifest schema. The CLI equivalent is
 `samsarix-campaign schema --kind handoff`; packet and trust-boundary rules are in
 `docs/HANDOFFS.md`.
 
+### `load_readiness_schema() -> dict[str, Any]`
+
+Loads the plan-readiness v1 report schema. The CLI equivalent is
+`samsarix-campaign schema --kind readiness`; stage, timing, CI, and trust-boundary rules are in
+`docs/READINESS.md`.
+
 ## Example
 
 ```python
@@ -305,8 +339,8 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan/approval/handoff JSON
+The package is pre-1.0. The exported names, campaign/plan/approval/handoff/readiness JSON
 `schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.8.x. Internal helpers and exact prose in warning
+compatibility surface for 0.9.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

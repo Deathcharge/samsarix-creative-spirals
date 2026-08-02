@@ -47,6 +47,7 @@ jobs:
           samsarix-campaign schema --kind plan-approval > /tmp/plan-approval.schema.json
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign schema --kind handoff > /tmp/handoff.schema.json
+          samsarix-campaign schema --kind readiness > /tmp/readiness.schema.json
           samsarix-campaign check examples/campaign.json --json
           samsarix-campaign preview examples/campaign.json
           samsarix-campaign validate examples/campaign-media.json --json
@@ -61,6 +62,7 @@ jobs:
           samsarix-campaign plan handoff create examples/launch-plan.json /tmp/plan.approval.json --at 2026-08-04T09:30:00Z --output /tmp/samsarix-handoff-outbox --json
           HANDOFF_PATH=$(find /tmp/samsarix-handoff-outbox -mindepth 1 -maxdepth 1 -type d -print -quit)
           samsarix-campaign plan handoff verify examples/launch-plan.json "$HANDOFF_PATH" --json
+          samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --at 2026-08-05T12:00:00Z --require-scheduled --require-stage handoff --html /tmp/launch-readiness.html --json
           samsarix-campaign plan export examples/launch-plan.json --output /tmp/samsarix-plan-outbox --json
           samsarix-campaign diff examples/campaign.json examples/campaign-follow-up.json --json
           samsarix-campaign approval create examples/campaign.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json

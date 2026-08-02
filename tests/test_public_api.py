@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.8.0"
+    assert package.__version__ == "0.9.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -27,6 +27,8 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanHandoff",
         "CampaignPlanHandoffPacket",
         "CampaignPlanItem",
+        "CampaignPlanReadiness",
+        "CampaignPlanReadinessItem",
         "ConfigError",
         "HandoffArtifact",
         "HandoffCheck",
@@ -40,9 +42,11 @@ def test_public_api_is_deliberate() -> None:
         "PlannedCampaign",
         "PlatformDraft",
         "QualityIssue",
+        "ReadinessIssue",
         "build_campaign",
         "build_campaign_plan",
         "build_campaign_plan_handoff",
+        "build_campaign_plan_readiness",
         "check_campaign",
         "check_campaign_plan",
         "create_campaign_approval",
@@ -54,6 +58,7 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_plan",
         "export_campaign_plan_approval",
         "export_campaign_plan_handoff",
+        "export_campaign_plan_readiness_html",
         "load_adapter_schema",
         "load_approval_schema",
         "load_campaign",
@@ -65,7 +70,9 @@ def test_public_api_is_deliberate() -> None:
         "load_handoff_schema",
         "load_plan_approval_schema",
         "load_plan_schema",
+        "load_readiness_schema",
         "parse_approval_timestamp",
+        "render_campaign_plan_readiness_html",
         "render_plan_adapter",
         "render_plan_calendar",
         "verify_campaign_approval",
@@ -179,3 +186,12 @@ def test_packaged_handoff_schema_is_available() -> None:
     assert schema["properties"]["producer"]["properties"]["name"]["const"] == (
         "samsarix-creative-spirals"
     )
+
+
+def test_packaged_readiness_schema_is_available() -> None:
+    schema = package.load_readiness_schema()
+
+    Draft202012Validator.check_schema(schema)
+    assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+    assert schema["properties"]["artifactType"]["const"] == "plan-readiness"
+    assert schema["properties"]["stage"]["enum"][-1] == "handoff-ready"

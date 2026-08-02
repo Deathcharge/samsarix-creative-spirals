@@ -48,6 +48,7 @@ samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json 
 samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
 samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan handoff create examples/launch-plan.json examples/launch-plan.json.approval.json --output handoff-outbox
+samsarix-campaign plan status examples/launch-plan.json --approval examples/launch-plan.json.approval.json --require-stage approval --json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
@@ -61,3 +62,8 @@ The handoff command creates a new `sch_*` directory with the embedded approval a
 artifacts. Pass the printed directory to `plan handoff verify` immediately before downstream use.
 The packet hashes provide unsigned integrity checks, not authenticated provenance or permission to
 publish; see `docs/HANDOFFS.md`.
+
+`plan status` consolidates quality, intended-time, approval, and optional handoff state. Pass the
+created packet with `--handoff`, add `--require-stage handoff` for a CI gate, or add
+`--html launch-readiness.html` for a self-contained offline board. The HTML includes the full
+drafts; see `docs/READINESS.md` for timing, privacy, and trust-boundary details.

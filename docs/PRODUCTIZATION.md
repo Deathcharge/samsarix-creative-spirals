@@ -62,9 +62,10 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.8 add bounded plans, interchange, campaign and whole-plan
-semantic diffs, source-bound local review metadata, portable image handoff, and exact approved
-packet verification without adding a scheduler, account connection, or network publisher.
+Helix integrations. Versions 0.4–0.9 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
+verification, and offline launch readiness without adding a scheduler, account connection, or
+network publisher.
 
 ## Product and architecture decisions
 
@@ -163,6 +164,23 @@ The resulting 0.8 slice is an exclusive offline-verifiable handoff packet: curre
 embedded approval, exact rendered files, sizes/checksums, and producer version are bound without
 adding credentials, a scheduler, or a false signing claim.
 
+### 0.9 launch-readiness follow-up
+
+- Sprout Social's Publishing Calendar emphasizes one place to see planned messages, filters,
+  notes, and sharable review, while its approval workflow exposes `Needs Approval` and requires
+  rescheduling when approval misses the intended time:
+  <https://support.sproutsocial.com/hc/en-us/articles/360000121343-How-do-I-use-the-Publishing-Calendar>
+  and <https://support.sproutsocial.com/hc/en-us/articles/205974715-Message-Approval-Workflows>.
+- Buffer exposes an `Awaiting Approval` list and its July 13, 2026 update explicitly addresses the
+  friction of finding draft/pending-approval work from the calendar:
+  <https://support.buffer.com/article/665-managing-and-approving-draft-posts> and
+  <https://buffer.com/changelog/access-your-drafts-from-the-calendar>.
+
+The resulting 0.9 slice is a point-in-time, offline readiness report: current quality, future or
+complete schedule policy, approval, and handoff evidence become one stable stage plus an optional
+self-contained HTML board. It adds no hosted calendar, account, notification, publisher action, or
+claim that intent equals publication.
+
 ## Untouched baseline results
 
 Environment: Windows, Python 3.11.9, pip 26.1.1.
@@ -219,8 +237,9 @@ No locally actionable P0 remains.
    channels, source references, and every campaign.
 6. [x] Add an exclusive approved handoff packet that binds current source, approval metadata, and
    exact regenerated artifacts without claiming authenticated provenance.
-7. Evaluate optional editor snippets that reference the bundled JSON Schema.
-8. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
+7. [x] Add consolidated point-in-time launch readiness and an offline HTML review board.
+8. Evaluate optional editor snippets that reference the bundled JSON Schema.
+9. Evaluate an optional official `twitter-text` adapter for exact edge-case parity; keep the
    dependency optional and retain conservative zero-dependency behavior.
 
 ## Implementation checklist and completed work
@@ -258,6 +277,8 @@ No locally actionable P0 remains.
   hosted collaboration state.
 - [x] Add offline-verifiable approved-plan handoff packets without credentials, signing claims, or
   automatic publishing.
+- [x] Add time-aware launch-readiness stages, CI gates, JSON Schema, and an escaped offline HTML
+  board without hosted workflow state.
 
 ## Release acceptance criteria
 
