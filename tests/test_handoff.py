@@ -384,6 +384,18 @@ def test_handoff_load_and_verify_reject_missing_or_invalid_file_types(
         load_campaign_plan_handoff(packet_path)
 
 
+def test_verify_rechecks_packet_root_type(tmp_path: Path, campaign_data: dict[str, Any]) -> None:
+    bundle, _, _, packet_path = _export_packet(tmp_path, campaign_data)
+    packet = load_campaign_plan_handoff(packet_path)
+    invalid_root = tmp_path / "packet-is-now-a-file"
+    invalid_root.write_text("not a directory", encoding="utf-8")
+
+    result = verify_campaign_plan_handoff(bundle, replace(packet, root=invalid_root))
+
+    assert result.valid is False
+    assert _issue_codes(result) == {"packet-root-invalid"}
+
+
 def test_handoff_rejects_file_output_root_and_symbolic_link_packet(
     tmp_path: Path, campaign_data: dict[str, Any]
 ) -> None:

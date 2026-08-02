@@ -549,6 +549,14 @@ def verify_campaign_plan_handoff(
     """Verify packet source, approval, shape, and regenerated artifact bytes offline."""
     issues: list[HandoffIssue] = []
     handoff = packet.handoff
+    packet_root_valid = not packet.root.is_symlink() and packet.root.is_dir()
+    if not packet_root_valid:
+        issues.append(
+            HandoffIssue(
+                "packet-root-invalid",
+                "Packet root must remain a non-symbolic-link directory.",
+            )
+        )
     approval_check = verify_campaign_plan_approval(bundle, packet.approval)
     for approval_issue in approval_check.issues:
         issues.append(
@@ -650,56 +658,57 @@ def verify_campaign_plan_handoff(
                 )
             )
 
-    expected_paths = _expected_packet_paths(expected_artifacts)
-    _check_packet_entries(packet, expected_paths, issues)
-    expected_handoff_payload = _handoff_payload(handoff)
-    actual_handoff_digest = _hash_expected_file(
-        packet.root,
-        "handoff.json",
-        len(expected_handoff_payload),
-        issues,
-    )
-    if (
-        actual_handoff_digest is not None
-        and actual_handoff_digest != hashlib.sha256(expected_handoff_payload).hexdigest()
-    ):
-        issues.append(
-            HandoffIssue(
-                "handoff-file-changed",
-                "On-disk handoff metadata does not match the loaded canonical record.",
-                "handoff.json",
-            )
-        )
-    for relative_path in _ARTIFACT_PATHS:
-        payload = expected_artifacts.get(relative_path)
-        if payload is None:
-            continue
-        actual_digest = _hash_expected_file(
+    if packet_root_valid:
+        expected_paths = _expected_packet_paths(expected_artifacts)
+        _check_packet_entries(packet, expected_paths, issues)
+        expected_handoff_payload = _handoff_payload(handoff)
+        actual_handoff_digest = _hash_expected_file(
             packet.root,
-            relative_path,
-            len(payload),
+            "handoff.json",
+            len(expected_handoff_payload),
             issues,
         )
-        if actual_digest is None:
-            continue
-        expected_digest = hashlib.sha256(payload).hexdigest()
-        if actual_digest != expected_digest:
+        if (
+            actual_handoff_digest is not None
+            and actual_handoff_digest != hashlib.sha256(expected_handoff_payload).hexdigest()
+        ):
             issues.append(
                 HandoffIssue(
-                    "artifact-content-changed",
-                    "Artifact bytes do not match regenerated current-plan output.",
-                    relative_path,
+                    "handoff-file-changed",
+                    "On-disk handoff metadata does not match the loaded canonical record.",
+                    "handoff.json",
                 )
             )
-        declared_artifact = declared.get(relative_path)
-        if declared_artifact is not None and actual_digest != declared_artifact.sha256:
-            issues.append(
-                HandoffIssue(
-                    "artifact-checksum-mismatch",
-                    "Artifact bytes do not match the checksum declared by the packet.",
-                    relative_path,
-                )
+        for relative_path in _ARTIFACT_PATHS:
+            payload = expected_artifacts.get(relative_path)
+            if payload is None:
+                continue
+            actual_digest = _hash_expected_file(
+                packet.root,
+                relative_path,
+                len(payload),
+                issues,
             )
+            if actual_digest is None:
+                continue
+            expected_digest = hashlib.sha256(payload).hexdigest()
+            if actual_digest != expected_digest:
+                issues.append(
+                    HandoffIssue(
+                        "artifact-content-changed",
+                        "Artifact bytes do not match regenerated current-plan output.",
+                        relative_path,
+                    )
+                )
+            declared_artifact = declared.get(relative_path)
+            if declared_artifact is not None and actual_digest != declared_artifact.sha256:
+                issues.append(
+                    HandoffIssue(
+                        "artifact-checksum-mismatch",
+                        "Artifact bytes do not match the checksum declared by the packet.",
+                        relative_path,
+                    )
+                )
 
     return HandoffCheck(
         handoff_id=handoff.handoff_id,
