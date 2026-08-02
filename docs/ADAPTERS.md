@@ -27,8 +27,9 @@ ID and full source hash, optional intended UTC time, and complete generated draf
    to match the manifest.
 4. Treat `intendedAt` as human intent, never proof that a post was scheduled.
 5. Revalidate content against the selected provider/account immediately before creating a draft.
-6. Use `(planId, sequence, platform, sourceHash)` as an idempotency key where the provider permits.
-7. Default to creating provider drafts. Publishing, scheduling, and destructive replacement need
+6. Reject duplicate platform drafts and require canonical platform order.
+7. Use `(planId, sequence, platform, sourceHash)` as an idempotency key where the provider permits.
+8. Default to creating provider drafts. Publishing, scheduling, and destructive replacement need
    separate explicit operator authorization.
 
 Unlike the spreadsheet-oriented CSV files, `adapter.json` preserves exact draft text without a

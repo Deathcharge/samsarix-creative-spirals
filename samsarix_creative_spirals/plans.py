@@ -492,7 +492,7 @@ def render_plan_calendar(
     lines = [
         "BEGIN:VCALENDAR",
         "VERSION:2.0",
-        "PRODID:-//Samsarix LLC//Creative Spirals 0.4//EN",
+        "PRODID:-//Samsarix LLC//Creative Spirals//EN",
         "CALSCALE:GREGORIAN",
         f"X-WR-CALNAME:{_ical_escape(bundle.name)}",
     ]

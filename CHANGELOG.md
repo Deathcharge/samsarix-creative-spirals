@@ -10,6 +10,8 @@ All notable changes to this project are documented here.
 - Added an approval JSON Schema and typed diff/approval models and functions to the public API.
 - Added deterministic `samsarix.plan-drafts` adapter JSON, a bundled v1 schema, and explicit
   consumer/idempotency/authorization guidance for separately permissioned importers.
+- Made the iCalendar product identifier version-neutral so unchanged calendar semantics do not
+  carry a stale package version.
 - Kept approval identity explicitly non-cryptographic and preserved the offline, zero-runtime-
   dependency boundary.
 
