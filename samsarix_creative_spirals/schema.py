@@ -31,6 +31,13 @@ def load_approval_schema() -> dict[str, Any]:
     return cast(dict[str, Any], payload)
 
 
+def load_plan_approval_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public campaign-plan approval JSON Schema."""
+    resource = files(__package__).joinpath("plan-approval.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
 def load_adapter_schema() -> dict[str, Any]:
     """Return a fresh copy of the public plan-adapter JSON Schema."""
     resource = files(__package__).joinpath("adapter.schema.json")

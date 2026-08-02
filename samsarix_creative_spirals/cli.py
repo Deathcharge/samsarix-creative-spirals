@@ -21,6 +21,15 @@ from .plans import (
     export_campaign_plan,
     load_campaign_plan,
 )
+from .plan_review import (
+    CampaignPlanDiff,
+    PlanApprovalCheck,
+    create_campaign_plan_approval,
+    diff_campaign_plans,
+    export_campaign_plan_approval,
+    load_campaign_plan_approval,
+    verify_campaign_plan_approval,
+)
 from .quality import check_campaign
 from .review import (
     ApprovalCheck,
@@ -36,6 +45,7 @@ from .schema import (
     load_adapter_schema,
     load_approval_schema,
     load_campaign_schema,
+    load_plan_approval_schema,
     load_plan_schema,
 )
 from .templates import starter_campaign
@@ -112,6 +122,37 @@ def _print_approval_check(result: ApprovalCheck) -> None:
     status = "valid" if result.valid else "invalid"
     print(
         f"Approval {status} for {result.campaign_id}: "
+        f"{result.approval.approved_by} at {result.approval.to_dict()['approvedAt']}"
+    )
+    for issue in result.issues:
+        print(f"error: {issue.message}")
+
+
+def _print_plan_diff(result: CampaignPlanDiff) -> None:
+    if not result.changed:
+        print(f"No semantic changes ({result.before_plan_id})")
+        return
+    print(f"Plan changed: {result.before_plan_id} -> {result.after_plan_id}")
+    for field_change in result.fields:
+        print(
+            f"field {field_change.field}: {_display_diff_value(field_change.before)} -> "
+            f"{_display_diff_value(field_change.after)}"
+        )
+    for item_change in result.items:
+        fields = ", ".join(item_change.fields)
+        print(f"item {item_change.sequence}: {item_change.change} ({fields})")
+        if item_change.campaign_diff is not None:
+            for campaign_field_change in item_change.campaign_diff.fields:
+                print(f"  campaign field {campaign_field_change.field}")
+            for draft_change in item_change.campaign_diff.drafts:
+                draft_fields = ", ".join(draft_change.fields)
+                print(f"  draft {draft_change.platform}: {draft_change.change} ({draft_fields})")
+
+
+def _print_plan_approval_check(result: PlanApprovalCheck) -> None:
+    status = "valid" if result.valid else "invalid"
+    print(
+        f"Plan approval {status} for {result.plan_id}: "
         f"{result.approval.approved_by} at {result.approval.to_dict()['approvedAt']}"
     )
     for issue in result.issues:
@@ -261,12 +302,58 @@ def _plan_export_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _plan_diff_command(args: argparse.Namespace) -> int:
+    result = diff_campaign_plans(
+        load_campaign_plan(args.before),
+        load_campaign_plan(args.after),
+    )
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_plan_diff(result)
+    return 4 if args.exit_code and result.changed else 0
+
+
+def _plan_approval_create_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    approved_at = parse_approval_timestamp(args.approved_at) if args.approved_at else None
+    approval = create_campaign_plan_approval(
+        bundle,
+        approved_by=args.approved_by,
+        approved_at=approved_at,
+        warnings_as_errors=args.warnings_as_errors,
+        note=args.note,
+    )
+    output = Path(args.output) if args.output else Path(f"{args.plan}.approval.json")
+    path = export_campaign_plan_approval(approval, output)
+    if args.json:
+        _json_print({"path": str(path), "approval": approval.to_dict()})
+    else:
+        print(f"Recorded local plan approval for {bundle.plan_id} in {path}")
+        print("This record is source-bound review metadata, not a digital signature.")
+    return 0
+
+
+def _plan_approval_verify_command(args: argparse.Namespace) -> int:
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    result = verify_campaign_plan_approval(
+        bundle,
+        load_campaign_plan_approval(args.approval),
+    )
+    if args.json:
+        _json_print(result.to_dict())
+    else:
+        _print_plan_approval_check(result)
+    return 0 if result.valid else 4
+
+
 def _schema_command(args: argparse.Namespace) -> int:
     schema_loaders = {
         "adapter": load_adapter_schema,
         "approval": load_approval_schema,
         "campaign": load_campaign_schema,
         "plan": load_plan_schema,
+        "plan-approval": load_plan_approval_schema,
     }
     schema = schema_loaders[args.kind]()
     if args.output is None:
@@ -387,7 +474,7 @@ def build_parser() -> argparse.ArgumentParser:
     approval_verify_parser.set_defaults(handler=_approval_verify_command)
 
     plan_parser = subparsers.add_parser(
-        "plan", help="validate, preview, check, or export a multi-campaign plan"
+        "plan", help="validate, review, approve, or export a multi-campaign plan"
     )
     plan_subparsers = plan_parser.add_subparsers(dest="plan_command")
 
@@ -440,12 +527,67 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_export_parser.set_defaults(handler=_plan_export_command)
 
+    plan_diff_parser = plan_subparsers.add_parser(
+        "diff", help="compare plan metadata, order, schedules, and campaign semantics"
+    )
+    plan_diff_parser.add_argument("before")
+    plan_diff_parser.add_argument("after")
+    plan_diff_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_diff_parser.add_argument(
+        "--exit-code",
+        action="store_true",
+        help="return exit code 4 when semantic changes are present",
+    )
+    plan_diff_parser.set_defaults(handler=_plan_diff_command)
+
+    plan_approval_parser = plan_subparsers.add_parser(
+        "approval", help="create or verify source-bound plan approval metadata"
+    )
+    plan_approval_subparsers = plan_approval_parser.add_subparsers(dest="plan_approval_command")
+    plan_approval_create_parser = plan_approval_subparsers.add_parser(
+        "create", help="record approval after the complete plan quality policy passes"
+    )
+    plan_approval_create_parser.add_argument("plan")
+    plan_approval_create_parser.add_argument(
+        "--by", dest="approved_by", required=True, help="human-readable reviewer label"
+    )
+    plan_approval_create_parser.add_argument(
+        "--at", dest="approved_at", help="explicit RFC 3339 approval time (default: now)"
+    )
+    plan_approval_create_parser.add_argument(
+        "--note", help="optional review note (maximum 500 chars)"
+    )
+    plan_approval_create_parser.add_argument(
+        "--warnings-as-errors",
+        action="store_true",
+        help="require a warning-free plan and record that stricter policy",
+    )
+    plan_approval_create_parser.add_argument(
+        "--output", help="new approval file (default: PLAN.approval.json)"
+    )
+    plan_approval_create_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_approval_create_parser.set_defaults(handler=_plan_approval_create_command)
+
+    plan_approval_verify_parser = plan_approval_subparsers.add_parser(
+        "verify", help="verify approval against the current plan and its quality policy"
+    )
+    plan_approval_verify_parser.add_argument("plan")
+    plan_approval_verify_parser.add_argument("approval")
+    plan_approval_verify_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_approval_verify_parser.set_defaults(handler=_plan_approval_verify_command)
+
     schema_parser = subparsers.add_parser(
         "schema", help="print or write a bundled authoring or adapter JSON Schema"
     )
     schema_parser.add_argument(
         "--kind",
-        choices=("campaign", "plan", "approval", "adapter"),
+        choices=("campaign", "plan", "approval", "plan-approval", "adapter"),
         default="campaign",
         help="schema to emit",
     )

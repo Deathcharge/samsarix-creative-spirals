@@ -129,11 +129,18 @@ must cover:
 samsarix-campaign plan validate examples/launch-plan.json --json
 samsarix-campaign plan preview examples/launch-plan.json
 samsarix-campaign plan check examples/launch-plan.json
+samsarix-campaign plan diff launch-plan-before.json examples/launch-plan.json --json --exit-code
+samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
+samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
 Plan paths use forward slashes, remain relative to the plan file, and cannot escape its directory.
 `intendedAt` is optional; when present it must be RFC 3339 with an explicit offset or `Z`.
+The plan diff covers metadata, order, intended times, source references, and nested campaign/draft
+changes. Plan approval binds all of that state plus every referenced campaign to the recorded
+quality policy. Any later schedule, membership, required-platform, copy, or media change makes
+verification return `4`.
 
 The exported directory contains:
 
@@ -171,5 +178,7 @@ publish on an adapter's behalf.
   a portable relative path without `..` or a symbolic-link escape.
 - `Approval invalid`: diff the approved and current source, repeat human review, then create a new
   approval file; existing records are intentionally not overwritten.
+- `Plan approval invalid`: run `plan diff` against the reviewed plan, repeat review of the complete
+  sequence, and create a new plan approval file.
 - `samsarix-campaign: command not found`: activate the environment where the package was installed,
   or run `python -m samsarix_creative_spirals` with the same arguments.

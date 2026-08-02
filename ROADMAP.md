@@ -116,6 +116,22 @@ schema v1 gains an optional field; adapter consumers must explicitly migrate fro
 commands, artifact hashes, review disposition, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#06-portable-media-release-evidence).
 
+## Active milestone — 0.7 whole-plan review
+
+- [x] Add deterministic plan diff output for metadata, required channels, ordered membership,
+  schedules, source references, and nested campaign/draft changes.
+- [x] Add aggregate-quality-gated plan approval metadata bound to the full normalized plan hash.
+- [x] Re-run the stored plan quality policy during verification and invalidate approval when the
+  plan or any referenced campaign changes.
+- [x] Keep campaign approval v1 compatible by publishing a distinct plan-approval v1 schema.
+- [ ] Complete hosted release verification and record exact artifact and rollback evidence.
+
+The workflow pattern is grounded in current official Buffer and Sprout Social approval
+documentation and GitHub's stale-review/branch-protection controls. The product remains
+credential-free: reviewer labels are untrusted metadata, while repository controls provide the
+optional authenticated collaboration boundary. Contract details and sources are in
+[`docs/PLAN_REVIEW.md`](docs/PLAN_REVIEW.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

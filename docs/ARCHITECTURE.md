@@ -35,6 +35,7 @@ plan.json ──confined relative paths──► CampaignConfig (1..100)
     ▼
 CampaignPlanBundle
     ├──► aggregate quality report
+    ├──► deterministic plan diff / source-bound plan approval verification
     └──► manifest.json + adapter.json + calendar.ics + per-platform CSV
 ```
 
@@ -86,11 +87,19 @@ creation first runs the selected quality policy, then records the exact full sou
 verification compares current identity and re-runs that stored policy. Reviewer labels and files
 are intentionally non-cryptographic; repository access control remains outside the package.
 
+### `plan_review.py`
+
+Compares normalized plan metadata and ordered positions, with nested campaign diffs when content
+changes. Plan approval creation gates the whole built sequence and binds the full plan hash;
+verification checks identity and re-runs the stored aggregate quality policy. The campaign
+approval v1 contract remains separate so existing consumers do not need to distinguish a union.
+
 ### `schema.py` and bundled JSON Schemas
 
 Package the authoring contract with the wheel and return a fresh decoded dictionary to library
-callers. Campaign, plan, and approval schemas help editors and generic validators, while runtime
-models remain authoritative and provide more actionable error messages.
+callers. Campaign, plan, campaign-approval, plan-approval, and adapter schemas help editors and
+generic validators, while runtime models remain authoritative and provide more actionable error
+messages.
 
 ### `cli.py`
 
@@ -111,6 +120,7 @@ returns `0`.
 | Platform output | User-authored draft text | No execution or network send; visible limit and mention warnings. |
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
+| Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, aggregate quality re-check; no identity claim. |
 
 The package never interprets draft content as a command, template language, HTML, or filesystem
 path. Media references are explicitly path metadata but core never resolves or opens them. It
@@ -131,7 +141,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
   record intent but trigger no background work.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.6 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.7 scope.
 
 ## Dependency and cost model
 

@@ -50,9 +50,9 @@ and Discord artifacts, then review a complete sequence with deterministic identi
 quality findings, portable CSV/calendar handoff, and machine-readable manifests.
 
 **Primary journey:** install locally → create standalone campaign JSON → optionally compose a plan
-→ validate and preview every platform variant → run deterministic quality gates → compare semantic
-changes → record/verify source-bound local approval → explicitly export review/interchange bundles
-→ hand them to an approved publishing process.
+→ validate and preview every platform variant → run deterministic quality gates → compare campaign
+or complete-plan semantic changes → record/verify source-bound local approval → explicitly export
+review/interchange bundles → hand them to an approved publishing process.
 
 **Independent reason to exist:** Buffer, Typefully, and Postiz center on connected-account
 scheduling and publishing. This tool is a small, version-control-friendly preprocessing and review
@@ -62,9 +62,9 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media processing; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.6 add bounded plans, interchange, semantic diffs, local
-source-bound review metadata, and portable image handoff without adding a scheduler, account
-connection, or network publisher.
+Helix integrations. Versions 0.4–0.7 add bounded plans, interchange, campaign and whole-plan
+semantic diffs, source-bound local review metadata, and portable image handoff without adding a
+scheduler, account connection, or network publisher.
 
 ## Product and architecture decisions
 

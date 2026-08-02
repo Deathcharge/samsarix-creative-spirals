@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 0.7.0 - 2026-08-02
+
+- Added deterministic whole-plan semantic diffs covering plan metadata, required channels,
+  ordered membership, schedules, source references, and nested campaign/draft changes.
+- Added aggregate-quality-gated plan approval creation and verification bound to the normalized
+  plan plus every referenced campaign.
+- Added typed plan-review models/functions, nested CLI commands, and a dedicated bundled
+  plan-approval v1 JSON Schema while preserving campaign approval v1 compatibility.
+- Documented positional reorder semantics, CI exit behavior, stale-state invalidation, current
+  competitive workflow evidence, and the non-cryptographic trust boundary.
+
 ## 0.6.0 - 2026-08-02
 
 - Added portable, platform-targeted JPEG/PNG references with required alt text, strict path rules,

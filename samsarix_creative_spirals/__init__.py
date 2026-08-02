@@ -41,15 +41,29 @@ from .plans import (
     render_plan_adapter,
     render_plan_calendar,
 )
+from .plan_review import (
+    CampaignPlanApproval,
+    CampaignPlanDiff,
+    PlanApprovalCheck,
+    PlanFieldChange,
+    PlanItemChange,
+    PlanItemSnapshot,
+    create_campaign_plan_approval,
+    diff_campaign_plans,
+    export_campaign_plan_approval,
+    load_campaign_plan_approval,
+    verify_campaign_plan_approval,
+)
 from .schema import (
     load_adapter_schema,
     load_approval_schema,
     load_campaign_schema,
+    load_plan_approval_schema,
     load_plan_schema,
 )
 from .workflow import build_campaign, export_campaign, load_campaign
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 __all__ = [
     "ApprovalCheck",
@@ -62,11 +76,17 @@ __all__ = [
     "CampaignDraftChange",
     "CampaignFieldChange",
     "CampaignPlan",
+    "CampaignPlanApproval",
     "CampaignPlanBundle",
     "CampaignPlanCheck",
+    "CampaignPlanDiff",
     "CampaignPlanItem",
     "ConfigError",
     "MediaReference",
+    "PlanApprovalCheck",
+    "PlanFieldChange",
+    "PlanItemChange",
+    "PlanItemSnapshot",
     "PlanIssue",
     "PlannedCampaign",
     "PlatformDraft",
@@ -76,19 +96,25 @@ __all__ = [
     "check_campaign",
     "check_campaign_plan",
     "create_campaign_approval",
+    "create_campaign_plan_approval",
     "diff_campaigns",
+    "diff_campaign_plans",
     "export_campaign",
     "export_campaign_approval",
     "export_campaign_plan",
+    "export_campaign_plan_approval",
     "load_adapter_schema",
     "load_approval_schema",
     "load_campaign",
     "load_campaign_approval",
     "load_campaign_plan",
+    "load_campaign_plan_approval",
     "load_campaign_schema",
     "load_plan_schema",
+    "load_plan_approval_schema",
     "parse_approval_timestamp",
     "render_plan_adapter",
     "render_plan_calendar",
     "verify_campaign_approval",
+    "verify_campaign_plan_approval",
 ]

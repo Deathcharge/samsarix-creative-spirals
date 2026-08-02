@@ -61,6 +61,11 @@ before/after campaign IDs and full source hashes. `CampaignApproval` is source-b
 quality. These immutable models provide `to_dict()` output. Approval labels are not authenticated
 identities or digital signatures.
 
+`CampaignPlanDiff` contains ordered `PlanFieldChange` and `PlanItemChange` values. Each item change
+has compact before/after `PlanItemSnapshot` values and, when referenced campaign content changed,
+a nested `CampaignDiff`. `CampaignPlanApproval` is full-plan source-bound metadata;
+`PlanApprovalCheck` reports whether it still matches plan identity and quality.
+
 ### `ConfigError`
 
 Subclasses `ValueError`. `issues` is a tuple of one or more actionable validation messages. File
@@ -163,6 +168,36 @@ Runs every campaign check, fails on missing `requiredPlatforms`, and reports dup
 out-of-order intended times. Timing/order findings are warnings by default and errors when
 `warnings_as_errors=True`.
 
+### `diff_campaign_plans(before, after) -> CampaignPlanDiff`
+
+Accepts two validated `CampaignPlan` values. It compares normalized `name`, required-platform
+order, and every one-based sequence position. Item comparison covers the portable source path,
+normalized intended time, and referenced campaign semantics. Reorders appear as modifications at
+the affected positions. The function builds deterministic identities but performs no file or
+network I/O; callers load plan files separately with `load_campaign_plan`.
+
+### `create_campaign_plan_approval(bundle, *, approved_by, approved_at=None, warnings_as_errors=False, note=None) -> CampaignPlanApproval`
+
+Re-runs the aggregate plan quality policy and refuses creation when it fails. The approval binds
+the reviewer label, UTC time, policy, optional note, plan ID, and full plan source hash. That hash
+covers order, schedule, required platforms, source references, and every normalized referenced
+campaign. The reviewer label is not authenticated.
+
+### `export_campaign_plan_approval(approval, path) -> Path`
+
+Writes one UTF-8 plan approval JSON file with exclusive-create behavior. Existing evidence is
+never replaced, and parent directories are created when needed.
+
+### `load_campaign_plan_approval(path) -> CampaignPlanApproval`
+
+Reads a bounded UTF-8 JSON object and validates the dedicated plan-approval v1 contract, including
+artifact type, plan identity, timestamp, quality policy, and reviewer metadata.
+
+### `verify_campaign_plan_approval(bundle, approval) -> PlanApprovalCheck`
+
+Requires the full plan source hash and plan ID to match, then re-runs the stored quality policy.
+Stable issue codes distinguish changed source, changed plan ID, and a current policy failure.
+
 ### `render_plan_calendar(bundle, *, generated_at) -> str`
 
 Returns an RFC 5545 calendar using UTC date-times, CRLF lines, and UTF-8-safe 75-octet folding.
@@ -192,6 +227,11 @@ Loads a fresh dictionary from the plan schema bundled in the wheel. The CLI equi
 
 Loads a fresh dictionary from the approval schema bundled in the wheel. The CLI equivalent is
 `samsarix-campaign schema --kind approval`.
+
+### `load_plan_approval_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the separate campaign-plan approval schema bundled in the wheel.
+The CLI equivalent is `samsarix-campaign schema --kind plan-approval`.
 
 ### `load_adapter_schema() -> dict[str, Any]`
 
@@ -229,6 +269,6 @@ else:
 
 The package is pre-1.0. The exported names, campaign/plan JSON `schemaVersion: 1`, adapter
 `schemaVersion: 2`, manifest shape, and documented CLI behavior are the compatibility surface for
-0.6.x. Internal helpers and exact prose in warning
+0.7.x. Internal helpers and exact prose in warning
 messages may evolve. Breaking schema or public API changes require a minor-version increment while
 the package remains pre-1.0.

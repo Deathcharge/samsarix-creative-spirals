@@ -252,3 +252,113 @@ def test_cli_emits_adapter_schema(capsys: Any) -> None:
     schema = json.loads(capsys.readouterr().out)
     assert schema["properties"]["schemaVersion"]["const"] == 2
     assert schema["properties"]["contract"]["const"] == "samsarix.plan-drafts"
+
+
+def test_cli_plan_diff_and_approval_journey(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    before = tmp_path / "before-plan.json"
+    after = tmp_path / "after-plan.json"
+    approval = tmp_path / "plan.approval.json"
+    _write_campaign(campaign, campaign_data)
+    base_plan = {
+        "schemaVersion": 1,
+        "name": "Release sequence",
+        "items": [
+            {
+                "campaign": "campaign.json",
+                "intendedAt": "2026-08-10T13:00:00Z",
+            }
+        ],
+    }
+    before.write_text(json.dumps(base_plan), encoding="utf-8")
+    revised_plan = dict(base_plan)
+    revised_plan["items"] = [
+        {
+            "campaign": "campaign.json",
+            "intendedAt": "2026-08-10T14:00:00Z",
+        }
+    ]
+    after.write_text(json.dumps(revised_plan), encoding="utf-8")
+
+    assert main(["plan", "diff", str(before), str(after)]) == 0
+    assert "item 1: modified (intendedAt)" in capsys.readouterr().out
+
+    assert main(["plan", "diff", str(before), str(after), "--json", "--exit-code"]) == 4
+    assert json.loads(capsys.readouterr().out)["items"][0]["fields"] == ["intendedAt"]
+
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(after),
+                "--by",
+                "Launch reviewer",
+                "--at",
+                "2026-08-03T14:15:00Z",
+                "--output",
+                str(approval),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    created = json.loads(capsys.readouterr().out)
+    assert created["approval"]["artifactType"] == "plan"
+    assert created["approval"]["approvedBy"] == "Launch reviewer"
+
+    assert main(["plan", "approval", "verify", str(after), str(approval), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["valid"] is True
+
+    after.write_text(json.dumps(base_plan), encoding="utf-8")
+    assert main(["plan", "approval", "verify", str(after), str(approval)]) == 4
+    assert "Plan approval invalid" in capsys.readouterr().out
+
+
+def test_cli_plan_approval_uses_default_output_and_quality_gate(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Release sequence",
+                "items": [{"campaign": "campaign.json"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert main(["plan", "approval", "create", str(plan), "--by", "Reviewer"]) == 0
+    capsys.readouterr()
+    assert Path(f"{plan}.approval.json").is_file()
+
+    strict_plan = tmp_path / "strict-plan.json"
+    strict_plan.write_text(plan.read_text(encoding="utf-8"), encoding="utf-8")
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(strict_plan),
+                "--by",
+                "Reviewer",
+                "--warnings-as-errors",
+            ]
+        )
+        == 1
+    )
+    assert "selected quality policy" in capsys.readouterr().err
+
+
+def test_cli_emits_plan_approval_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "plan-approval"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["artifactType"]["const"] == "plan"
