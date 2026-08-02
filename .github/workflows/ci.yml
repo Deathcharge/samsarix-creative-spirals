@@ -47,6 +47,7 @@ jobs:
           samsarix-campaign schema --kind plan-approval > /tmp/plan-approval.schema.json
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign schema --kind handoff > /tmp/handoff.schema.json
+          samsarix-campaign schema --kind media-package > /tmp/media-package.schema.json
           samsarix-campaign schema --kind publication > /tmp/publication.schema.json
           samsarix-campaign schema --kind readiness > /tmp/readiness.schema.json
           samsarix-campaign schema --kind content-policy > /tmp/content-policy.schema.json
@@ -124,6 +125,69 @@ jobs:
           samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --at 2026-08-05T12:00:00Z --require-scheduled --require-stage handoff --html /tmp/launch-readiness.html --json
           samsarix-campaign plan status examples/launch-plan.json --handoff "$HANDOFF_PATH" --publication /tmp/plan.publication.json --at 2026-08-05T12:00:00Z --require-stage publication --json
           samsarix-campaign plan export examples/launch-plan.json --output /tmp/samsarix-plan-outbox --json
+          python - <<'PY'
+          import json
+          import struct
+          import zlib
+          from pathlib import Path
+
+          root = Path("/tmp/samsarix-media-journey")
+          (root / "campaigns" / "media").mkdir(parents=True)
+
+          def chunk(kind, data):
+              return (
+                  struct.pack(">I", len(data)) + kind + data
+                  + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+              )
+
+          image = (
+              b"\x89PNG\r\n\x1a\n"
+              + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+              + chunk(b"IDAT", zlib.compress(b"\x00\x0c\x22\x38\xff"))
+              + chunk(b"IEND", b"")
+          )
+          (root / "campaigns" / "media" / "launch.png").write_bytes(image)
+          campaign = {
+              "schemaVersion": 1,
+              "name": "Verified media launch",
+              "body": "The exact reviewed image travels with this approved draft.",
+              "platforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+              "media": [{
+                  "path": "media/launch.png",
+                  "altText": "One-pixel deterministic CI image"
+              }],
+          }
+          plan = {
+              "schemaVersion": 1,
+              "name": "Verified media sequence",
+              "requiredPlatforms": ["x", "linkedin", "bluesky", "mastodon", "discord"],
+              "items": [{
+                  "campaign": "campaigns/launch.json",
+                  "intendedAt": "2026-08-10T13:00:00Z"
+              }],
+          }
+          (root / "campaigns" / "launch.json").write_text(json.dumps(campaign))
+          (root / "plan.json").write_text(json.dumps(plan))
+          PY
+          samsarix-campaign plan approval create /tmp/samsarix-media-journey/plan.json --by "CI visual reviewer" --at 2026-08-03T14:15:00Z --include-media --output /tmp/media-plan.approval.json --json > /tmp/media-approval.json
+          samsarix-campaign plan approval verify /tmp/samsarix-media-journey/plan.json /tmp/media-plan.approval.json --json
+          samsarix-campaign plan handoff create /tmp/samsarix-media-journey/plan.json /tmp/media-plan.approval.json --at 2026-08-04T09:30:00Z --output /tmp/samsarix-media-handoff-outbox --json > /tmp/media-handoff.json
+          MEDIA_HANDOFF_PATH=$(find /tmp/samsarix-media-handoff-outbox -mindepth 1 -maxdepth 1 -type d -print -quit)
+          test -f "$MEDIA_HANDOFF_PATH/media-index.json"
+          test "$(find "$MEDIA_HANDOFF_PATH/media" -maxdepth 1 -type f | wc -l)" -eq 1
+          samsarix-campaign plan handoff verify /tmp/samsarix-media-journey/plan.json "$MEDIA_HANDOFF_PATH" --json
+          samsarix-campaign plan status /tmp/samsarix-media-journey/plan.json --handoff "$MEDIA_HANDOFF_PATH" --at 2026-08-05T12:00:00Z --require-stage handoff --json > /tmp/media-status.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          approval = json.loads(Path("/tmp/media-approval.json").read_text())
+          handoff = json.loads(Path("/tmp/media-handoff.json").read_text())
+          status = json.loads(Path("/tmp/media-status.json").read_text())
+          assert approval["approval"]["media"]["assetCount"] == 1
+          assert "media-index.json" in handoff["handoff"]["artifacts"]
+          assert status["stage"] == "handoff-ready"
+          PY
           samsarix-campaign diff examples/campaign.json examples/campaign-follow-up.json --json
           samsarix-campaign approval create examples/campaign.json --policy examples/content-policy.json --by "CI reviewer" --at 2026-08-02T12:30:00Z --output /tmp/campaign.approval.json --json
           samsarix-campaign approval verify examples/campaign.json /tmp/campaign.approval.json --policy examples/content-policy.json --json

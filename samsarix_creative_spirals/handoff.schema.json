@@ -59,13 +59,14 @@
     "artifacts": {
       "type": "object",
       "minProperties": 5,
-      "maxProperties": 10,
+      "maxProperties": 11,
       "propertyNames": {
         "enum": [
           "adapter.json",
           "approval.json",
           "calendar.ics",
           "content-policy.json",
+          "media-index.json",
           "manifest.json",
           "csv/x.csv",
           "csv/linkedin.csv",

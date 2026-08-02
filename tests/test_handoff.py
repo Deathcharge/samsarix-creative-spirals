@@ -306,7 +306,7 @@ def test_handoff_parser_rejects_invalid_shape() -> None:
     assert "artifactType must be plan-handoff" in message
     assert "handoffId must be" in message
     assert "producer has unknown field" in message
-    assert "artifacts must contain between 5 and 10 files" in message
+    assert "artifacts must contain between 5 and 11 files" in message
 
 
 @pytest.mark.parametrize(

@@ -49,6 +49,13 @@ the payload as potentially sensitive campaign data and avoid logging it. Image b
 embedded or copied into the plan export; a media-aware consumer needs a separately trusted source
 tree. See [MEDIA.md](MEDIA.md) for the complete resolution and revalidation boundary.
 
+An approved handoff created from an exact-media-bound plan approval is the exception to that plan
+export rule: its unchanged `adapter.json` remains path-metadata v2, while sibling
+`media-index.json` maps each `(sequence, reference)` to a verified content-addressed file beneath
+`media/`. A consumer should first require successful handoff verification, then use only the packet
+path declared for that reference. It must still fully decode and revalidate current provider,
+account, and instance constraints before upload.
+
 ## Compatibility
 
 Additive optional fields may appear within the v2 contract only after the schema permits them.

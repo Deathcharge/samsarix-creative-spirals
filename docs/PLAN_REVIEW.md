@@ -33,6 +33,11 @@ Pass `--warnings-as-errors` during creation when duplicate times, out-of-order s
 campaign review warnings must block approval. The selected policy is stored and re-run during
 every verification. Existing approval files are never overwritten.
 
+When the review includes the exact referenced image bytes, add `--include-media` during creation.
+The approval then binds a bounded content-addressed `scm_*` snapshot. Later approval verification
+automatically re-collects the current files, and handoff creation packages them only if they still
+match. See [`MEDIA.md`](MEDIA.md).
+
 When the plan is governed by a portable content policy, pass the same `--policy POLICY` to plan
 check, approval creation, and every later verification. Approval v1 then includes an optional
 `contentPolicy` identity; omission or substitution after review is an explicit invalid result. See
@@ -66,13 +71,16 @@ Each record contains:
 - the deterministic `scp_*` plan ID and full SHA-256 source hash;
 - a normalized reviewer label and UTC review time;
 - the `errors-only` or `warnings-as-errors` quality policy;
-- an optional normalized external `contentPolicy` ID, full source hash, and name; and
+- an optional normalized external `contentPolicy` ID, full source hash, and name;
+- an optional exact-media ID, full hash, reference count, and unique-byte total; and
 - an optional review note.
 
 The plan source hash covers normalized plan metadata, ordered source paths, normalized intended
 times, and every normalized referenced campaign—including its media metadata. Changing any of
 those values invalidates both the hash and plan ID. Verification also re-runs the recorded plan
 quality policy, so a matching record cannot bypass a current quality failure.
+An exact-media binding is additional to the plan source hash: metadata changes still change plan
+identity, while pixel-byte changes invalidate the `scm_*` snapshot even when the path stays the same.
 
 ## Trust boundary
 

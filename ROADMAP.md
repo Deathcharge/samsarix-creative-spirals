@@ -310,6 +310,34 @@ Rollback is a revert of PR #15's merge or a pin to pre-0.13 main commit `452e466
 digest, review disposition, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#013-publication-reconciliation-release-evidence).
 
+## Release milestone — 0.14 approval-bound exact media
+
+- [x] Keep media dereferencing explicitly opt-in while binding exact bytes to the human plan
+  approval rather than adding unreviewed images after approval.
+- [x] Enforce campaign-relative containment, no symbolic-link components, stable regular-file
+  reads, conservative byte/pixel/reference/packet limits, and structural static JPEG/PNG checks.
+- [x] Deduplicate image payloads by SHA-256 and embed a canonical `scm_*` media index plus exact
+  content-addressed bytes in immutable handoff packets.
+- [x] Verify media approval/source bindings, index identity, packet shape, file stability, sizes,
+  and checksums through approval, handoff, readiness, publication, CLI, and public library paths.
+- [x] Add a bundled media-package schema, adversarial and end-to-end tests, installed-wheel CI
+  journey, current official provider evidence, and explicit structural-validation limitations.
+- [ ] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
+  final rollback evidence.
+
+The canonical Bluesky image Lexicon sets the strictest common byte ceiling at 2,000,000 bytes;
+X and Discord currently allow larger files, LinkedIn requires fewer than 36,152,320 pixels, and
+Mastodon exposes instance-specific limits. Samsarix therefore proves one conservative local packet
+without claiming universal provider acceptance. Contract details and official sources are in
+[`docs/MEDIA.md`](docs/MEDIA.md).
+
+Reviewed technical evidence at `0cd4d57`: 372 tests at 93.57% coverage, clean formatting, lint,
+strict typing, compilation, and ten schema checks; an external Python 3.11 installed-wheel journey
+reached `publication-complete` with media package `scm_25320c1662b1`; wheel SHA-256
+`d6425c5319dc1b823d708e6f51016272901ac048f7f7efdd7cc5ceb4148eb2ea`; sdist SHA-256
+`7e5a146e11d2931d65eba770b5f11ba143e6196c4f88a2422239ec45c7c74d7b`. Final hosted reruns and merge
+evidence remain open.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

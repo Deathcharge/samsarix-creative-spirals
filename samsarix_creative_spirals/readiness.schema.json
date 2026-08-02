@@ -122,6 +122,7 @@
         },
         "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
         "contentPolicy": {"$ref": "#/$defs/contentPolicy"},
+        "media": {"$ref": "#/$defs/mediaBinding"},
         "note": {"type": "string", "minLength": 1, "maxLength": 500}
       }
     },
@@ -162,6 +163,17 @@
           "type": "string", "minLength": 1, "maxLength": 120,
           "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
         }
+      }
+    },
+    "mediaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mediaId", "mediaHash", "assetCount", "totalBytes"],
+      "properties": {
+        "mediaId": {"type": "string", "pattern": "^scm_[0-9a-f]{12}$"},
+        "mediaHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "assetCount": {"type": "integer", "minimum": 1, "maximum": 400},
+        "totalBytes": {"type": "integer", "minimum": 1, "maximum": 100000000}
       }
     },
     "readinessItem": {

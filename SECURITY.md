@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.13.x` release line is supported. Earlier pre-productization and
+The latest `0.14.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -46,6 +46,11 @@ files selected by the invoking user. The supported workflow:
 - creates approved handoff packets exclusively and verifies their current plan/approval identity,
   embedded approval-bound policy, producer version, fixed directory shape, exact regenerated
   bytes, declared sizes and SHA-256 values, regular-file types, and file stability during reads;
+- optionally binds exact campaign-relative static JPEG/PNG bytes at plan approval, rejecting
+  symbolic-link components, containment escapes, non-regular or unstable files, malformed
+  structure, animation, files above 2,000,000 bytes, images at or above 36,152,320 pixels, more
+  than 400 references, or more than 100 MB of unique payloads; content-addressed handoffs re-hash
+  those exact approval-bound bytes;
 - creates readiness HTML exclusively, escapes all campaign-controlled text, includes no scripts or
   remote resources, and applies restrictive CSP and no-referrer metadata;
 - limits publication ledgers to 500 exact draft records, enforces strict pending/published/failed/
@@ -56,12 +61,13 @@ files selected by the invoking user. The supported workflow:
 - writes exact campaign text to deterministic adapter JSON without executing, transmitting, or
   automatically logging that content.
 
-Media references are not evidence that a file exists, remains beneath a directory after symbolic
-link resolution, has the claimed format, is non-malicious, fits a provider limit, or is authorized
-for upload. The core never reads those files. Any external adapter that does must use a trusted
-source root, resolve links and enforce containment, bound reads, inspect actual content, revalidate
-current provider/account rules, use a race-safe open or revalidate and process the same opened
-handle, and obtain explicit operator authorization as described in `docs/MEDIA.md`.
+Metadata-only media references are not evidence that a file exists, has the claimed format, is
+non-malicious, fits a provider limit, or is authorized for upload. Exact-media mode adds bounded
+containment, stable-read, signature/structure, dimension, size, and checksum evidence, but does not
+fully decode pixels, scan for malware, remove metadata, determine rights or consent, or guarantee
+acceptance by a selected provider/account/instance. Any external adapter must revalidate current
+provider rules, process the same verified packet file with race-aware controls, and obtain explicit
+operator authorization as described in `docs/MEDIA.md`.
 
 The tool runs with the invoking user's filesystem permissions. Treat campaign
 and content-policy files as potentially sensitive content, review drafts before pasting them into a

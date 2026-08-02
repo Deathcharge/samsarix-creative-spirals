@@ -5,12 +5,13 @@ permissioned adapter imports campaign drafts into a publisher. It packages the c
 embedded approval record, any approval-bound content policy, exact rendered outputs, and bounded
 integrity metadata in one exclusive directory.
 
-The packet answers four offline questions:
+The packet answers five offline questions:
 
 1. Does the embedded approval still match the current plan and every referenced campaign?
 2. Was the packet generated at or after that approval?
 3. Does every expected file still have the exact current rendered bytes?
-4. Does the directory contain any missing, substituted, or unexpected deliverable?
+4. If the reviewer bound exact images, do the packet bytes match that approved snapshot?
+5. Does the directory contain any missing, substituted, or unexpected deliverable?
 
 It does not answer who approved or produced the packet. The hashes are unsigned integrity and
 current-source checks, not authenticated provenance, a digital signature, authorization, or
@@ -36,6 +37,16 @@ The create command refuses a stale approval, a plan that no longer passes the re
 policy, a generation time before the approval time, a symbolic-link output root, a non-directory
 output root, or an existing packet identity. It creates the packet in a private temporary
 directory and renames that directory into place only after every file is written.
+
+If visual review must bind exact local images, add `--include-media` when creating the plan
+approval—not when creating the handoff. Approval verification and handoff creation will then
+re-collect those files automatically, while the resulting handoff remains self-contained:
+
+```bash
+samsarix-campaign plan approval create examples/launch-plan.json \
+  --by "Visual reviewer" --include-media \
+  --output launch-plan.approval.json
+```
 
 Verify immediately before import, copy, or manual publication:
 
@@ -72,6 +83,9 @@ handoff-outbox/
     ├── manifest.json
     ├── adapter.json
     ├── calendar.ics
+    ├── media-index.json       # present only for exact-media approval
+    ├── media/                 # content-addressed, deduplicated exact bytes
+    │   └── SHA256.png
     └── csv/
         ├── x.csv
         ├── linkedin.csv
@@ -84,8 +98,10 @@ handoff-outbox/
 samsarix-campaign schema --kind handoff
 ```
 
-Its `artifacts` object declares each plan-export file, embedded `approval.json`, and optional
-`content-policy.json` by fixed, packet-relative path, exact byte length, and lowercase SHA-256. The
+Its `artifacts` object declares each plan-export file, embedded `approval.json`, optional
+`content-policy.json`, and optional `media-index.json` by fixed, packet-relative path, exact byte
+length, and lowercase SHA-256. The media index transitively declares each content-addressed image's
+path, byte length, checksum, content type, dimensions, source reference, alt text, and targets. The
 manifest also contains the full
 plan source hash, plan ID, UTC generation time, producer name/version, a full `handoffHash`, and an
 `sch_*` ID derived from that hash. The hash covers canonical handoff metadata and all artifact
@@ -101,6 +117,8 @@ The verifier:
   generation time and current producer version;
 - verifies the embedded approval and policy bytes, every declared size and checksum, canonical on-disk
   `handoff.json`, fixed root/CSV directory shape, and absence of extra entries;
+- verifies any media index against the approval's `scm_*` binding, enforces the exact `media/`
+  directory shape, and hashes every unique packaged image with stable-read checks;
 - refuses symbolic-link artifacts and non-regular files and detects file identity, size, or
   modification-time changes during a verification read.
 
@@ -147,7 +165,9 @@ complete packet.
 - Verification is local and point-in-time. A downstream consumer must minimize the gap between
   verify and use and apply its own race-safe file-opening controls when the directory is shared
   with an untrusted writer.
-- Media paths remain metadata. Media bytes are not included, opened, checked, or uploaded by the
-  core package; follow [MEDIA.md](MEDIA.md) before dereferencing them.
+- Media paths remain metadata unless the plan approval explicitly binds an exact snapshot with
+  `--include-media`. Exact-media packets are structurally checked and content-addressed but are not
+  fully decoded, malware-scanned, licensed, moderated, or guaranteed provider-compatible; follow
+  [MEDIA.md](MEDIA.md) before use.
 - The calendar records intent and the CSV/adapter files carry drafts. No file schedules or
   publishes a post by itself.

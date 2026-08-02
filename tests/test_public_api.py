@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.13.0"
+    assert package.__version__ == "0.14.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -28,10 +28,14 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanHandoff",
         "CampaignPlanHandoffPacket",
         "CampaignPlanItem",
+        "CampaignPlanMedia",
+        "CampaignPlanMediaAsset",
+        "CampaignPlanMediaBinding",
         "CampaignPlanPublication",
         "CampaignPlanReadiness",
         "CampaignPlanReadinessItem",
         "ConfigError",
+        "CollectedCampaignPlanMedia",
         "ContentPolicy",
         "ContentPolicyBinding",
         "ContentPolicyRule",
@@ -59,6 +63,7 @@ def test_public_api_is_deliberate() -> None:
         "build_campaign_plan_readiness",
         "check_campaign",
         "check_campaign_plan",
+        "collect_campaign_plan_media",
         "create_campaign_approval",
         "create_campaign_plan_approval",
         "diff_campaigns",
@@ -79,11 +84,13 @@ def test_public_api_is_deliberate() -> None:
         "load_campaign_plan",
         "load_campaign_plan_approval",
         "load_campaign_plan_handoff",
+        "load_campaign_plan_media",
         "load_campaign_plan_publication",
         "load_campaign_schema",
         "load_content_policy",
         "load_content_policy_schema",
         "load_handoff_schema",
+        "load_media_package_schema",
         "load_plan_approval_schema",
         "load_plan_schema",
         "load_publication_schema",

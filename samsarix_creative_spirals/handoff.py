@@ -17,6 +17,13 @@ from pathlib import Path
 from typing import Any
 
 from ._version import __version__
+from .media_package import (
+    CampaignPlanMedia,
+    CollectedCampaignPlanMedia,
+    load_campaign_plan_media,
+    media_index_payload,
+    validate_collected_campaign_plan_media,
+)
 from .models import ConfigError
 from .plan_review import (
     CampaignPlanApproval,
@@ -54,7 +61,7 @@ _REQUIRED_ARTIFACT_PATHS = (
     "calendar.ics",
     "manifest.json",
 )
-_OPTIONAL_ARTIFACT_PATHS = ("content-policy.json",)
+_OPTIONAL_ARTIFACT_PATHS = ("content-policy.json", "media-index.json")
 _CSV_ARTIFACT_PATHS = (
     "csv/x.csv",
     "csv/linkedin.csv",
@@ -250,6 +257,7 @@ class CampaignPlanHandoffPacket:
     handoff: CampaignPlanHandoff
     approval: CampaignPlanApproval
     content_policy: ContentPolicy | None = None
+    media: CampaignPlanMedia | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -303,11 +311,14 @@ def _handoff_artifact_payloads(
     approval: CampaignPlanApproval,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
+    media: CampaignPlanMedia | None = None,
 ) -> dict[str, bytes]:
     artifacts = _plan_artifact_payloads(bundle, generated_at)
     artifacts["approval.json"] = _approval_payload(approval)
     if content_policy is not None:
         artifacts["content-policy.json"] = _content_policy_payload(content_policy)
+    if media is not None:
+        artifacts["media-index.json"] = media_index_payload(media)
     return artifacts
 
 
@@ -337,9 +348,10 @@ def _assemble_handoff(
     approval: CampaignPlanApproval,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
+    media: CampaignPlanMedia | None = None,
 ) -> CampaignPlanHandoff:
     artifacts = _artifact_descriptors(
-        _handoff_artifact_payloads(bundle, approval, generated_at, content_policy)
+        _handoff_artifact_payloads(bundle, approval, generated_at, content_policy, media)
     )
     provisional = CampaignPlanHandoff(
         handoff_id="sch_000000000000",
@@ -368,6 +380,7 @@ def build_campaign_plan_handoff(
     *,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
+    media: CampaignPlanMedia | None = None,
 ) -> CampaignPlanHandoff:
     """Build an unsigned handoff manifest after approval and aggregate quality verification."""
     issues: list[str] = []
@@ -375,7 +388,9 @@ def build_campaign_plan_handoff(
         issues.append("generated_at must include timezone information")
     if approval.approved_at.utcoffset() is None:
         issues.append("approval approved_at must include timezone information")
-    approval_check = verify_campaign_plan_approval(bundle, approval, content_policy=content_policy)
+    approval_check = verify_campaign_plan_approval(
+        bundle, approval, content_policy=content_policy, media=media
+    )
     if not approval_check.valid:
         details = ", ".join(issue.message for issue in approval_check.issues)
         issues.append(f"cannot create handoff from an invalid plan approval: {details}")
@@ -387,7 +402,7 @@ def build_campaign_plan_handoff(
         issues.append("generated_at must not be earlier than approved_at")
     if issues:
         raise ConfigError(issues)
-    return _assemble_handoff(bundle, approval, generated_at, content_policy)
+    return _assemble_handoff(bundle, approval, generated_at, content_policy, media)
 
 
 def export_campaign_plan_handoff(
@@ -397,20 +412,26 @@ def export_campaign_plan_handoff(
     *,
     generated_at: datetime | None = None,
     content_policy: ContentPolicy | None = None,
+    media: CollectedCampaignPlanMedia | None = None,
 ) -> Path:
     """Atomically create a new approved handoff packet without overwriting evidence."""
     stamp = generated_at or datetime.now(timezone.utc)
+    if media is not None:
+        validate_collected_campaign_plan_media(media)
+    media_index = media.index if media is not None else None
     handoff = build_campaign_plan_handoff(
         bundle,
         approval,
         generated_at=stamp,
         content_policy=content_policy,
+        media=media_index,
     )
     artifacts = _handoff_artifact_payloads(
         bundle,
         approval,
         handoff.generated_at,
         content_policy,
+        media_index,
     )
 
     root = Path(os.path.abspath(output_root))
@@ -430,6 +451,8 @@ def export_campaign_plan_handoff(
     temporary.mkdir(mode=0o700)
     try:
         _write_plan_artifacts(temporary, artifacts)
+        if media is not None:
+            _write_plan_artifacts(temporary, media.payloads())
         (temporary / "handoff.json").write_bytes(_handoff_payload(handoff))
         temporary.replace(target)
     finally:
@@ -457,16 +480,24 @@ def load_campaign_plan_handoff(path: str | Path) -> CampaignPlanHandoffPacket:
     content_policy = None
     if content_policy_path.exists() or content_policy_path.is_symlink():
         content_policy = load_content_policy(_require_packet_json(root, "content-policy.json"))
+    media_path = root / "media-index.json"
+    media = None
+    if media_path.exists() or media_path.is_symlink():
+        media = load_campaign_plan_media(_require_packet_json(root, "media-index.json"))
     return CampaignPlanHandoffPacket(
         root=root,
         handoff=handoff,
         approval=approval,
         content_policy=content_policy,
+        media=media,
     )
 
 
-def _expected_packet_paths(artifacts: dict[str, bytes]) -> set[str]:
-    return {"handoff.json", *artifacts}
+def _expected_packet_paths(
+    artifacts: dict[str, bytes], media: CampaignPlanMedia | None
+) -> set[str]:
+    media_paths = {asset.packet_path for asset in media.assets} if media is not None else set()
+    return {"handoff.json", *artifacts, *media_paths}
 
 
 def _check_packet_entries(
@@ -489,29 +520,47 @@ def _check_packet_entries(
                     entry.name,
                 )
             )
-    csv_root = packet.root / "csv"
-    expected_csv = {path for path in expected_paths if path.startswith("csv/")}
-    if csv_root.is_symlink() or (csv_root.exists() and not csv_root.is_dir()):
+    _check_packet_directory(packet.root, "csv", expected_paths, issues)
+    _check_packet_directory(packet.root, "media", expected_paths, issues)
+
+
+def _check_packet_directory(
+    root: Path,
+    name: str,
+    expected_paths: set[str],
+    issues: list[HandoffIssue],
+) -> None:
+    directory = root / name
+    expected = {path for path in expected_paths if path.startswith(f"{name}/")}
+    if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
         issues.append(
-            HandoffIssue("artifact-type-invalid", "CSV entry must be a regular directory.", "csv")
+            HandoffIssue(
+                "artifact-type-invalid",
+                f"{name} entry must be a regular directory.",
+                name,
+            )
         )
         return
-    if not csv_root.exists():
+    if not directory.exists():
         return
     try:
-        csv_entries = list(csv_root.iterdir())
+        entries = list(directory.iterdir())
     except OSError as error:
         issues.append(
-            HandoffIssue("packet-read-failed", f"Cannot list packet CSV directory: {error}", "csv")
+            HandoffIssue(
+                "packet-read-failed",
+                f"Cannot list packet {name} directory: {error}",
+                name,
+            )
         )
         return
-    for entry in sorted(csv_entries, key=lambda candidate: candidate.name):
-        relative = f"csv/{entry.name}"
-        if relative not in expected_csv:
+    for entry in sorted(entries, key=lambda candidate: candidate.name):
+        relative = f"{name}/{entry.name}"
+        if relative not in expected:
             issues.append(
                 HandoffIssue(
                     "artifact-unexpected",
-                    "Packet contains an unexpected CSV artifact.",
+                    f"Packet contains an unexpected {name} artifact.",
                     relative,
                 )
             )
@@ -523,7 +572,20 @@ def _hash_expected_file(
     expected_size: int,
     issues: list[HandoffIssue],
 ) -> str | None:
-    path = root.joinpath(*relative_path.split("/"))
+    segments = relative_path.split("/")
+    parent = root
+    for segment in segments[:-1]:
+        parent /= segment
+        if parent.is_symlink():
+            issues.append(
+                HandoffIssue(
+                    "artifact-type-invalid",
+                    "Packet artifact parent must not be a symbolic link.",
+                    relative_path,
+                )
+            )
+            return None
+    path = root.joinpath(*segments)
     if path.is_symlink() or not path.exists():
         issues.append(
             HandoffIssue("artifact-missing", "Expected packet artifact is missing.", relative_path)
@@ -603,7 +665,10 @@ def _check_handoff_identity_and_order(
             )
         )
     approval_check = verify_campaign_plan_approval(
-        bundle, packet.approval, content_policy=content_policy
+        bundle,
+        packet.approval,
+        content_policy=content_policy,
+        media=packet.media,
     )
     for approval_issue in approval_check.issues:
         issues.append(
@@ -654,12 +719,14 @@ def _regenerate_and_check_handoff(
         packet.approval,
         handoff.generated_at,
         content_policy,
+        packet.media,
     )
     expected_handoff = _assemble_handoff(
         bundle,
         packet.approval,
         handoff.generated_at,
         content_policy,
+        packet.media,
     )
     declared_core_hash = hashlib.sha256(_canonical_handoff_core(handoff._core_dict())).hexdigest()
     if handoff.handoff_hash != declared_core_hash:
@@ -732,7 +799,7 @@ def _check_handoff_files(
     declared: dict[str, HandoffArtifact],
     issues: list[HandoffIssue],
 ) -> None:
-    expected_paths = _expected_packet_paths(expected_artifacts)
+    expected_paths = _expected_packet_paths(expected_artifacts, packet.media)
     _check_packet_entries(packet, expected_paths, issues)
     expected_handoff_payload = _handoff_payload(packet.handoff)
     actual_handoff_digest = _hash_expected_file(
@@ -782,6 +849,26 @@ def _check_handoff_files(
                     relative_path,
                 )
             )
+    if packet.media is not None:
+        checked_paths: set[str] = set()
+        for asset in packet.media.assets:
+            if asset.packet_path in checked_paths:
+                continue
+            checked_paths.add(asset.packet_path)
+            actual_digest = _hash_expected_file(
+                packet.root,
+                asset.packet_path,
+                asset.size,
+                issues,
+            )
+            if actual_digest is not None and actual_digest != asset.sha256:
+                issues.append(
+                    HandoffIssue(
+                        "media-checksum-mismatch",
+                        "Packaged media bytes do not match the approval-bound media index.",
+                        asset.packet_path,
+                    )
+                )
 
 
 def verify_campaign_plan_handoff(

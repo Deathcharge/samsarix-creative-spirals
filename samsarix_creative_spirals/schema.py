@@ -52,6 +52,13 @@ def load_handoff_schema() -> dict[str, Any]:
     return cast(dict[str, Any], payload)
 
 
+def load_media_package_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public approval-bound media index JSON Schema."""
+    resource = files(__package__).joinpath("media-package.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
 def load_readiness_schema() -> dict[str, Any]:
     """Return a fresh copy of the public campaign-plan readiness JSON Schema."""
     resource = files(__package__).joinpath("readiness.schema.json")

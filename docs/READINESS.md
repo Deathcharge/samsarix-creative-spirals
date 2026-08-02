@@ -62,6 +62,11 @@ A policy-bound handoff supplies its embedded normalized policy automatically; an
 then acts as an additional equality check. The JSON and HTML reports show the applied policy
 identity. See [`POLICIES.md`](POLICIES.md).
 
+For a standalone approval created with `--include-media`, `plan status` automatically re-collects
+the current referenced files before reporting `approved`. An exact-media handoff instead supplies
+its already approval-bound media index and verifies the self-contained packet bytes; the original
+image checkout is no longer required for that handoff assessment.
+
 After handoff use, add its bound publication ledger and require complete reconciliation:
 
 ```bash
