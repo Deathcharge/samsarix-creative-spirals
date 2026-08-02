@@ -702,7 +702,9 @@ portability, concrete test types, approval-only CLI coverage, bounded issue-code
 orchestrator decomposition, and this evidence record were implemented. The suggested external
 approval `$ref` was not used because readiness v1 must validate offline as a standalone document;
 instead its embedded approval structure is byte-for-structure synchronized with plan-approval v1
-by a direct regression test. The incremental review status passed.
+by a direct regression test. All original threads are resolved; the incremental re-review was
+rate-limited after the fixes, while the complete local and hosted gates passed on the resulting
+code head.
 
 Compatibility is additive for 0.9.x: existing campaign, plan, approval, handoff, manifest, and
 adapter contracts do not change. New public names, `plan status`, schema kind `readiness`, and
