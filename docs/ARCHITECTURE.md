@@ -39,6 +39,8 @@ CampaignPlanBundle
     ├──► deterministic plan diff / source-bound plan approval verification
     │       ├── approval-policy.json + independent approvals ──► canonical scas_* set
     │       └── optional exact media collection ──► approval-bound scm_* snapshot
+    ├──► immutable plan-review feedback (comment / request-changes / reject)
+    │       └── exact source + optional scm_* snapshot ──► current or stale review state
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
     ├──► exclusive approved handoff packet
             ├── embedded approval.json + optional content-policy.json + handoff.json
@@ -129,6 +131,15 @@ one exact plan/source/content-policy/media binding, rejects duplicate evidence, 
 and total minimums, optionally compares case-folded reviewer labels, and reverifies every member.
 Labels and roles are unsigned metadata; the module supplies no account or authorization system.
 
+### `plan_feedback.py`
+
+Creates immutable `plan-review` records for comments and negative review decisions without
+weakening or duplicating positive plan approval. Canonical content produces a full review hash and
+short `scr_*` identity. Findings are bounded and may target one plan item/platform with an optional
+suggestion. Verification checks exact current plan identity and optional exact-media binding;
+current `request-changes` and `reject` records are reported as blocking, while stale records remain
+historical evidence. Reviewer labels, decisions, hashes, and times are unsigned local metadata.
+
 ### `media_package.py`
 
 Implements the sole opt-in media dereference boundary. A trusted plan root plus normalized campaign
@@ -171,13 +182,13 @@ labels and hashes are unsigned.
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
 dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval,
-approval-policy, plan-approval-set, media-package, handoff, publication, readiness, and adapter schemas help editors and generic
+approval-policy, plan-approval-set, plan-review, media-package, handoff, publication, readiness, and adapter schemas help editors and generic
 validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign, diff, approval, handoff, publication, readiness, and nested plan operations. Successful
+Provides the single-campaign, diff, approval, plan-feedback, handoff, publication, readiness, and nested plan operations. Successful
 output and valid quality/review reports stay on stdout;
 configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
 quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff/incomplete-publication results return `4`,
@@ -200,6 +211,7 @@ quality gate uses `3` and its approval/handoff/publication gates use `4`.
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, optional exact-media binding, aggregate quality re-check; no identity claim. |
 | Approval policy/set | Role names, count rules, reviewer labels, and embedded approvals | 20-role/50-approval bounds; canonical identity; per-role/total/distinct-label checks; duplicate rejection; every approval reverified; no human identity or authorization claim. |
+| Plan review record | Reviewer label, decision, time, findings, suggestion, and optional media binding | 50-finding/text/item/platform bounds; canonical hash/ID; exact plan/source/media verification; exclusive export; no identity, workflow-lock, or resolution claim. |
 | Approved handoff packet | Local directory, metadata, approval/policy/media evidence, and generated files | Exclusive atomic creation; exact expected shape; source, approval, embedded-policy/media, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Publication ledger | Local outcome JSON, operator labels, times, URLs, and notes | Shared file/nesting bounds; strict state combinations; exact plan/handoff/draft binding; chronology; URL scheme/credential/length checks; no network verification; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
@@ -232,7 +244,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.15 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.16 scope.
 
 ## Dependency and cost model
 

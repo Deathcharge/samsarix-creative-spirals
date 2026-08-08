@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.15.0"
+    assert package.__version__ == "0.16.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -41,6 +41,7 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanPublication",
         "CampaignPlanReadiness",
         "CampaignPlanReadinessItem",
+        "CampaignPlanReview",
         "ConfigError",
         "CollectedCampaignPlanMedia",
         "ContentPolicy",
@@ -58,6 +59,9 @@ def test_public_api_is_deliberate() -> None:
         "PlanItemChange",
         "PlanItemSnapshot",
         "PlanIssue",
+        "PlanReviewCheck",
+        "PlanReviewFinding",
+        "PlanReviewIssue",
         "PlannedCampaign",
         "PlatformContentVariant",
         "PlatformDraft",
@@ -76,6 +80,7 @@ def test_public_api_is_deliberate() -> None:
         "create_campaign_approval",
         "create_campaign_plan_approval",
         "create_campaign_plan_approval_set",
+        "create_campaign_plan_review",
         "diff_campaigns",
         "diff_campaign_plans",
         "export_campaign",
@@ -83,6 +88,7 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_plan",
         "export_campaign_plan_approval",
         "export_campaign_plan_approval_set",
+        "export_campaign_plan_review",
         "export_campaign_plan_handoff",
         "export_campaign_plan_publication",
         "export_campaign_plan_readiness_html",
@@ -98,6 +104,7 @@ def test_public_api_is_deliberate() -> None:
         "load_campaign_plan_approval",
         "load_campaign_plan_approval_evidence",
         "load_campaign_plan_approval_set",
+        "load_campaign_plan_review",
         "load_campaign_plan_handoff",
         "load_campaign_plan_media",
         "load_campaign_plan_publication",
@@ -109,6 +116,7 @@ def test_public_api_is_deliberate() -> None:
         "load_plan_approval_schema",
         "load_plan_approval_set_schema",
         "load_plan_schema",
+        "load_plan_review_schema",
         "load_publication_schema",
         "load_readiness_schema",
         "parse_approval_timestamp",
@@ -119,6 +127,7 @@ def test_public_api_is_deliberate() -> None:
         "verify_campaign_plan_approval",
         "verify_campaign_plan_approval_evidence",
         "verify_campaign_plan_approval_set",
+        "verify_campaign_plan_review",
         "verify_campaign_plan_handoff",
         "verify_campaign_plan_publication",
     ]
@@ -323,6 +332,19 @@ def test_packaged_approval_policy_schemas_are_available() -> None:
     )
     Draft202012Validator(approval_set).validate(generated_set.to_dict())
     Draft202012Validator(policy).validate(generated_policy.to_dict())
+
+
+def test_packaged_plan_review_schema_is_available() -> None:
+    schema = package.load_plan_review_schema()
+
+    Draft202012Validator.check_schema(schema)
+    assert schema["properties"]["artifactType"]["const"] == "plan-review"
+    assert schema["properties"]["decision"]["enum"] == [
+        "comment",
+        "request-changes",
+        "reject",
+    ]
+    assert schema["properties"]["findings"]["maxItems"] == 50
 
 
 def test_packaged_adapter_schema_is_available() -> None:

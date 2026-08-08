@@ -370,6 +370,33 @@ runs `31244227416` and `31244229167`; merge commit `acb21ce`; and post-merge run
 `c25e6ca`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#015-policy-bound-approval-quorum-release-evidence).
 
+## Active milestone — 0.16 source-bound plan feedback
+
+- [x] Add immutable `comment`, `request-changes`, and `reject` records bound to one exact plan
+  revision, while keeping positive release authorization in the quality-gated approval contract.
+- [x] Add bounded structured findings, deterministic `scr_*` identity, tamper detection, optional
+  exact-media binding, exclusive export, current/stale verification, and stable blocking semantics.
+- [x] Expose CLI, typed API, bundled Draft 2020-12 schema, adversarial tests, and installed-wheel CI
+  coverage without adding runtime dependencies, accounts, network access, or mutable service state.
+- [x] Document current Buffer, Sprout Social, and Planable feedback workflows plus the unsigned
+  reviewer-label, local blocking, confidentiality, and resolution boundaries.
+- [ ] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
+  capture final rollback evidence.
+
+Connected review services keep comments, rejection notes, suggestions, notifications, accounts,
+and version activity beside a draft. Samsarix supplies the portable artifact portion: exact-revision
+feedback that can live in Git or an archive, turns stale automatically when source changes, and can
+bind reviewed image bytes without needing publisher credentials. Contract details and official
+sources are in [`docs/PLAN_FEEDBACK.md`](docs/PLAN_FEEDBACK.md).
+
+## Planned milestone — 0.17 canonical CSV and plan import
+
+Official Buffer and Planable workflows confirm that spreadsheet bulk authoring is a separate
+high-frequency use case. The next bounded slice should import a documented Samsarix CSV contract
+into normalized campaign files and a plan, report every row error without partial writes, preserve
+explicit UTC/timezone semantics, and round-trip through existing preview/check/diff/review/export
+gates. Provider-specific templates and direct upload remain separate adapters.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

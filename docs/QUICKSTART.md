@@ -173,6 +173,7 @@ samsarix-campaign plan validate examples/launch-plan.json --json
 samsarix-campaign plan preview examples/launch-plan.json
 samsarix-campaign plan check examples/launch-plan.json
 samsarix-campaign plan diff launch-plan-before.json examples/launch-plan.json --json --exit-code
+samsarix-campaign plan review create examples/launch-plan.json --decision request-changes --by "Brand reviewer" --finding "Support the opening claim." --item 1 --platform linkedin
 samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
 samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
@@ -190,6 +191,14 @@ samsarix-campaign plan approval collect examples/launch-plan.json \
 
 The set can replace the single approval path in verify, handoff, and status commands. See
 [APPROVAL_POLICIES.md](APPROVAL_POLICIES.md) for setup and the unsigned-role boundary.
+
+`plan review create` writes immutable feedback before approval. Use `comment`, `request-changes`,
+or `reject`; verify the printed `scr_*` file against current source with `plan review verify`.
+Comments are informational, while current negative decisions report `blocking: true`. Changing the
+plan or a referenced campaign makes the old record stale. Positive release authorization still
+uses `plan approval`, which runs quality and participates in approval policies. See
+[PLAN_FEEDBACK.md](PLAN_FEEDBACK.md) for structured findings, exact-media review, and trust
+boundaries.
 
 Plan paths use forward slashes, remain relative to the plan file, and cannot escape its directory.
 `intendedAt` is optional; when present it must be RFC 3339 with an explicit offset or `Z`.
