@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.14.x` release line is supported. Earlier pre-productization and
+The latest `0.15.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -43,6 +43,9 @@ files selected by the invoking user. The supported workflow:
 - binds campaign approvals to the normalized campaign SHA-256 and plan approvals to the normalized
   plan plus every referenced campaign, optionally binds the normalized external content-policy
   SHA-256, then requires and re-runs that exact policy during verification;
+- validates bounded approval policies and deterministic multi-role approval sets, independently
+  reverifies each embedded plan approval, and rejects duplicate evidence, missing role/count
+  minimums, stale source, and mixed content-policy or exact-media bindings;
 - creates approved handoff packets exclusively and verifies their current plan/approval identity,
   embedded approval-bound policy, producer version, fixed directory shape, exact regenerated
   bytes, declared sizes and SHA-256 values, regular-file types, and file stability during reads;
@@ -79,6 +82,12 @@ Campaign and plan approval records do not prove reviewer identity. `approvedBy` 
 the files are not signed, and anyone with filesystem write access can replace source or approval
 data. Use Git permissions and protected review workflows, or a separately reviewed signing system,
 when authenticated authorization or non-repudiation is required.
+
+Approval policy roles and `distinctReviewers` also operate only on untrusted reviewer labels. A
+policy-satisfying set does not prove that separate humans, accounts, organizations, or devices
+participated, and it does not enforce authorization or separation of duties. Use protected branch
+rules, required reviews, and CODEOWNERS for authenticated organizational controls; see
+`docs/APPROVAL_POLICIES.md`.
 
 Content policies perform literal substring checks on final rendered `PlatformDraft.content` only.
 They do not understand meaning, context, spelling variants, images, media alt text, facts, laws, or

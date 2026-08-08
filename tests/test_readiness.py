@@ -10,12 +10,15 @@ import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 from samsarix_creative_spirals import (
+    ApprovalPolicy,
     CampaignPlanApproval,
+    CampaignPlanApprovalAssignment,
     CampaignPlanBundle,
     ConfigError,
     build_campaign_plan,
     build_campaign_plan_readiness,
     create_campaign_plan_approval,
+    create_campaign_plan_approval_set,
     export_campaign_plan_handoff,
     export_campaign_plan_readiness_html,
     initialize_campaign_plan_publication,
@@ -86,6 +89,50 @@ def test_readiness_without_evidence_is_schema_valid_and_ready_for_approval(
         "issues": len(payload["issues"]),
     }
     Draft202012Validator(load_readiness_schema(), format_checker=FormatChecker()).validate(payload)
+
+
+def test_readiness_accepts_policy_bound_approval_set(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle = _bundle(tmp_path, campaign_data)
+    first = _approval(bundle)
+    second = create_campaign_plan_approval(
+        bundle,
+        approved_by="Legal reviewer",
+        approved_at=datetime(2026, 8, 4, 12, 5, tzinfo=timezone.utc),
+    )
+    policy = ApprovalPolicy.from_dict(
+        {
+            "schemaVersion": 1,
+            "name": "Two-role launch review",
+            "minimumTotal": 2,
+            "distinctReviewers": True,
+            "requirements": [
+                {"role": "launch", "minimum": 1},
+                {"role": "legal", "minimum": 1},
+            ],
+        }
+    )
+    approval_set = create_campaign_plan_approval_set(
+        bundle,
+        policy,
+        (
+            CampaignPlanApprovalAssignment("launch", first),
+            CampaignPlanApprovalAssignment("legal", second),
+        ),
+    )
+
+    report = build_campaign_plan_readiness(
+        bundle,
+        approval=approval_set,
+        assessed_at=ASSESSMENT,
+    )
+
+    assert report.stage == "approved"
+    assert report.approval == approval_set
+    Draft202012Validator(load_readiness_schema(), format_checker=FormatChecker()).validate(
+        report.to_dict()
+    )
 
 
 def test_readiness_applies_quality_and_schedule_policies(

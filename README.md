@@ -4,8 +4,9 @@ Samsarix Creative Spirals is a local-first CLI and typed Python library that tur
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
 publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
-deterministic link attribution, portable content-policy profiles, and source-bound campaign and
-plan approval records make exact changes and guardrails visible before handoff.
+deterministic link attribution, portable content-policy profiles, source-bound campaign and plan
+approval records, and multi-role approval policies make exact changes and guardrails visible before
+handoff.
 Approved handoff packets then bind current source, approval metadata, exact rendered files, and
 optionally the exact reviewed JPEG/PNG bytes for offline verification immediately before downstream
 use. A handoff-bound publication ledger can
@@ -16,7 +17,7 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.14 alpha.** Approval-bound static-image packets, publication reconciliation,
+> Maturity: **0.15 alpha.** Deterministic multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
 > approvals, portable image metadata, approved handoff verification, and
@@ -156,6 +157,8 @@ samsarix-campaign schema
 samsarix-campaign schema --kind plan
 samsarix-campaign schema --kind approval
 samsarix-campaign schema --kind plan-approval
+samsarix-campaign schema --kind approval-policy
+samsarix-campaign schema --kind plan-approval-set
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --kind handoff
 samsarix-campaign schema --kind media-package
@@ -264,6 +267,24 @@ binds the complete normalized plan—including order, intended times, required p
 every referenced campaign—to one quality policy. Any of those changes makes verification return
 `4`. See [Plan review and approval](docs/PLAN_REVIEW.md) for the machine-readable contract, CI
 pattern, and trust boundary.
+
+When a launch needs several review disciplines, create independent plan approvals and collect them
+under a reusable policy:
+
+```bash
+samsarix-campaign plan approval collect examples/launch-plan.json \
+  --approval-policy examples/approval-policy.json \
+  --approval brand=brand.approval.json \
+  --approval release-owner=release-owner.approval.json \
+  --output launch-plan.approval-set.json
+samsarix-campaign plan approval verify examples/launch-plan.json launch-plan.approval-set.json
+```
+
+The policy can require per-role and total minimums plus distinct reviewer labels. Each embedded
+approval is independently reverified, and the completed `scas_*` set works anywhere a plan approval
+is accepted, including handoff, readiness, and publication workflows. Reviewer labels and roles
+remain unsigned metadata; repository controls provide the optional authenticated collaboration
+boundary. See [Approval policies and quorum evidence](docs/APPROVAL_POLICIES.md).
 
 When a plan references real images and review must cover their exact pixels, create the plan
 approval with `--include-media`. Samsarix resolves each reference beneath its campaign directory,
@@ -381,13 +402,14 @@ samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--js
 samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--publication PATH] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff|publication] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--include-media] [--output PATH] [--json]
+samsarix-campaign plan approval collect PLAN --approval-policy POLICY --approval ROLE=PATH [--approval ROLE=PATH ...] [--policy CONTENT_POLICY] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--policy POLICY] [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
 samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|adapter|handoff|media-package|publication|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|adapter|handoff|media-package|publication|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
@@ -448,11 +470,12 @@ console command. The package has no third-party runtime dependencies.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
+- `approval_policy.py` validates reusable role/count policies and collects deterministic multi-reviewer approval evidence.
 - `media_package.py` captures, validates, indexes, and approval-binds opt-in static image bytes.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
 - `publication.py` initializes and verifies handoff-bound operator outcome ledgers.
 - `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
-- `schema.py` exposes campaign, plan, approval, media-package, handoff, publication, readiness, and adapter JSON Schemas bundled in the wheel.
+- `schema.py` exposes all authoring and evidence JSON Schemas bundled in the wheel, including approval policies and sets.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -479,6 +502,8 @@ for trust boundaries and failure behavior.
 - Local approval labels are not authenticated and approval files are forgeable by anyone who can
   write them. Use repository permissions, pull-request review, or a separately designed signing
   system when verified identity is required.
+- Approval-set roles and distinct-reviewer checks operate on unsigned labels; they enforce a local
+  artifact contract, not human identity, authorization, separation of duties, or non-repudiation.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
@@ -490,7 +515,7 @@ for trust boundaries and failure behavior.
   they do not prove provider acceptance, remote visibility, authorship, or continued availability.
 - Media transformation, per-account capabilities and mention resolution, cryptographic approvals,
   hosted collaboration, network publishing, click collection, and analytics reporting are outside
-  the 0.14 scope. Calendar, readiness, and publication files record
+  the 0.15 scope. Calendar, readiness, and publication files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

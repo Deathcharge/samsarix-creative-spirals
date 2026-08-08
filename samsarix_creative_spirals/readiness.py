@@ -12,6 +12,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
+from .approval_policy import (
+    CampaignPlanApprovalEvidence,
+    CampaignPlanApprovalSet,
+    verify_campaign_plan_approval_evidence,
+)
 from .handoff import (
     CampaignPlanHandoffPacket,
     verify_campaign_plan_handoff,
@@ -19,7 +24,6 @@ from .handoff import (
 from .media_package import CampaignPlanMedia
 from .models import ConfigError
 from .policy import ContentPolicy, ContentPolicyBinding
-from .plan_review import CampaignPlanApproval, verify_campaign_plan_approval
 from .plans import CampaignPlanBundle, PlanIssue, check_campaign_plan
 from .publication import (
     CampaignPlanPublication,
@@ -109,7 +113,7 @@ class CampaignPlanReadiness:
     schedule_complete: bool
     schedule_ready: bool
     approval_status: EvidenceStatus
-    approval: CampaignPlanApproval | None
+    approval: CampaignPlanApprovalEvidence | None
     handoff_status: EvidenceStatus
     handoff_id: str | None
     publication_status: PublicationEvidenceStatus
@@ -195,7 +199,7 @@ class _ScheduleAssessment:
 
 @dataclass(frozen=True, slots=True)
 class _EvidenceAssessment:
-    approval: CampaignPlanApproval | None
+    approval: CampaignPlanApprovalEvidence | None
     approval_status: EvidenceStatus
     approval_valid: bool
     handoff_status: EvidenceStatus
@@ -270,7 +274,7 @@ def _assess_schedule(
 
 def _assess_evidence(
     bundle: CampaignPlanBundle,
-    approval: CampaignPlanApproval | None,
+    approval: CampaignPlanApprovalEvidence | None,
     handoff: CampaignPlanHandoffPacket | None,
     *,
     content_policy: ContentPolicy | None = None,
@@ -299,7 +303,7 @@ def _assess_evidence(
     approval_status: EvidenceStatus = "not-provided"
     if selected_approval is not None:
         effective_media = handoff.media if handoff is not None else media
-        approval_check = verify_campaign_plan_approval(
+        approval_check = verify_campaign_plan_approval_evidence(
             bundle,
             selected_approval,
             content_policy=content_policy,
@@ -433,7 +437,7 @@ def _select_stage(
 def build_campaign_plan_readiness(
     bundle: CampaignPlanBundle,
     *,
-    approval: CampaignPlanApproval | None = None,
+    approval: CampaignPlanApprovalEvidence | None = None,
     handoff: CampaignPlanHandoffPacket | None = None,
     publication: CampaignPlanPublication | None = None,
     assessed_at: datetime | None = None,
@@ -580,12 +584,20 @@ def render_campaign_plan_readiness_html(
         for planned in bundle.items
     )
     stage_label = report.stage.replace("-", " ").title()
-    approval_detail = (
-        f"{report.approval.approved_by} at "
-        f"{report.approval.to_dict()['approvedAt']} ({report.approval.quality_policy})"
-        if report.approval
-        else "Not provided"
-    )
+    if isinstance(report.approval, CampaignPlanApprovalSet):
+        approval_detail = (
+            f"{len(report.approval.approvals)} reviewers; "
+            f"{report.approval.approval_policy.name} "
+            f"({report.approval.approval_policy.policy_id}); latest at "
+            f"{_format_utc(report.approval.approved_at)}"
+        )
+    elif report.approval is not None:
+        approval_detail = (
+            f"{report.approval.approved_by} at "
+            f"{report.approval.to_dict()['approvedAt']} ({report.approval.quality_policy})"
+        )
+    else:
+        approval_detail = "Not provided"
     content_policy_detail = (
         f"{report.content_policy.name} ({report.content_policy.policy_id})"
         if report.content_policy

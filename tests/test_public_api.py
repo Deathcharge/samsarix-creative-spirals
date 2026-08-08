@@ -8,11 +8,13 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.14.0"
+    assert package.__version__ == "0.15.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
         "ApprovalIssue",
+        "ApprovalPolicy",
+        "ApprovalRequirement",
         "CampaignApproval",
         "CampaignBundle",
         "CampaignCheck",
@@ -22,6 +24,8 @@ def test_public_api_is_deliberate() -> None:
         "CampaignFieldChange",
         "CampaignPlan",
         "CampaignPlanApproval",
+        "CampaignPlanApprovalAssignment",
+        "CampaignPlanApprovalSet",
         "CampaignPlanBundle",
         "CampaignPlanCheck",
         "CampaignPlanDiff",
@@ -45,6 +49,7 @@ def test_public_api_is_deliberate() -> None:
         "LinkTracking",
         "MediaReference",
         "PlanApprovalCheck",
+        "PlanApprovalSetCheck",
         "PlanFieldChange",
         "PlanItemChange",
         "PlanItemSnapshot",
@@ -66,23 +71,29 @@ def test_public_api_is_deliberate() -> None:
         "collect_campaign_plan_media",
         "create_campaign_approval",
         "create_campaign_plan_approval",
+        "create_campaign_plan_approval_set",
         "diff_campaigns",
         "diff_campaign_plans",
         "export_campaign",
         "export_campaign_approval",
         "export_campaign_plan",
         "export_campaign_plan_approval",
+        "export_campaign_plan_approval_set",
         "export_campaign_plan_handoff",
         "export_campaign_plan_publication",
         "export_campaign_plan_readiness_html",
         "evaluate_content_policy",
         "initialize_campaign_plan_publication",
         "load_adapter_schema",
+        "load_approval_policy",
+        "load_approval_policy_schema",
         "load_approval_schema",
         "load_campaign",
         "load_campaign_approval",
         "load_campaign_plan",
         "load_campaign_plan_approval",
+        "load_campaign_plan_approval_evidence",
+        "load_campaign_plan_approval_set",
         "load_campaign_plan_handoff",
         "load_campaign_plan_media",
         "load_campaign_plan_publication",
@@ -92,6 +103,7 @@ def test_public_api_is_deliberate() -> None:
         "load_handoff_schema",
         "load_media_package_schema",
         "load_plan_approval_schema",
+        "load_plan_approval_set_schema",
         "load_plan_schema",
         "load_publication_schema",
         "load_readiness_schema",
@@ -101,6 +113,8 @@ def test_public_api_is_deliberate() -> None:
         "render_plan_calendar",
         "verify_campaign_approval",
         "verify_campaign_plan_approval",
+        "verify_campaign_plan_approval_evidence",
+        "verify_campaign_plan_approval_set",
         "verify_campaign_plan_handoff",
         "verify_campaign_plan_publication",
     ]
@@ -252,6 +266,18 @@ def test_packaged_plan_approval_schema_is_available() -> None:
         "errors-only",
         "warnings-as-errors",
     ]
+
+
+def test_packaged_approval_policy_schemas_are_available() -> None:
+    policy = package.load_approval_policy_schema()
+    approval_set = package.load_plan_approval_set_schema()
+
+    Draft202012Validator.check_schema(policy)
+    Draft202012Validator.check_schema(approval_set)
+    assert policy["properties"]["requirements"]["maxItems"] == 20
+    assert policy["properties"]["minimumTotal"]["maximum"] == 50
+    assert approval_set["properties"]["artifactType"]["const"] == "plan-approval-set"
+    assert approval_set["properties"]["approvals"]["maxItems"] == 50
 
 
 def test_packaged_adapter_schema_is_available() -> None:

@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here.
 
+## 0.15.0 - 2026-08-08
+
+- Added reusable approval-policy v1 profiles with role minimums, a total minimum, optional
+  distinct-reviewer-label enforcement, deterministic `scap_*` identities, strict bounded parsing,
+  a bundled Draft 2020-12 schema, and a realistic example.
+- Added deterministic `plan-approval-set` v1 evidence and `plan approval collect`, which assigns
+  independently created plan approvals to policy roles, independently reverifies every approval,
+  rejects mixed source/content-policy/media bindings, and derives a canonical `scas_*` identity.
+- Extended plan approval verification, approved handoffs, readiness JSON/HTML, publication
+  initialization, public typed APIs, schema output, and installed-wheel CI to accept either legacy
+  single approval evidence or a policy-satisfying approval set.
+- Kept the handoff v1 shape and fixed `approval.json` packet path compatible while documenting that
+  reviewer labels and roles remain unsigned metadata rather than authenticated identity or
+  authorization.
+
 ## 0.14.0 - 2026-08-02
 
 - Added opt-in `--include-media` plan approvals that bind exact campaign-relative static JPEG/PNG

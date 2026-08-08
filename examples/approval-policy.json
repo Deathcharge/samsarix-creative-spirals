@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "name": "Brand and release-owner review",
+  "minimumTotal": 2,
+  "distinctReviewers": true,
+  "requirements": [
+    {
+      "role": "brand",
+      "minimum": 1
+    },
+    {
+      "role": "release-owner",
+      "minimum": 1
+    }
+  ]
+}

@@ -43,6 +43,27 @@ check, approval creation, and every later verification. Approval v1 then include
 `contentPolicy` identity; omission or substitution after review is an explicit invalid result. See
 [`POLICIES.md`](POLICIES.md).
 
+## Multi-role review
+
+For separate brand, legal, accessibility, regional, or release-owner review, each reviewer creates
+an ordinary approval of the same plan. `plan approval collect` then assigns those records to a
+bounded approval policy and emits one deterministic `plan-approval-set` document. The verifier
+checks every embedded approval independently; collecting a set cannot turn stale or failed evidence
+into valid evidence.
+
+```bash
+samsarix-campaign plan approval collect launch-plan.json \
+  --approval-policy approval-policy.json \
+  --approval brand=brand.approval.json \
+  --approval release-owner=release-owner.approval.json \
+  --output launch-plan.approval-set.json
+```
+
+The completed set is accepted by approval verification, handoff, readiness, and publication flows
+without changing the legacy single-approval record. See
+[`APPROVAL_POLICIES.md`](APPROVAL_POLICIES.md) for the policy/set schemas, exact-media and
+content-policy rules, determinism, limits, and unauthenticated-label boundary.
+
 ## Semantic diff contract
 
 JSON output uses `schemaVersion: 1` and includes both plan IDs, both full source hashes, ordered
@@ -100,6 +121,6 @@ position:
 - [GitHub's protected-branch documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
   supports required reviews and can dismiss approvals when the reviewed diff changes.
 
-Samsarix implements the portable artifact and stale-state checks. It deliberately does not
-implement user accounts, notifications, role management, cryptographic identity, scheduling, or
-publishing.
+Samsarix implements the portable artifact, multi-role count policy, and stale-state checks. It
+deliberately does not implement user accounts, notifications, authenticated role membership,
+cryptographic identity, scheduling, or publishing.

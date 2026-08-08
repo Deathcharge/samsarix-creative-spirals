@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Any
 
 from ._version import __version__
+from .approval_policy import (
+    CampaignPlanApprovalEvidence,
+    load_campaign_plan_approval_evidence,
+    verify_campaign_plan_approval_evidence,
+)
 from .media_package import (
     CampaignPlanMedia,
     CollectedCampaignPlanMedia,
@@ -25,11 +30,6 @@ from .media_package import (
     validate_collected_campaign_plan_media,
 )
 from .models import ConfigError
-from .plan_review import (
-    CampaignPlanApproval,
-    load_campaign_plan_approval,
-    verify_campaign_plan_approval,
-)
 from .policy import ContentPolicy, load_content_policy
 from .plans import (
     CampaignPlanBundle,
@@ -255,7 +255,7 @@ class CampaignPlanHandoffPacket:
 
     root: Path
     handoff: CampaignPlanHandoff
-    approval: CampaignPlanApproval
+    approval: CampaignPlanApprovalEvidence
     content_policy: ContentPolicy | None = None
     media: CampaignPlanMedia | None = None
 
@@ -291,7 +291,7 @@ class HandoffCheck:
         }
 
 
-def _approval_payload(approval: CampaignPlanApproval) -> bytes:
+def _approval_payload(approval: CampaignPlanApprovalEvidence) -> bytes:
     return (json.dumps(approval.to_dict(), ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
@@ -308,7 +308,7 @@ def _handoff_payload(handoff: CampaignPlanHandoff) -> bytes:
 
 def _handoff_artifact_payloads(
     bundle: CampaignPlanBundle,
-    approval: CampaignPlanApproval,
+    approval: CampaignPlanApprovalEvidence,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
     media: CampaignPlanMedia | None = None,
@@ -345,7 +345,7 @@ def _canonical_handoff_core(core: dict[str, Any]) -> bytes:
 
 def _assemble_handoff(
     bundle: CampaignPlanBundle,
-    approval: CampaignPlanApproval,
+    approval: CampaignPlanApprovalEvidence,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
     media: CampaignPlanMedia | None = None,
@@ -376,7 +376,7 @@ def _assemble_handoff(
 
 def build_campaign_plan_handoff(
     bundle: CampaignPlanBundle,
-    approval: CampaignPlanApproval,
+    approval: CampaignPlanApprovalEvidence,
     *,
     generated_at: datetime,
     content_policy: ContentPolicy | None = None,
@@ -388,7 +388,7 @@ def build_campaign_plan_handoff(
         issues.append("generated_at must include timezone information")
     if approval.approved_at.utcoffset() is None:
         issues.append("approval approved_at must include timezone information")
-    approval_check = verify_campaign_plan_approval(
+    approval_check = verify_campaign_plan_approval_evidence(
         bundle, approval, content_policy=content_policy, media=media
     )
     if not approval_check.valid:
@@ -407,7 +407,7 @@ def build_campaign_plan_handoff(
 
 def export_campaign_plan_handoff(
     bundle: CampaignPlanBundle,
-    approval: CampaignPlanApproval,
+    approval: CampaignPlanApprovalEvidence,
     output_root: str | Path = "handoff-outbox",
     *,
     generated_at: datetime | None = None,
@@ -475,7 +475,7 @@ def load_campaign_plan_handoff(path: str | Path) -> CampaignPlanHandoffPacket:
     handoff_path = _require_packet_json(root, "handoff.json")
     approval_path = _require_packet_json(root, "approval.json")
     handoff = CampaignPlanHandoff.from_dict(_load_json_object(handoff_path, kind="handoff"))
-    approval = load_campaign_plan_approval(approval_path)
+    approval = load_campaign_plan_approval_evidence(approval_path)
     content_policy_path = root / "content-policy.json"
     content_policy = None
     if content_policy_path.exists() or content_policy_path.is_symlink():
@@ -664,7 +664,7 @@ def _check_handoff_identity_and_order(
                 "Packet root must remain a non-symbolic-link directory.",
             )
         )
-    approval_check = verify_campaign_plan_approval(
+    approval_check = verify_campaign_plan_approval_evidence(
         bundle,
         packet.approval,
         content_policy=content_policy,

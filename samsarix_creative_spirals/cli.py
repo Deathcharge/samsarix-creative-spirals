@@ -12,6 +12,16 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
+from .approval_policy import (
+    CampaignPlanApprovalAssignment,
+    PlanApprovalEvidenceCheck,
+    PlanApprovalSetCheck,
+    create_campaign_plan_approval_set,
+    export_campaign_plan_approval_set,
+    load_approval_policy,
+    load_campaign_plan_approval_evidence,
+    verify_campaign_plan_approval_evidence,
+)
 from .handoff import (
     HandoffCheck,
     export_campaign_plan_handoff,
@@ -31,12 +41,10 @@ from .plans import (
 )
 from .plan_review import (
     CampaignPlanDiff,
-    PlanApprovalCheck,
     create_campaign_plan_approval,
     diff_campaign_plans,
     export_campaign_plan_approval,
     load_campaign_plan_approval,
-    verify_campaign_plan_approval,
 )
 from .quality import check_campaign
 from .publication import (
@@ -63,12 +71,14 @@ from .review import (
 )
 from .schema import (
     load_adapter_schema,
+    load_approval_policy_schema,
     load_approval_schema,
     load_campaign_schema,
     load_content_policy_schema,
     load_handoff_schema,
     load_media_package_schema,
     load_plan_approval_schema,
+    load_plan_approval_set_schema,
     load_plan_schema,
     load_publication_schema,
     load_readiness_schema,
@@ -183,12 +193,20 @@ def _print_plan_diff(result: CampaignPlanDiff) -> None:
                 print(f"  draft {draft_change.platform}: {draft_change.change} ({draft_fields})")
 
 
-def _print_plan_approval_check(result: PlanApprovalCheck) -> None:
+def _print_plan_approval_check(result: PlanApprovalEvidenceCheck) -> None:
     status = "valid" if result.valid else "invalid"
-    print(
-        f"Plan approval {status} for {result.plan_id}: "
-        f"{result.approval.approved_by} at {result.approval.to_dict()['approvedAt']}"
-    )
+    if isinstance(result, PlanApprovalSetCheck):
+        approval_set = result.approval_set
+        print(
+            f"Plan approval set {status} for {result.plan_id}: "
+            f"{approval_set.approval_set_id} with {len(approval_set.approvals)} reviewers"
+        )
+    else:
+        approval = result.approval
+        print(
+            f"Plan approval {status} for {result.plan_id}: "
+            f"{approval.approved_by} at {approval.to_dict()['approvedAt']}"
+        )
     for issue in result.issues:
         print(f"error: {issue.message}")
 
@@ -442,13 +460,13 @@ def _plan_approval_create_command(args: argparse.Namespace) -> int:
 def _plan_approval_verify_command(args: argparse.Namespace) -> int:
     plan_path = Path(args.plan)
     bundle = build_campaign_plan(load_campaign_plan(plan_path))
-    approval = load_campaign_plan_approval(args.approval)
+    approval = load_campaign_plan_approval_evidence(args.approval)
     media = (
         collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
         if approval.media is not None
         else None
     )
-    result = verify_campaign_plan_approval(
+    result = verify_campaign_plan_approval_evidence(
         bundle,
         approval,
         content_policy=_optional_content_policy(args),
@@ -461,10 +479,48 @@ def _plan_approval_verify_command(args: argparse.Namespace) -> int:
     return 0 if result.valid else 4
 
 
+def _plan_approval_collect_command(args: argparse.Namespace) -> int:
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
+    assignments: list[CampaignPlanApprovalAssignment] = []
+    for value in args.approvals:
+        role, separator, path = value.partition("=")
+        if not separator or not role or not path:
+            raise ConfigError("each --approval must use ROLE=PATH")
+        assignments.append(CampaignPlanApprovalAssignment(role, load_campaign_plan_approval(path)))
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if any(assignment.approval.media is not None for assignment in assignments)
+        else None
+    )
+    approval_set = create_campaign_plan_approval_set(
+        bundle,
+        load_approval_policy(args.approval_policy),
+        assignments,
+        content_policy=_optional_content_policy(args),
+        media=media,
+    )
+    output = Path(args.output) if args.output else Path(f"{args.plan}.approval-set.json")
+    path = export_campaign_plan_approval_set(approval_set, output)
+    if args.json:
+        _json_print({"path": str(path), "approvalSet": approval_set.to_dict()})
+    else:
+        print(
+            f"Collected {len(approval_set.approvals)} approvals into "
+            f"{approval_set.approval_set_id} in {path}"
+        )
+        print(
+            f"Approval policy: {approval_set.approval_policy.name} "
+            f"({approval_set.approval_policy.policy_id})"
+        )
+        print("Reviewer labels and roles are local metadata, not authenticated identities.")
+    return 0
+
+
 def _plan_handoff_create_command(args: argparse.Namespace) -> int:
     plan_path = Path(args.plan)
     bundle = build_campaign_plan(load_campaign_plan(plan_path))
-    approval = load_campaign_plan_approval(args.approval)
+    approval = load_campaign_plan_approval_evidence(args.approval)
     media = (
         collect_campaign_plan_media(bundle, plan_path.resolve().parent)
         if approval.media is not None
@@ -554,7 +610,7 @@ def _plan_publication_verify_command(args: argparse.Namespace) -> int:
 def _plan_status_command(args: argparse.Namespace) -> int:
     plan_path = Path(args.plan)
     bundle = build_campaign_plan(load_campaign_plan(plan_path))
-    approval = load_campaign_plan_approval(args.approval) if args.approval else None
+    approval = load_campaign_plan_approval_evidence(args.approval) if args.approval else None
     handoff = load_campaign_plan_handoff(args.handoff) if args.handoff else None
     publication = load_campaign_plan_publication(args.publication) if args.publication else None
     assessed_at = parse_approval_timestamp(args.assessed_at) if args.assessed_at else None
@@ -591,12 +647,14 @@ def _schema_command(args: argparse.Namespace) -> int:
     schema_loaders = {
         "adapter": load_adapter_schema,
         "approval": load_approval_schema,
+        "approval-policy": load_approval_policy_schema,
         "campaign": load_campaign_schema,
         "content-policy": load_content_policy_schema,
         "handoff": load_handoff_schema,
         "media-package": load_media_package_schema,
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
+        "plan-approval-set": load_plan_approval_set_schema,
         "publication": load_publication_schema,
         "readiness": load_readiness_schema,
     }
@@ -883,6 +941,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_approval_create_parser.set_defaults(handler=_plan_approval_create_command)
 
+    plan_approval_collect_parser = plan_approval_subparsers.add_parser(
+        "collect", help="combine independent approvals under a reusable role policy"
+    )
+    plan_approval_collect_parser.add_argument("plan")
+    plan_approval_collect_parser.add_argument(
+        "--approval-policy",
+        required=True,
+        help="approval-policy JSON defining roles, minima, and reviewer distinctness",
+    )
+    plan_approval_collect_parser.add_argument(
+        "--approval",
+        dest="approvals",
+        action="append",
+        required=True,
+        metavar="ROLE=PATH",
+        help="assign one existing single-reviewer approval to a role; repeat as needed",
+    )
+    plan_approval_collect_parser.add_argument(
+        "--policy", help="exact content policy bound to every approval, when present"
+    )
+    plan_approval_collect_parser.add_argument(
+        "--output", help="new approval-set file (default: PLAN.approval-set.json)"
+    )
+    plan_approval_collect_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_approval_collect_parser.set_defaults(handler=_plan_approval_collect_command)
+
     plan_approval_verify_parser = plan_approval_subparsers.add_parser(
         "verify", help="verify approval against the current plan and its quality policy"
     )
@@ -996,9 +1082,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=(
             "campaign",
             "content-policy",
+            "approval-policy",
             "plan",
             "approval",
             "plan-approval",
+            "plan-approval-set",
             "publication",
             "adapter",
             "handoff",
