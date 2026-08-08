@@ -18,6 +18,11 @@ The first form is informational. `--exit-code` returns `4` when semantic changes
 an explicit review decision easy to require in CI. Equivalent normalized spelling, such as the
 same RFC 3339 instant expressed with another offset, does not create noise.
 
+If a reviewer has comments or cannot approve the current revision, create an immutable `plan-review`
+record with `comment`, `request-changes`, or `reject`. Its findings bind to the exact plan/source
+and can optionally bind exact image bytes. Positive authorization remains in the approval contract.
+See [`PLAN_FEEDBACK.md`](PLAN_FEEDBACK.md).
+
 After the aggregate quality gate and human review pass, create a new approval record:
 
 ```bash

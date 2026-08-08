@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.16.0 - 2026-08-08
+
+- Added immutable `plan-review` v1 records for source-bound `comment`, `request-changes`, and
+  `reject` feedback without conflating negative review state with quality-gated approval.
+- Added deterministic `scr_*` identities and full canonical hashes, one to fifty bounded findings,
+  optional item/platform targets and suggestions, exclusive export, strict loading, tamper
+  detection, and stale-source verification.
+- Added optional exact JPEG/PNG media binding so visual feedback can identify the same bounded
+  `scm_*` snapshot used by exact-media approval and handoff workflows.
+- Added `plan review create/verify`, stable valid/blocking JSON semantics and exit codes, a public
+  typed API, bundled Draft 2020-12 schema, installed-wheel CI journey, and security/adoption docs.
+- Documented current Buffer, Sprout Social, and Planable feedback patterns, the unsigned reviewer
+  label boundary, and canonical CSV import as the next separate onboarding milestone.
+
 ## 0.15.0 - 2026-08-08
 
 - Added reusable approval-policy v1 profiles with role minimums, a total minimum, optional

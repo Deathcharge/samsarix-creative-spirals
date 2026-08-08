@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-review-v1.schema.json",
+  "title": "Samsarix Creative Spirals campaign plan review",
+  "description": "Immutable, non-cryptographic feedback bound to one exact campaign-plan revision and optional exact-media snapshot.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "artifactType",
+    "reviewId",
+    "reviewHash",
+    "planId",
+    "sourceHash",
+    "decision",
+    "reviewedBy",
+    "reviewedAt",
+    "findings"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-review"},
+    "reviewId": {"type": "string", "pattern": "^scr_[0-9a-f]{12}$"},
+    "reviewHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+    "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decision": {"enum": ["comment", "request-changes", "reject"]},
+    "reviewedBy": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120,
+      "pattern": "^(?=.*\\S)[^\\r\\n\\t\\u0000-\\u001F\\u007F-\\u009F\\uD800-\\uDFFF]*$"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/finding"}
+    },
+    "note": {"$ref": "#/$defs/multiline500"},
+    "media": {"$ref": "#/$defs/mediaBinding"}
+  },
+  "$defs": {
+    "multiline500": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500,
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F-\\u009F\\uD800-\\uDFFF]*$"
+    },
+    "multiline1000": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "pattern": "^(?=.*\\S)[^\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F-\\u009F\\uD800-\\uDFFF]*$"
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["message"],
+      "properties": {
+        "message": {"$ref": "#/$defs/multiline1000"},
+        "item": {"type": "integer", "minimum": 1, "maximum": 100},
+        "platform": {"enum": ["x", "linkedin", "bluesky", "mastodon", "discord"]},
+        "suggestion": {"$ref": "#/$defs/multiline1000"}
+      },
+      "dependentRequired": {"platform": ["item"]}
+    },
+    "mediaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mediaId", "mediaHash", "assetCount", "totalBytes"],
+      "properties": {
+        "mediaId": {"type": "string", "pattern": "^scm_[0-9a-f]{12}$"},
+        "mediaHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "assetCount": {"type": "integer", "minimum": 1, "maximum": 400},
+        "totalBytes": {"type": "integer", "minimum": 1, "maximum": 1000000}
+      }
+    }
+  }
+}

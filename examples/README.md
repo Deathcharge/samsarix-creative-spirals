@@ -79,6 +79,7 @@ samsarix-campaign plan validate examples/launch-plan.json
 samsarix-campaign plan preview examples/launch-plan.json
 samsarix-campaign plan check examples/launch-plan.json
 samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json --json --exit-code
+samsarix-campaign plan review create examples/launch-plan.json --decision comment --by "Editorial reviewer" --finding "Consider a shorter opening sentence."
 samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
 samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
 samsarix-campaign plan handoff create examples/launch-plan.json examples/launch-plan.json.approval.json --output handoff-outbox
@@ -104,6 +105,11 @@ samsarix-campaign plan approval verify examples/launch-plan.json launch-plan.app
 
 The example policy requires distinct reviewer labels, but labels and role assignments remain
 unsigned local metadata. See `docs/APPROVAL_POLICIES.md` before using the pattern as a release gate.
+
+The review command writes a new deterministic `scr_*` sidecar for the exact example revision. Use
+`request-changes` or `reject` for blocking feedback and add `--item`, `--platform`, or
+`--suggestion` when useful. It does not approve the plan, notify a user, or overwrite another
+record. See `docs/PLAN_FEEDBACK.md`.
 
 The plan export contains a manifest, v2 adapter JSON, an RFC 5545 calendar, and one
 publisher-neutral CSV for each used platform. It records intended UTC times but never schedules or

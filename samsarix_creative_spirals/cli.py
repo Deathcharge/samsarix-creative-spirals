@@ -46,6 +46,13 @@ from .plan_review import (
     export_campaign_plan_approval,
     load_campaign_plan_approval,
 )
+from .plan_feedback import (
+    PlanReviewFinding,
+    create_campaign_plan_review,
+    export_campaign_plan_review,
+    load_campaign_plan_review,
+    verify_campaign_plan_review,
+)
 from .quality import check_campaign
 from .publication import (
     PublicationCheck,
@@ -79,6 +86,7 @@ from .schema import (
     load_media_package_schema,
     load_plan_approval_schema,
     load_plan_approval_set_schema,
+    load_plan_review_schema,
     load_plan_schema,
     load_publication_schema,
     load_readiness_schema,
@@ -517,6 +525,79 @@ def _plan_approval_collect_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _plan_review_create_command(args: argparse.Namespace) -> int:
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
+    if args.suggestion is not None and len(args.findings) != 1:
+        raise ConfigError("--suggestion requires exactly one --finding")
+    findings = tuple(
+        PlanReviewFinding(
+            message=message,
+            item=args.item,
+            platform=args.platform,
+            suggestion=args.suggestion if index == 0 else None,
+        )
+        for index, message in enumerate(args.findings)
+    )
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if args.include_media
+        else None
+    )
+    reviewed_at = parse_approval_timestamp(args.reviewed_at) if args.reviewed_at else None
+    review = create_campaign_plan_review(
+        bundle,
+        decision=args.decision,
+        reviewed_by=args.reviewed_by,
+        reviewed_at=reviewed_at,
+        findings=findings,
+        note=args.note,
+        media=media,
+    )
+    output = (
+        Path(args.output) if args.output else Path(f"{args.plan}.{review.review_id}.review.json")
+    )
+    path = export_campaign_plan_review(review, output)
+    if args.json:
+        _json_print({"path": str(path), "review": review.to_dict()})
+    else:
+        print(
+            f"Recorded {review.decision} review {review.review_id} for "
+            f"{bundle.plan_id} in {path}"
+        )
+        if review.media is not None:
+            print(
+                f"Exact media: {review.media.media_id} "
+                f"({review.media.asset_count} references, {review.media.total_bytes} bytes)"
+            )
+        print("This record is source-bound feedback metadata, not authenticated identity.")
+    return 0
+
+
+def _plan_review_verify_command(args: argparse.Namespace) -> int:
+    plan_path = Path(args.plan)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
+    review = load_campaign_plan_review(args.review)
+    media = (
+        collect_campaign_plan_media(bundle, plan_path.resolve().parent).index
+        if review.media is not None
+        else None
+    )
+    result = verify_campaign_plan_review(bundle, review, media=media)
+    if args.json:
+        _json_print(result.to_dict())
+    elif result.valid:
+        state = "blocking" if result.blocking else "informational"
+        print(f"Review valid for {bundle.plan_id}: {review.decision} ({state})")
+    else:
+        print(f"Review invalid for {bundle.plan_id}")
+        for issue in result.issues:
+            print(f"- {issue.code}: {issue.message}")
+    if not result.valid or (args.fail_on_blocking and result.blocking):
+        return 4
+    return 0
+
+
 def _plan_handoff_create_command(args: argparse.Namespace) -> int:
     plan_path = Path(args.plan)
     bundle = build_campaign_plan(load_campaign_plan(plan_path))
@@ -655,6 +736,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
         "plan-approval-set": load_plan_approval_set_schema,
+        "plan-review": load_plan_review_schema,
         "publication": load_publication_schema,
         "readiness": load_readiness_schema,
     }
@@ -982,6 +1064,75 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_approval_verify_parser.set_defaults(handler=_plan_approval_verify_command)
 
+    plan_review_parser = plan_subparsers.add_parser(
+        "review", help="record or verify source-bound comments and negative review decisions"
+    )
+    plan_review_subparsers = plan_review_parser.add_subparsers(dest="plan_review_command")
+    plan_review_create_parser = plan_review_subparsers.add_parser(
+        "create", help="write immutable feedback for the current exact plan revision"
+    )
+    plan_review_create_parser.add_argument("plan")
+    plan_review_create_parser.add_argument(
+        "--decision",
+        required=True,
+        choices=("comment", "request-changes", "reject"),
+        help="review outcome; positive authorization stays in plan approval",
+    )
+    plan_review_create_parser.add_argument(
+        "--by", dest="reviewed_by", required=True, help="human-readable reviewer label"
+    )
+    plan_review_create_parser.add_argument(
+        "--at", dest="reviewed_at", help="explicit RFC 3339 review time (default: now)"
+    )
+    plan_review_create_parser.add_argument(
+        "--finding",
+        dest="findings",
+        action="append",
+        required=True,
+        help="one bounded feedback message; repeat for additional findings",
+    )
+    plan_review_create_parser.add_argument(
+        "--item", type=int, help="optional plan item number targeted by every finding"
+    )
+    plan_review_create_parser.add_argument(
+        "--platform",
+        choices=("x", "linkedin", "bluesky", "mastodon", "discord"),
+        help="optional platform target; requires --item",
+    )
+    plan_review_create_parser.add_argument(
+        "--suggestion", help="optional replacement suggestion when exactly one finding is supplied"
+    )
+    plan_review_create_parser.add_argument(
+        "--note", help="optional overall review context (maximum 500 chars)"
+    )
+    plan_review_create_parser.add_argument(
+        "--include-media",
+        action="store_true",
+        help="inspect and bind exact referenced JPEG/PNG bytes to this review",
+    )
+    plan_review_create_parser.add_argument(
+        "--output", help="new review file (default includes the deterministic review ID)"
+    )
+    plan_review_create_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_review_create_parser.set_defaults(handler=_plan_review_create_command)
+
+    plan_review_verify_parser = plan_review_subparsers.add_parser(
+        "verify", help="verify a review against current plan source and exact media"
+    )
+    plan_review_verify_parser.add_argument("plan")
+    plan_review_verify_parser.add_argument("review")
+    plan_review_verify_parser.add_argument(
+        "--fail-on-blocking",
+        action="store_true",
+        help="return exit code 4 for a current request-changes or reject decision",
+    )
+    plan_review_verify_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_review_verify_parser.set_defaults(handler=_plan_review_verify_command)
+
     plan_handoff_parser = plan_subparsers.add_parser(
         "handoff", help="create or verify an approved offline handoff packet"
     )
@@ -1087,6 +1238,7 @@ def build_parser() -> argparse.ArgumentParser:
             "approval",
             "plan-approval",
             "plan-approval-set",
+            "plan-review",
             "publication",
             "adapter",
             "handoff",

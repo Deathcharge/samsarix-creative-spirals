@@ -3,7 +3,8 @@
 Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
-publisher-neutral CSV, and portable calendars. Portable image references, semantic diffs, and
+publisher-neutral CSV, and portable calendars. Portable image references, source-bound review
+feedback, semantic diffs, and
 deterministic link attribution, portable content-policy profiles, source-bound campaign and plan
 approval records, and multi-role approval policies make exact changes and guardrails visible before
 handoff.
@@ -17,7 +18,8 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.15 alpha.** Deterministic multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
+> Maturity: **0.16 alpha.** Source-bound comments and negative review decisions, deterministic
+> multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
 > approvals, portable image metadata, approved handoff verification, and
@@ -159,6 +161,7 @@ samsarix-campaign schema --kind approval
 samsarix-campaign schema --kind plan-approval
 samsarix-campaign schema --kind approval-policy
 samsarix-campaign schema --kind plan-approval-set
+samsarix-campaign schema --kind plan-review
 samsarix-campaign schema --kind adapter
 samsarix-campaign schema --kind handoff
 samsarix-campaign schema --kind media-package
@@ -286,6 +289,27 @@ is accepted, including handoff, readiness, and publication workflows. Reviewer l
 remain unsigned metadata; repository controls provide the optional authenticated collaboration
 boundary. See [Approval policies and quorum evidence](docs/APPROVAL_POLICIES.md).
 
+Before approval, preserve comments or negative review decisions against the exact plan revision:
+
+```bash
+samsarix-campaign plan review create examples/launch-plan.json \
+  --decision request-changes \
+  --by "Brand reviewer" \
+  --finding "The launch claim needs supporting evidence." \
+  --item 1 --platform linkedin \
+  --suggestion "Link the benchmark or narrow the claim."
+samsarix-campaign plan review verify \
+  examples/launch-plan.json \
+  examples/launch-plan.json.scr_REVIEW_ID.review.json \
+  --json
+```
+
+`comment` is informational; current `request-changes` and `reject` records report `blocking: true`.
+Any source change makes prior feedback stale instead of silently applying it to a new revision.
+Review files are immutable, deterministic `scr_*` artifacts and can optionally bind exact image
+bytes with `--include-media`. Positive authorization stays in the quality-gated `plan approval`
+workflow. See [Source-bound plan feedback](docs/PLAN_FEEDBACK.md).
+
 When a plan references real images and review must cover their exact pixels, create the plan
 approval with `--include-media`. Samsarix resolves each reference beneath its campaign directory,
 rejects symbolic links and unstable reads, validates bounded static JPEG/PNG structure and
@@ -404,18 +428,21 @@ samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--include-media] [--output PATH] [--json]
 samsarix-campaign plan approval collect PLAN --approval-policy POLICY --approval ROLE=PATH [--approval ROLE=PATH ...] [--policy CONTENT_POLICY] [--output PATH] [--json]
 samsarix-campaign plan approval verify PLAN APPROVAL [--policy POLICY] [--json]
+samsarix-campaign plan review create PLAN --decision comment|request-changes|reject --by LABEL --finding TEXT [--finding TEXT ...] [--at RFC3339] [--item NUMBER] [--platform PLATFORM] [--suggestion TEXT] [--note TEXT] [--include-media] [--output PATH] [--json]
+samsarix-campaign plan review verify PLAN REVIEW [--fail-on-blocking] [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
 samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|adapter|handoff|media-package|publication|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|plan-review|adapter|handoff|media-package|publication|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
 usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
-stderr. Exit `4` means a requested diff detected changes, an approval is stale/invalid, or a
-handoff is not current and intact, a publication ledger is incomplete/invalid, or a requested
+stderr. Exit `4` means a requested diff detected changes, an approval or plan review is
+stale/invalid, `plan review verify --fail-on-blocking` found a current negative decision, a handoff
+is not current and intact, a publication ledger is incomplete/invalid, or a requested
 approval/handoff/publication readiness stage is unmet.
 `plan status --require-stage quality` uses `3` when its quality/schedule gate is unmet. Without a
 required stage, status is informational. Quality, diff, approval, handoff, and readiness
@@ -470,12 +497,13 @@ console command. The package has no third-party runtime dependencies.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
+- `plan_feedback.py` records and verifies immutable feedback for exact plan revisions.
 - `approval_policy.py` validates reusable role/count policies and collects deterministic multi-reviewer approval evidence.
 - `media_package.py` captures, validates, indexes, and approval-binds opt-in static image bytes.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
 - `publication.py` initializes and verifies handoff-bound operator outcome ledgers.
 - `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
-- `schema.py` exposes all authoring and evidence JSON Schemas bundled in the wheel, including approval policies and sets.
+- `schema.py` exposes all authoring and evidence JSON Schemas bundled in the wheel, including approval policies, sets, and plan reviews.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -504,6 +532,9 @@ for trust boundaries and failure behavior.
   system when verified identity is required.
 - Approval-set roles and distinct-reviewer checks operate on unsigned labels; they enforce a local
   artifact contract, not human identity, authorization, separation of duties, or non-repudiation.
+- Plan-review decisions and reviewer labels are also unsigned metadata. A current blocking result
+  is local evidence about one exact revision, not an authenticated workflow lock or proof that a
+  person supplied or resolved the findings.
 - Approved handoff hashes detect stale source and modified bytes but remain unsigned. They do not
   prove signer identity or authenticated provenance, and verification should occur immediately
   before a downstream consumer uses the same packet directory.
@@ -515,7 +546,7 @@ for trust boundaries and failure behavior.
   they do not prove provider acceptance, remote visibility, authorship, or continued availability.
 - Media transformation, per-account capabilities and mention resolution, cryptographic approvals,
   hosted collaboration, network publishing, click collection, and analytics reporting are outside
-  the 0.15 scope. Calendar, readiness, and publication files record
+  the 0.16 scope. Calendar, readiness, review, and publication files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).
