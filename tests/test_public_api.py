@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import samsarix_creative_spirals as package
@@ -25,6 +27,7 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlan",
         "CampaignPlanApproval",
         "CampaignPlanApprovalAssignment",
+        "CampaignPlanApprovalEvidence",
         "CampaignPlanApprovalSet",
         "CampaignPlanBundle",
         "CampaignPlanCheck",
@@ -49,6 +52,7 @@ def test_public_api_is_deliberate() -> None:
         "LinkTracking",
         "MediaReference",
         "PlanApprovalCheck",
+        "PlanApprovalEvidenceCheck",
         "PlanApprovalSetCheck",
         "PlanFieldChange",
         "PlanItemChange",
@@ -278,6 +282,47 @@ def test_packaged_approval_policy_schemas_are_available() -> None:
     assert policy["properties"]["minimumTotal"]["maximum"] == 50
     assert approval_set["properties"]["artifactType"]["const"] == "plan-approval-set"
     assert approval_set["properties"]["approvals"]["maxItems"] == 50
+    approval_definition = approval_set["$defs"]["approval"]["properties"]
+    media_definition = approval_set["$defs"]["mediaBinding"]["properties"]
+    assert approval_definition["approvedBy"]["maxLength"] == 120
+    assert approval_definition["note"]["maxLength"] == 500
+    assert media_definition["assetCount"]["maximum"] == 400
+    assert media_definition["totalBytes"]["maximum"] == 100000000
+
+    plan_path = Path(__file__).parents[1] / "examples" / "launch-plan.json"
+    bundle = package.build_campaign_plan(package.load_campaign_plan(plan_path))
+    first = package.create_campaign_plan_approval(
+        bundle,
+        approved_by="Brand reviewer",
+        approved_at=datetime(2026, 8, 3, 14, 15, tzinfo=timezone.utc),
+    )
+    second = package.create_campaign_plan_approval(
+        bundle,
+        approved_by="Release owner",
+        approved_at=datetime(2026, 8, 3, 15, 0, tzinfo=timezone.utc),
+    )
+    generated_policy = package.ApprovalPolicy.from_dict(
+        {
+            "schemaVersion": 1,
+            "name": "Packaged schema fixture",
+            "minimumTotal": 2,
+            "distinctReviewers": True,
+            "requirements": [
+                {"role": "brand", "minimum": 1},
+                {"role": "release-owner", "minimum": 1},
+            ],
+        }
+    )
+    generated_set = package.create_campaign_plan_approval_set(
+        bundle,
+        generated_policy,
+        (
+            package.CampaignPlanApprovalAssignment("brand", first),
+            package.CampaignPlanApprovalAssignment("release-owner", second),
+        ),
+    )
+    Draft202012Validator(approval_set).validate(generated_set.to_dict())
+    Draft202012Validator(policy).validate(generated_policy.to_dict())
 
 
 def test_packaged_adapter_schema_is_available() -> None:

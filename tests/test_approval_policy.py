@@ -287,6 +287,11 @@ def test_create_set_rejects_stale_approval(
     ("field", "value", "message"),
     [
         (
+            "warnings_as_errors",
+            True,
+            "same warning policy",
+        ),
+        (
             "content_policy",
             ContentPolicyBinding("scpol_000000000000", "0" * 64, "Different policy"),
             "same content policy",
@@ -307,17 +312,18 @@ def test_set_rejects_mixed_policy_or_media_bindings(
 ) -> None:
     bundle = _bundle(tmp_path, campaign_data)
     assignments = _assignments(bundle)
-    changed = (
-        replace(
+    if field == "warnings_as_errors":
+        changed = replace(assignments[1].approval, warnings_as_errors=cast(bool, value))
+    elif field == "content_policy":
+        changed = replace(
             assignments[1].approval,
             content_policy=cast(ContentPolicyBinding, value),
         )
-        if field == "content_policy"
-        else replace(
+    else:
+        changed = replace(
             assignments[1].approval,
             media=cast(CampaignPlanMediaBinding, value),
         )
-    )
 
     with pytest.raises(ConfigError, match=message):
         create_campaign_plan_approval_set(
@@ -349,7 +355,12 @@ def test_approval_set_rejects_tampered_identity(
 ) -> None:
     bundle = _bundle(tmp_path, campaign_data)
     value = create_campaign_plan_approval_set(bundle, _policy(), _assignments(bundle)).to_dict()
-    value[field] = "0" * (64 if field.endswith("Hash") or field == "sourceHash" else 12)
+    value[field] = {
+        "approvalSetId": "scas_" + "0" * 12,
+        "approvalSetHash": "0" * 64,
+        "planId": "scp_" + "0" * 12,
+        "sourceHash": "0" * 64,
+    }[field]
 
     with pytest.raises(ConfigError):
         CampaignPlanApprovalSet.from_dict(value)
@@ -463,6 +474,18 @@ def test_verifier_reports_tampered_set_and_plan_id(
         "plan-id-changed",
         "approval-set-invalid",
     }
+
+
+def test_approval_set_public_constructor_rejects_empty_approvals() -> None:
+    with pytest.raises(ConfigError, match="at least one approval"):
+        CampaignPlanApprovalSet(
+            approval_set_id="scas_000000000000",
+            approval_set_hash="0" * 64,
+            plan_id="scp_000000000000",
+            source_hash="0" * 64,
+            approval_policy=_policy(),
+            approvals=(),
+        )
 
 
 def test_requirement_dataclass_has_stable_shape() -> None:

@@ -90,6 +90,10 @@ samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 brand and release-owner labels, then collect and verify them:
 
 ```bash
+samsarix-campaign plan approval create examples/launch-plan.json \
+  --by "Brand reviewer" --output brand.approval.json
+samsarix-campaign plan approval create examples/launch-plan.json \
+  --by "Release owner" --output release-owner.approval.json
 samsarix-campaign plan approval collect examples/launch-plan.json \
   --approval-policy examples/approval-policy.json \
   --approval brand=brand.approval.json \

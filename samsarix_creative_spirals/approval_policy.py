@@ -294,6 +294,8 @@ def _approval_set_issues(
             issues.append("all approvals must reference the same plan ID")
         if assignment.approval.source_hash != first.source_hash:
             issues.append("all approvals must reference the same plan source hash")
+        if assignment.approval.warnings_as_errors != first.warnings_as_errors:
+            issues.append("all approvals must use the same warning policy")
         if assignment.approval.content_policy != first.content_policy:
             issues.append("all approvals must bind the same content policy")
         if assignment.approval.media != first.media:
@@ -318,6 +320,10 @@ class CampaignPlanApprovalSet:
     source_hash: str
     approval_policy: ApprovalPolicy
     approvals: tuple[CampaignPlanApprovalAssignment, ...]
+
+    def __post_init__(self) -> None:
+        if not self.approvals:
+            raise ConfigError("plan approval set must contain at least one approval")
 
     @property
     def approved_at(self) -> datetime:
@@ -415,12 +421,17 @@ class CampaignPlanApprovalSet:
                 issues.append("planId does not match embedded approvals")
             if source_hash != assignments[0].approval.source_hash:
                 issues.append("sourceHash does not match embedded approvals")
+        if not normalized_assignments:
+            issues.append("approvals must contain at least one approval")
+        if issues:
+            raise ConfigError(issues)
+        assert policy is not None
         provisional = cls(
             set_id,
             set_hash,
             plan_id,
             source_hash,
-            policy or ApprovalPolicy("invalid", 1, True, (ApprovalRequirement("invalid", 1),)),
+            policy,
             normalized_assignments,
         )
         expected_hash = hashlib.sha256(_canonical_json(provisional._core_dict())).hexdigest()
