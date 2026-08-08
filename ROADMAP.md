@@ -351,7 +351,7 @@ disposition, sdist-derived journey identities, compatibility notes, and limitati
   public API, schemas, examples, and installed-wheel CI without changing the handoff manifest shape.
 - [x] Document current Buffer, Planable, Sprout Social, and GitHub approval patterns and state the
   unsigned label/role boundary without implying authenticated separation of duties.
-- [ ] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
+- [x] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
   final rollback evidence.
 
 Connected products provide user accounts, permissions, comments, notifications, and approval
@@ -359,6 +359,16 @@ routing. Samsarix supplies a complementary credential-free artifact: a canonical
 be reviewed and protected in Git, verified offline, and handed to any separately permissioned
 downstream process. Contract details and sources are in
 [`docs/APPROVAL_POLICIES.md`](docs/APPROVAL_POLICIES.md).
+
+Reviewed technical evidence at `6acf51e`: 424 tests at 93.77% coverage, clean formatting, lint,
+strict typing, compilation, and twelve schema checks; an external Python 3.11 installed-wheel
+journey reached `handoff-ready` with approval set `scas_d15bc114e02b`; wheel SHA-256
+`2e97eb32c788ad36f19f5e4311e4b290413abafb91772ffe0a2367e5f12ebeb7`; sdist SHA-256
+`3a8df4f3ce3ccc10812c62e21b643a45eb8d97f40d17a74f2a13b2f208c0b534`; reviewed push/PR
+runs `31244227416` and `31244229167`; merge commit `acb21ce`; and post-merge run
+`31244355550` all passed. Rollback is a revert of PR #17's merge or a pin to pre-0.15 main commit
+`c25e6ca`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#015-policy-bound-approval-quorum-release-evidence).
 
 ## Deliberate exclusions
 

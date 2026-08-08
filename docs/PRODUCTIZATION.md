@@ -1253,7 +1253,59 @@ necessary when those properties matter.
 
 ### Verification and release disposition
 
-Release verification is in progress. Exact code/review commits, test and coverage totals, all
-twelve schema results, sdist-derived distribution hashes, isolated installed-wheel identities,
-hosted GitHub Actions runs, review disposition, merge commit, and rollback point will be recorded
-here before this milestone is marked complete.
+Implementation and accepted review fixes converge at exact code commit
+`6acf51e3897dd145e00af96660844d2940b376f8`. [PR #17](https://github.com/Deathcharge/samsarix-creative-spirals/pull/17)
+merged that head to `main` as
+`acb21ce6873d16d4a5fc9221397e1375ceef06b0`. This evidence section is a subsequent
+documentation-only main commit, so the artifact hashes identify the exact reviewed code tree rather
+than a self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 38 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 37 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing` | 0 | 424 passed; 93.77% total coverage and 97% approval-policy coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
+| Draft 2020-12 metaschema validation | 0 | All twelve bundled schemas validated. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.15.0 sdist and then its universal wheel from exact reviewed code head `6acf51e`. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.15.0, all twelve schemas, two approvals, set `scas_d15bc114e02b`, handoff `sch_d14845e57d95`, `handoff-ready`, publication `scpub_d6d25feea12e`, ten records, and `pip check` passed outside the checkout. |
+| Hosted GitHub Actions before review fixes | 0 | [Runs 31243101577](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31243101577) and [31243139939](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31243139939) each passed the complete Python 3.10/3.13 matrix at initial head `6d0592f`. |
+| Hosted GitHub Actions after review fixes | 0 | [Runs 31244227416](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31244227416) and [31244229167](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31244229167) each passed the complete Python 3.10/3.13 matrix at reviewed head `6acf51e`. |
+| Post-merge GitHub Actions | 0 | [Main run 31244355550](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31244355550) passed both complete matrices at merge commit `acb21ce`. |
+| `git diff --check` | 0 | No whitespace errors at the reviewed code commit. |
+
+Isolated artifact digests from exact reviewed code commit `6acf51e`:
+
+- `samsarix_creative_spirals-0.15.0-py3-none-any.whl` — SHA-256
+  `2e97eb32c788ad36f19f5e4311e4b290413abafb91772ffe0a2367e5f12ebeb7`.
+- `samsarix_creative_spirals-0.15.0.tar.gz` — SHA-256
+  `3a8df4f3ce3ccc10812c62e21b643a45eb8d97f40d17a74f2a13b2f208c0b534`.
+
+CodeRabbit posted eight inline findings. All were validated and addressed: approval sets now require
+one warning policy; direct construction enforces a non-empty set; parsing preserves aggregated
+errors; evidence/check aliases are public; runnable documentation creates its inputs; tamper tests
+use valid-shaped identities; and the packaged self-contained schema has both synchronized bound
+assertions and generated-instance validation. Seven threads auto-resolved. The schema anchor stayed
+open because its source schema already had the correct bounds and the fix lived in its sibling test;
+incremental automated re-review was rate-limited. Both complete reviewed-head hosted matrices and
+all local gates passed after the changes.
+
+Release disposition: **merged release candidate with one owner-controlled distribution gate**.
+The exact local source and sdist-derived wheel support the declared independent-approval-to-handoff
+journey with no known locally actionable P0 or P1 defect. Public PyPI publication has not been
+performed and remains an explicit owner action. External-user adoption evidence likewise remains
+unavailable; competitor workflow evidence demonstrates the operational need, not product-market
+fit.
+
+Compatibility is additive: campaign, plan, adapter, campaign-approval, and single plan-approval
+contracts are unchanged. Approval-policy v1 and plan-approval-set v1 are new; generic plan evidence
+paths accept either form. Handoff v1 retains its fixed `approval.json` path and manifest shape,
+while readiness v1 extends its existing approval field to the new set alternative. Consumers that
+parse only `artifactType: "plan"` should continue using single evidence or upgrade before receiving
+a set. PyPI publication and external adoption validation remain owner-controlled gates.
+
+Before public package publication, roll back by reverting merge commit
+`acb21ce6873d16d4a5fc9221397e1375ceef06b0` or pinning pre-0.15 main commit
+`c25e6ca1f9de6d7d5f8372eeddf66d67fcf1c7d8`. After publication, use normal version pinning and a
+corrective release; do not replace published artifacts silently.
