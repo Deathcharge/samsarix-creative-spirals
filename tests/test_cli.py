@@ -652,6 +652,236 @@ def test_cli_emits_handoff_schema(capsys: Any) -> None:
     assert schema["properties"]["artifactType"]["const"] == "plan-handoff"
 
 
+def test_cli_collects_policy_approvals_into_handoff_and_readiness(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    policy = tmp_path / "approval-policy.json"
+    brand = tmp_path / "brand.approval.json"
+    legal = tmp_path / "legal.approval.json"
+    approval_set = tmp_path / "approval-set.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Governed release",
+                "requiredPlatforms": ["x", "linkedin", "discord"],
+                "items": [
+                    {
+                        "campaign": "campaign.json",
+                        "intendedAt": "2026-08-10T13:00:00Z",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    policy.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Brand and legal release review",
+                "minimumTotal": 2,
+                "distinctReviewers": True,
+                "requirements": [
+                    {"role": "brand", "minimum": 1},
+                    {"role": "legal", "minimum": 1},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    for reviewer, timestamp, output in (
+        ("Brand reviewer", "2026-08-03T14:15:00Z", brand),
+        ("Legal reviewer", "2026-08-03T15:00:00Z", legal),
+    ):
+        assert (
+            main(
+                [
+                    "plan",
+                    "approval",
+                    "create",
+                    str(plan),
+                    "--by",
+                    reviewer,
+                    "--at",
+                    timestamp,
+                    "--output",
+                    str(output),
+                    "--json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
+
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "collect",
+                str(plan),
+                "--approval-policy",
+                str(policy),
+                "--approval",
+                f"legal={legal}",
+                "--approval",
+                f"brand={brand}",
+                "--output",
+                str(approval_set),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    collected = json.loads(capsys.readouterr().out)
+    assert collected["approvalSet"]["artifactType"] == "plan-approval-set"
+    assert [item["role"] for item in collected["approvalSet"]["approvals"]] == [
+        "brand",
+        "legal",
+    ]
+    assert main(["plan", "approval", "verify", str(plan), str(approval_set), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["valid"] is True
+
+    outbox = tmp_path / "handoffs"
+    assert (
+        main(
+            [
+                "plan",
+                "handoff",
+                "create",
+                str(plan),
+                str(approval_set),
+                "--at",
+                "2026-08-04T09:30:00Z",
+                "--output",
+                str(outbox),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    packet = Path(json.loads(capsys.readouterr().out)["path"])
+    assert json.loads((packet / "approval.json").read_text())["approvalSetId"].startswith("scas_")
+    assert (
+        main(
+            [
+                "plan",
+                "status",
+                str(plan),
+                "--handoff",
+                str(packet),
+                "--at",
+                "2026-08-05T12:00:00Z",
+                "--require-stage",
+                "handoff",
+                "--json",
+            ]
+        )
+        == 0
+    )
+    status = json.loads(capsys.readouterr().out)
+    assert status["stage"] == "handoff-ready"
+    assert status["approval"]["artifactType"] == "plan-approval-set"
+    ledger = tmp_path / "publication.json"
+    assert (
+        main(
+            [
+                "plan",
+                "publication",
+                "init",
+                str(plan),
+                str(packet),
+                "--at",
+                "2026-08-04T10:00:00Z",
+                "--output",
+                str(ledger),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    publication = json.loads(capsys.readouterr().out)
+    assert publication["publication"]["handoffId"].startswith("sch_")
+    assert len(publication["publication"]["records"]) == 3
+
+
+def test_cli_rejects_unsatisfied_or_malformed_approval_collection(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    approval = tmp_path / "approval.json"
+    policy = tmp_path / "policy.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Incomplete review",
+                "items": [{"campaign": "campaign.json"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    policy.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Two roles",
+                "minimumTotal": 2,
+                "distinctReviewers": True,
+                "requirements": [
+                    {"role": "brand", "minimum": 1},
+                    {"role": "legal", "minimum": 1},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        main(
+            [
+                "plan",
+                "approval",
+                "create",
+                str(plan),
+                "--by",
+                "Only reviewer",
+                "--output",
+                str(approval),
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    base = [
+        "plan",
+        "approval",
+        "collect",
+        str(plan),
+        "--approval-policy",
+        str(policy),
+        "--approval",
+    ]
+    assert main([*base, str(approval)]) == 1
+    assert "ROLE=PATH" in capsys.readouterr().err
+    assert main([*base, f"brand={approval}"]) == 1
+    assert "role legal requires" in capsys.readouterr().err
+
+
+def test_cli_emits_approval_policy_schemas(capsys: Any) -> None:
+    assert main(["schema", "--kind", "approval-policy"]) == 0
+    policy = json.loads(capsys.readouterr().out)
+    assert policy["properties"]["minimumTotal"]["maximum"] == 50
+    assert main(["schema", "--kind", "plan-approval-set"]) == 0
+    approval_set = json.loads(capsys.readouterr().out)
+    assert approval_set["properties"]["artifactType"]["const"] == "plan-approval-set"
+
+
 def test_cli_binds_packages_and_verifies_exact_media(
     tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
 ) -> None:

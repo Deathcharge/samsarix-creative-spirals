@@ -15,6 +15,8 @@ from jsonschema import Draft202012Validator
 from media_helpers import png_chunk as _png_chunk
 from media_helpers import png_image as _png
 from samsarix_creative_spirals import (
+    ApprovalPolicy,
+    CampaignPlanApprovalAssignment,
     CampaignPlanMedia,
     CampaignPlanMediaBinding,
     CollectedCampaignPlanMedia,
@@ -23,6 +25,7 @@ from samsarix_creative_spirals import (
     build_campaign_plan_readiness,
     collect_campaign_plan_media,
     create_campaign_plan_approval,
+    create_campaign_plan_approval_set,
     export_campaign_plan_handoff,
     load_campaign_plan,
     load_campaign_plan_handoff,
@@ -202,6 +205,61 @@ def test_export_and_verify_approval_bound_media_packet(
         issue.code == "media-checksum-mismatch" and issue.path == asset.packet_path
         for issue in invalid.issues
     )
+
+
+def test_approval_quorum_preserves_exact_media_through_handoff(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, plan_path, _ = _media_plan(tmp_path, campaign_data)
+    media = collect_campaign_plan_media(bundle, plan_path.parent)
+    first = create_campaign_plan_approval(
+        bundle,
+        approved_by="Brand visual reviewer",
+        approved_at=APPROVED_AT,
+        media=media.index,
+    )
+    second = create_campaign_plan_approval(
+        bundle,
+        approved_by="Release visual reviewer",
+        approved_at=APPROVED_AT.replace(minute=APPROVED_AT.minute + 5),
+        media=media.index,
+    )
+    policy = ApprovalPolicy.from_dict(
+        {
+            "schemaVersion": 1,
+            "name": "Visual release quorum",
+            "minimumTotal": 2,
+            "distinctReviewers": True,
+            "requirements": [
+                {"role": "brand", "minimum": 1},
+                {"role": "release-owner", "minimum": 1},
+            ],
+        }
+    )
+    approval_set = create_campaign_plan_approval_set(
+        bundle,
+        policy,
+        (
+            CampaignPlanApprovalAssignment("brand", first),
+            CampaignPlanApprovalAssignment("release-owner", second),
+        ),
+        media=media.index,
+    )
+
+    packet_path = export_campaign_plan_handoff(
+        bundle,
+        approval_set,
+        tmp_path / "quorum-handoffs",
+        generated_at=GENERATED_AT,
+        media=media,
+    )
+    packet = load_campaign_plan_handoff(packet_path)
+    result = verify_campaign_plan_handoff(bundle, packet)
+
+    assert result.valid
+    assert packet.approval == approval_set
+    assert packet.media == media.index
+    assert (packet_path / media.index.assets[0].packet_path).read_bytes() == _png()
 
 
 def test_handoff_verifier_refuses_symbolic_link_media_directory(

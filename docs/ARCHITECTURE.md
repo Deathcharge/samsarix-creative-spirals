@@ -37,6 +37,7 @@ plan.json ──confined relative paths──► CampaignConfig (1..100)
 CampaignPlanBundle
     ├──► aggregate quality report
     ├──► deterministic plan diff / source-bound plan approval verification
+    │       ├── approval-policy.json + independent approvals ──► canonical scas_* set
     │       └── optional exact media collection ──► approval-bound scm_* snapshot
     ├──► manifest.json + adapter.json + calendar.ics + per-platform CSV
     ├──► exclusive approved handoff packet
@@ -120,6 +121,14 @@ verification checks identity, requires the exact external content policy when on
 re-runs the stored aggregate quality policy. The campaign
 approval v1 contract remains separate so existing consumers do not need to distinguish a union.
 
+### `approval_policy.py`
+
+Validates bounded role/count policies, derives deterministic `scap_*` policy identities, and
+normalizes independently created plan approvals into canonical `scas_*` sets. Collection requires
+one exact plan/source/content-policy/media binding, rejects duplicate evidence, enforces all role
+and total minimums, optionally compares case-folded reviewer labels, and reverifies every member.
+Labels and roles are unsigned metadata; the module supplies no account or authorization system.
+
 ### `media_package.py`
 
 Implements the sole opt-in media dereference boundary. A trusted plan root plus normalized campaign
@@ -162,7 +171,7 @@ labels and hashes are unsigned.
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
 dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval,
-media-package, handoff, publication, readiness, and adapter schemas help editors and generic
+approval-policy, plan-approval-set, media-package, handoff, publication, readiness, and adapter schemas help editors and generic
 validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
@@ -190,6 +199,7 @@ quality gate uses `3` and its approval/handoff/publication gates use `4`.
 | Output root | User-selected filesystem path | Generated safe child name, existing-target checks, explicit overwrite. |
 | Approval file | Local JSON and reviewer label | Strict bounded schema, full source-hash match, quality re-check; no identity claim. |
 | Plan approval file | Local JSON and complete launch identity | Dedicated strict schema, plan/hash match, optional exact-media binding, aggregate quality re-check; no identity claim. |
+| Approval policy/set | Role names, count rules, reviewer labels, and embedded approvals | 20-role/50-approval bounds; canonical identity; per-role/total/distinct-label checks; duplicate rejection; every approval reverified; no human identity or authorization claim. |
 | Approved handoff packet | Local directory, metadata, approval/policy/media evidence, and generated files | Exclusive atomic creation; exact expected shape; source, approval, embedded-policy/media, version, size, checksum, exact-byte, file-type, and read-stability checks; unsigned. |
 | Publication ledger | Local outcome JSON, operator labels, times, URLs, and notes | Shared file/nesting bounds; strict state combinations; exact plan/handoff/draft binding; chronology; URL scheme/credential/length checks; no network verification; unsigned. |
 | Readiness report | Local evidence, assessment time, and complete draft text | Existing verifiers; bounded schema; exclusive HTML output; escaping; CSP; no scripts/remote resources; point-in-time and unsigned. |
@@ -222,7 +232,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.14 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.15 scope.
 
 ## Dependency and cost model
 

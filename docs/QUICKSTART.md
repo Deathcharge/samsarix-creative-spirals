@@ -178,6 +178,19 @@ samsarix-campaign plan approval verify examples/launch-plan.json examples/launch
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
+For a multi-role gate, create independent approvals and collect them under the included policy:
+
+```bash
+samsarix-campaign plan approval collect examples/launch-plan.json \
+  --approval-policy examples/approval-policy.json \
+  --approval brand=brand.approval.json \
+  --approval release-owner=release-owner.approval.json \
+  --output launch-plan.approval-set.json
+```
+
+The set can replace the single approval path in verify, handoff, and status commands. See
+[APPROVAL_POLICIES.md](APPROVAL_POLICIES.md) for setup and the unsigned-role boundary.
+
 Plan paths use forward slashes, remain relative to the plan file, and cannot escape its directory.
 `intendedAt` is optional; when present it must be RFC 3339 with an explicit offset or `Z`.
 The plan diff covers metadata, order, intended times, source references, and nested campaign/draft

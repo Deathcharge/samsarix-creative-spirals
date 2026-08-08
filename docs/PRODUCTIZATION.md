@@ -63,7 +63,7 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media transformation or upload; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.14 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.15 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
 link attribution, and optional approval-bound exact image packets without adding a scheduler,
@@ -1206,3 +1206,54 @@ Before public package publication, roll back by reverting merge commit
 `917a2b816c02cae241505b0af53d97a006fc46d4` or pinning pre-0.14 main commit
 `89b5f94f97e859097f68ac7559a2a254c940cae2`. After publication, use normal version pinning and a
 corrective release; do not replace published artifacts silently.
+
+
+## 0.15 policy-bound approval-quorum release evidence
+
+### Research and product decision
+
+A single source-bound plan approval is useful for solo work, but it cannot express a real small-team
+release rule such as “one brand reviewer and one release owner.” Current official workflows show
+that approval routing, role separation, external stakeholders, and required review counts are
+ordinary operational needs: Buffer routes drafts between posting roles; Planable advertises
+dedicated approval flows and external approvers; Sprout Social documents message and external
+approver workflows; and GitHub supports required approving-review counts plus code-owner review.
+Exact official links and the bounded comparison are in
+[`APPROVAL_POLICIES.md`](APPROVAL_POLICIES.md).
+
+The local-first product decision is to reuse independent source-bound plan approvals rather than
+invent hosted identities. A reusable JSON policy declares roles and counts; a canonical set embeds
+that policy, assigns exact approvals to roles, and independently reverifies every member. The set
+then travels through the existing handoff/readiness/publication boundary. This fills a defensible
+Git-native workflow gap without credentials, accounts, notification state, or a dependency on
+another Samsarix repository.
+
+Priority disposition: P1 “a team cannot require evidence from more than one review discipline” is
+closed by this slice. Authenticated membership, comments, notifications, e-signatures, and provider
+publishing remain deferred because each would introduce persistent identity, authorization,
+network, or regulated-signature boundaries.
+
+### Bounded contract and implementation
+
+Implemented locally: immutable approval policy/requirement/assignment/set/check models; deterministic
+`scap_*` policy and `scas_*` set identities; 20-role and 50-approval bounds; strict lowercase role
+grammar; per-role and total minima; optional case-folded distinct reviewer-label checks; duplicate
+approval rejection; normalization independent of CLI input order; exact plan/source/content-policy/
+media binding consistency; independent member re-verification; generic single-or-set loaders and
+verifiers; exclusive set export; two bundled Draft 2020-12 schemas; public typed APIs; `plan
+approval collect`; unchanged single-approval behavior; handoff/readiness/publication integration;
+offline HTML set summaries; a realistic policy example; adversarial tests; and an installed-wheel
+CI journey.
+
+Reviewer labels and roles are unsigned metadata. A valid set proves only that a trusted verifier
+observed structurally valid evidence satisfying the declared local artifact contract. It does not
+prove separate humans, accounts, organizations, authorization, separation of duties, or
+non-repudiation. Repository protection or a separately reviewed signature/attestation layer remains
+necessary when those properties matter.
+
+### Verification and release disposition
+
+Release verification is in progress. Exact code/review commits, test and coverage totals, all
+twelve schema results, sdist-derived distribution hashes, isolated installed-wheel identities,
+hosted GitHub Actions runs, review disposition, merge commit, and rollback point will be recorded
+here before this milestone is marked complete.

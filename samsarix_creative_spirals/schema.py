@@ -45,6 +45,20 @@ def load_plan_approval_schema() -> dict[str, Any]:
     return cast(dict[str, Any], payload)
 
 
+def load_approval_policy_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public approval-policy JSON Schema."""
+    resource = files(__package__).joinpath("approval-policy.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
+def load_plan_approval_set_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public campaign-plan approval-set JSON Schema."""
+    resource = files(__package__).joinpath("plan-approval-set.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
 def load_handoff_schema() -> dict[str, Any]:
     """Return a fresh copy of the public approved-plan handoff JSON Schema."""
     resource = files(__package__).joinpath("handoff.schema.json")

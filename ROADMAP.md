@@ -341,6 +341,25 @@ Rollback is a revert of PR #16's merge or a pin to pre-0.14 main commit `89b5f94
 disposition, sdist-derived journey identities, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#014-approval-bound-exact-media-release-evidence).
 
+## Release milestone — 0.15 policy-bound approval quorums
+
+- [x] Add bounded reusable approval-policy v1 profiles with per-role and total minimums plus optional
+  distinct reviewer-label enforcement.
+- [x] Collect independently created, current plan approvals into deterministic `scas_*` evidence
+  while rejecting duplicate records and mixed source, content-policy, or exact-media bindings.
+- [x] Accept single or set evidence through verification, approved handoff, readiness, publication,
+  public API, schemas, examples, and installed-wheel CI without changing the handoff manifest shape.
+- [x] Document current Buffer, Planable, Sprout Social, and GitHub approval patterns and state the
+  unsigned label/role boundary without implying authenticated separation of duties.
+- [ ] Complete hosted CI and review, record exact distribution hashes, merge to main, and capture
+  final rollback evidence.
+
+Connected products provide user accounts, permissions, comments, notifications, and approval
+routing. Samsarix supplies a complementary credential-free artifact: a canonical quorum that can
+be reviewed and protected in Git, verified offline, and handed to any separately permissioned
+downstream process. Contract details and sources are in
+[`docs/APPROVAL_POLICIES.md`](docs/APPROVAL_POLICIES.md).
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

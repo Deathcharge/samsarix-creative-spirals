@@ -11,11 +11,15 @@ import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 from samsarix_creative_spirals import (
+    ApprovalPolicy,
+    CampaignPlanApprovalAssignment,
+    CampaignPlanApprovalSet,
     CampaignPlanHandoff,
     ConfigError,
     build_campaign_plan,
     build_campaign_plan_handoff,
     create_campaign_plan_approval,
+    create_campaign_plan_approval_set,
     export_campaign_plan_handoff,
     load_campaign_plan,
     load_campaign_plan_handoff,
@@ -140,6 +144,53 @@ def test_export_load_and_verify_complete_handoff_packet(
             tmp_path / "handoff-outbox",
             generated_at=GENERATED_AT,
         )
+
+
+def test_handoff_carries_and_verifies_policy_bound_approval_set(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, brand, _ = _approved_bundle(tmp_path, campaign_data)
+    legal = create_campaign_plan_approval(
+        bundle,
+        approved_by="Legal reviewer",
+        approved_at=datetime(2026, 8, 3, 15, 0, tzinfo=timezone.utc),
+    )
+    policy = ApprovalPolicy.from_dict(
+        {
+            "schemaVersion": 1,
+            "name": "Brand and legal",
+            "minimumTotal": 2,
+            "distinctReviewers": True,
+            "requirements": [
+                {"role": "brand", "minimum": 1},
+                {"role": "legal", "minimum": 1},
+            ],
+        }
+    )
+    approval_set = create_campaign_plan_approval_set(
+        bundle,
+        policy,
+        (
+            CampaignPlanApprovalAssignment("brand", brand),
+            CampaignPlanApprovalAssignment("legal", legal),
+        ),
+    )
+
+    packet_path = export_campaign_plan_handoff(
+        bundle,
+        approval_set,
+        tmp_path / "approval-set-handoff",
+        generated_at=GENERATED_AT,
+    )
+    packet = load_campaign_plan_handoff(packet_path)
+    check = verify_campaign_plan_handoff(bundle, packet)
+
+    assert isinstance(packet.approval, CampaignPlanApprovalSet)
+    assert packet.approval == approval_set
+    assert json.loads((packet_path / "approval.json").read_text())["artifactType"] == (
+        "plan-approval-set"
+    )
+    assert check.valid is True
 
 
 def test_handoff_refuses_invalid_approval_and_invalid_generation_times(

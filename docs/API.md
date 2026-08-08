@@ -89,6 +89,12 @@ has compact before/after `PlanItemSnapshot` values and, when referenced campaign
 a nested `CampaignDiff`. `CampaignPlanApproval` is full-plan source-bound metadata;
 `PlanApprovalCheck` reports whether it still matches plan identity and quality.
 
+`ApprovalPolicy` contains a normalized name, total minimum, distinct-reviewer-label flag, and
+ordered `ApprovalRequirement` values. Its full `source_hash` and short `scap_*` `policy_id` are
+content-derived. `CampaignPlanApprovalAssignment` binds one existing plan approval to a declared
+role. `CampaignPlanApprovalSet` is canonical `scas_*` evidence satisfying one policy, and
+`PlanApprovalSetCheck` reports independent verification of the complete set.
+
 ### Approved-handoff models
 
 `CampaignPlanHandoff` is the strict unsigned handoff v1 manifest. It contains the `sch_*` identity,
@@ -289,6 +295,20 @@ policy. If the approval has `contentPolicy`, the caller must supply the exact cu
 media-bound approval similarly requires the exact current `CampaignPlanMedia`. Stable issue codes
 distinguish changed source, changed plan ID, missing/changed policy or media, and quality failure.
 
+### Approval-policy and approval-set functions
+
+`load_approval_policy(path) -> ApprovalPolicy` reads and strictly validates one reusable bounded
+policy. `create_campaign_plan_approval_set(bundle, approval_policy, approvals, *, content_policy=None,
+media=None) -> CampaignPlanApprovalSet` normalizes role assignments, checks role and total minimums,
+enforces the optional distinct-label rule, and independently verifies every embedded approval.
+
+`export_campaign_plan_approval_set(approval_set, path) -> Path` writes evidence exclusively.
+`load_campaign_plan_approval_set(path) -> CampaignPlanApprovalSet` loads the dedicated set contract.
+`verify_campaign_plan_approval_set(...) -> PlanApprovalSetCheck` reverifies canonical identity,
+current source, policy requirements, and every member. `load_campaign_plan_approval_evidence(path)`
+and `verify_campaign_plan_approval_evidence(...)` dispatch between a legacy single approval and a
+new approval set for handoff/readiness consumers. See `docs/APPROVAL_POLICIES.md`.
+
 ### `build_campaign_plan_handoff(bundle, approval, *, generated_at, content_policy=None, media=None) -> CampaignPlanHandoff`
 
 Re-verifies the approval and recorded aggregate quality policy, requires a timezone-aware handoff
@@ -407,6 +427,16 @@ Loads a fresh dictionary from the approval schema bundled in the wheel. The CLI 
 Loads a fresh dictionary from the separate campaign-plan approval schema bundled in the wheel.
 The CLI equivalent is `samsarix-campaign schema --kind plan-approval`.
 
+### `load_approval_policy_schema() -> dict[str, Any]`
+
+Loads the approval-policy v1 authoring schema. The CLI equivalent is
+`samsarix-campaign schema --kind approval-policy`.
+
+### `load_plan_approval_set_schema() -> dict[str, Any]`
+
+Loads the plan-approval-set v1 evidence schema. The CLI equivalent is
+`samsarix-campaign schema --kind plan-approval-set`.
+
 ### `load_adapter_schema() -> dict[str, Any]`
 
 Loads the versioned `samsarix.plan-drafts` adapter schema. The CLI equivalent is
@@ -465,11 +495,13 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan/approval/handoff/media-package/publication/readiness JSON
-`schemaVersion: 1`, adapter `schemaVersion: 2`, manifest shape, and documented CLI behavior are the
-compatibility surface for 0.14.x. Media-package v1 and the optional plan-approval/handoff media
-fields are additive; metadata-only calls and artifacts retain their prior output. Publication v1
-remains an optional sidecar.
+The package is pre-1.0. The exported names, campaign/plan/approval/approval-policy/approval-set/
+handoff/media-package/publication/readiness JSON `schemaVersion: 1`, adapter `schemaVersion: 2`,
+manifest shape, and documented CLI behavior are the compatibility surface for 0.15.x. Approval-policy
+and plan-approval-set v1 are additive; legacy single approvals and the fixed handoff `approval.json`
+path retain their prior behavior. Media-package v1 and optional plan-approval/handoff media fields
+remain additive; metadata-only calls and artifacts retain their prior output. Publication v1 remains
+an optional sidecar.
 Campaign schema v1's optional `linkTracking` remains unchanged; sources without tracking retain
 their prior normalized source and output.
 Content-policy schema v1 and the optional approval/readiness policy fields introduced in 0.11

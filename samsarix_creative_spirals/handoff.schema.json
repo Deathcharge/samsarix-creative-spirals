@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://samsarix.com/schemas/creative-spirals/plan-handoff-v1.schema.json",
   "title": "Samsarix Creative Spirals approved plan handoff",
-  "description": "Unsigned local integrity metadata for one approved, fully rendered campaign-plan handoff packet.",
+  "description": "Unsigned local integrity metadata for one single- or multi-approval, fully rendered campaign-plan handoff packet.",
   "type": "object",
   "additionalProperties": false,
   "required": [

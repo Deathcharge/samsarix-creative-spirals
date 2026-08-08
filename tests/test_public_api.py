@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 import samsarix_creative_spirals as package
@@ -8,11 +10,13 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.14.0"
+    assert package.__version__ == "0.15.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
         "ApprovalIssue",
+        "ApprovalPolicy",
+        "ApprovalRequirement",
         "CampaignApproval",
         "CampaignBundle",
         "CampaignCheck",
@@ -22,6 +26,9 @@ def test_public_api_is_deliberate() -> None:
         "CampaignFieldChange",
         "CampaignPlan",
         "CampaignPlanApproval",
+        "CampaignPlanApprovalAssignment",
+        "CampaignPlanApprovalEvidence",
+        "CampaignPlanApprovalSet",
         "CampaignPlanBundle",
         "CampaignPlanCheck",
         "CampaignPlanDiff",
@@ -45,6 +52,8 @@ def test_public_api_is_deliberate() -> None:
         "LinkTracking",
         "MediaReference",
         "PlanApprovalCheck",
+        "PlanApprovalEvidenceCheck",
+        "PlanApprovalSetCheck",
         "PlanFieldChange",
         "PlanItemChange",
         "PlanItemSnapshot",
@@ -66,23 +75,29 @@ def test_public_api_is_deliberate() -> None:
         "collect_campaign_plan_media",
         "create_campaign_approval",
         "create_campaign_plan_approval",
+        "create_campaign_plan_approval_set",
         "diff_campaigns",
         "diff_campaign_plans",
         "export_campaign",
         "export_campaign_approval",
         "export_campaign_plan",
         "export_campaign_plan_approval",
+        "export_campaign_plan_approval_set",
         "export_campaign_plan_handoff",
         "export_campaign_plan_publication",
         "export_campaign_plan_readiness_html",
         "evaluate_content_policy",
         "initialize_campaign_plan_publication",
         "load_adapter_schema",
+        "load_approval_policy",
+        "load_approval_policy_schema",
         "load_approval_schema",
         "load_campaign",
         "load_campaign_approval",
         "load_campaign_plan",
         "load_campaign_plan_approval",
+        "load_campaign_plan_approval_evidence",
+        "load_campaign_plan_approval_set",
         "load_campaign_plan_handoff",
         "load_campaign_plan_media",
         "load_campaign_plan_publication",
@@ -92,6 +107,7 @@ def test_public_api_is_deliberate() -> None:
         "load_handoff_schema",
         "load_media_package_schema",
         "load_plan_approval_schema",
+        "load_plan_approval_set_schema",
         "load_plan_schema",
         "load_publication_schema",
         "load_readiness_schema",
@@ -101,6 +117,8 @@ def test_public_api_is_deliberate() -> None:
         "render_plan_calendar",
         "verify_campaign_approval",
         "verify_campaign_plan_approval",
+        "verify_campaign_plan_approval_evidence",
+        "verify_campaign_plan_approval_set",
         "verify_campaign_plan_handoff",
         "verify_campaign_plan_publication",
     ]
@@ -252,6 +270,59 @@ def test_packaged_plan_approval_schema_is_available() -> None:
         "errors-only",
         "warnings-as-errors",
     ]
+
+
+def test_packaged_approval_policy_schemas_are_available() -> None:
+    policy = package.load_approval_policy_schema()
+    approval_set = package.load_plan_approval_set_schema()
+
+    Draft202012Validator.check_schema(policy)
+    Draft202012Validator.check_schema(approval_set)
+    assert policy["properties"]["requirements"]["maxItems"] == 20
+    assert policy["properties"]["minimumTotal"]["maximum"] == 50
+    assert approval_set["properties"]["artifactType"]["const"] == "plan-approval-set"
+    assert approval_set["properties"]["approvals"]["maxItems"] == 50
+    approval_definition = approval_set["$defs"]["approval"]["properties"]
+    media_definition = approval_set["$defs"]["mediaBinding"]["properties"]
+    assert approval_definition["approvedBy"]["maxLength"] == 120
+    assert approval_definition["note"]["maxLength"] == 500
+    assert media_definition["assetCount"]["maximum"] == 400
+    assert media_definition["totalBytes"]["maximum"] == 100000000
+
+    plan_path = Path(__file__).parents[1] / "examples" / "launch-plan.json"
+    bundle = package.build_campaign_plan(package.load_campaign_plan(plan_path))
+    first = package.create_campaign_plan_approval(
+        bundle,
+        approved_by="Brand reviewer",
+        approved_at=datetime(2026, 8, 3, 14, 15, tzinfo=timezone.utc),
+    )
+    second = package.create_campaign_plan_approval(
+        bundle,
+        approved_by="Release owner",
+        approved_at=datetime(2026, 8, 3, 15, 0, tzinfo=timezone.utc),
+    )
+    generated_policy = package.ApprovalPolicy.from_dict(
+        {
+            "schemaVersion": 1,
+            "name": "Packaged schema fixture",
+            "minimumTotal": 2,
+            "distinctReviewers": True,
+            "requirements": [
+                {"role": "brand", "minimum": 1},
+                {"role": "release-owner", "minimum": 1},
+            ],
+        }
+    )
+    generated_set = package.create_campaign_plan_approval_set(
+        bundle,
+        generated_policy,
+        (
+            package.CampaignPlanApprovalAssignment("brand", first),
+            package.CampaignPlanApprovalAssignment("release-owner", second),
+        ),
+    )
+    Draft202012Validator(approval_set).validate(generated_set.to_dict())
+    Draft202012Validator(policy).validate(generated_policy.to_dict())
 
 
 def test_packaged_adapter_schema_is_available() -> None:

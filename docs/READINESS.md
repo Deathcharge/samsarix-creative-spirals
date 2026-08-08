@@ -57,6 +57,10 @@ samsarix-campaign plan status examples/launch-plan.json \
 
 If both `--approval` and `--handoff` are supplied, the explicit approval must exactly equal the
 record embedded in the packet. The handoff can otherwise supply its embedded approval by itself.
+The explicit or embedded evidence may be a legacy single plan approval or a policy-satisfying
+approval set. Set reports show the approval count and embedded policy identity, while verification
+still checks every member against current source. See
+[`APPROVAL_POLICIES.md`](APPROVAL_POLICIES.md).
 Add `--policy POLICY` to assess literal phrase rules and to verify a standalone approval binding.
 A policy-bound handoff supplies its embedded normalized policy automatically; an explicit policy
 then acts as an additional equality check. The JSON and HTML reports show the applied policy
@@ -131,7 +135,9 @@ samsarix-campaign schema --kind readiness
 The report records the assessment time and policies, stable stage and issue codes, evidence
 status, counts, and one item record per campaign. Version 0.13 adds optional
 `publicationStatus`, `publicationId`, and `publicationCounts` only when publication evidence is
-supplied. Reports without it retain their prior v1 shape and stages.
+supplied. Reports without it retain their prior v1 shape and stages. Version 0.15 extends only the
+existing `approval` field to accept a `plan-approval-set` evidence document in addition to the prior
+single approval.
 
 ## Offline HTML and privacy
 

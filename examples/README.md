@@ -86,6 +86,25 @@ samsarix-campaign plan status examples/launch-plan.json --approval examples/laun
 samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
 ```
 
+`approval-policy.json` demonstrates a two-role quorum. Create separate plan approvals for the
+brand and release-owner labels, then collect and verify them:
+
+```bash
+samsarix-campaign plan approval create examples/launch-plan.json \
+  --by "Brand reviewer" --output brand.approval.json
+samsarix-campaign plan approval create examples/launch-plan.json \
+  --by "Release owner" --output release-owner.approval.json
+samsarix-campaign plan approval collect examples/launch-plan.json \
+  --approval-policy examples/approval-policy.json \
+  --approval brand=brand.approval.json \
+  --approval release-owner=release-owner.approval.json \
+  --output launch-plan.approval-set.json
+samsarix-campaign plan approval verify examples/launch-plan.json launch-plan.approval-set.json
+```
+
+The example policy requires distinct reviewer labels, but labels and role assignments remain
+unsigned local metadata. See `docs/APPROVAL_POLICIES.md` before using the pattern as a release gate.
+
 The plan export contains a manifest, v2 adapter JSON, an RFC 5545 calendar, and one
 publisher-neutral CSV for each used platform. It records intended UTC times but never schedules or
 publishes a post. The self-diff demonstrates the unchanged exit path; compare against a saved prior

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-approval-set-v1.schema.json",
+  "title": "Samsarix Creative Spirals campaign plan approval set",
+  "description": "A deterministic unsigned collection of independently recorded plan approvals that satisfies an embedded approval policy.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "artifactType", "approvalSetId", "approvalSetHash", "planId",
+    "sourceHash", "approvalPolicy", "approvals"
+  ],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-approval-set"},
+    "approvalSetId": {"type": "string", "pattern": "^scas_[0-9a-f]{12}$"},
+    "approvalSetHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+    "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "approvalPolicy": {"$ref": "#/$defs/approvalPolicy"},
+    "approvals": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {"$ref": "#/$defs/assignment"}
+    }
+  },
+  "$defs": {
+    "approvalPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "name", "minimumTotal", "distinctReviewers", "requirements"],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "name": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        },
+        "minimumTotal": {"type": "integer", "minimum": 1, "maximum": 50},
+        "distinctReviewers": {"type": "boolean"},
+        "requirements": {
+          "type": "array", "minItems": 1, "maxItems": 20,
+          "items": {"$ref": "#/$defs/requirement"}
+        }
+      }
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "minimum"],
+      "properties": {
+        "role": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "minimum": {"type": "integer", "minimum": 1, "maximum": 50}
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "approval"],
+      "properties": {
+        "role": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+        "approval": {"$ref": "#/$defs/approval"}
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion", "artifactType", "planId", "sourceHash", "approvedBy",
+        "approvedAt", "qualityPolicy"
+      ],
+      "properties": {
+        "schemaVersion": {"const": 1},
+        "artifactType": {"const": "plan"},
+        "planId": {"type": "string", "pattern": "^scp_[0-9a-f]{12}$"},
+        "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "approvedBy": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\r\\n\\t\\u0000-\\u001F\\u007F]*$"
+        },
+        "approvedAt": {
+          "type": "string", "format": "date-time",
+          "pattern": "^(?!.*-00:00$)\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "qualityPolicy": {"enum": ["errors-only", "warnings-as-errors"]},
+        "contentPolicy": {"$ref": "#/$defs/contentPolicy"},
+        "media": {"$ref": "#/$defs/mediaBinding"},
+        "note": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    },
+    "contentPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyId", "sourceHash", "name"],
+      "properties": {
+        "policyId": {"type": "string", "pattern": "^scpol_[0-9a-f]{12}$"},
+        "sourceHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "name": {
+          "type": "string", "minLength": 1, "maxLength": 120,
+          "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        }
+      }
+    },
+    "mediaBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mediaId", "mediaHash", "assetCount", "totalBytes"],
+      "properties": {
+        "mediaId": {"type": "string", "pattern": "^scm_[0-9a-f]{12}$"},
+        "mediaHash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "assetCount": {"type": "integer", "minimum": 1, "maximum": 400},
+        "totalBytes": {"type": "integer", "minimum": 1, "maximum": 100000000}
+      }
+    }
+  }
+}

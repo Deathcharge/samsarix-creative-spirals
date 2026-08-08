@@ -2,7 +2,7 @@
 
 An approved handoff packet is the last local-first boundary before a person or separately
 permissioned adapter imports campaign drafts into a publisher. It packages the current plan,
-embedded approval record, any approval-bound content policy, exact rendered outputs, and bounded
+embedded approval evidence, any approval-bound content policy, exact rendered outputs, and bounded
 integrity metadata in one exclusive directory.
 
 The packet answers five offline questions:
@@ -37,6 +37,12 @@ The create command refuses a stale approval, a plan that no longer passes the re
 policy, a generation time before the approval time, a symbolic-link output root, a non-directory
 output root, or an existing packet identity. It creates the packet in a private temporary
 directory and renames that directory into place only after every file is written.
+
+The approval argument may also be a policy-satisfying `plan-approval-set` created by
+`plan approval collect`. The packet still uses the fixed `approval.json` filename and unchanged
+handoff v1 manifest shape; its embedded document is either the legacy single approval or the full
+set. Every set member is reverified, and the packet generation time must be at or after the latest
+embedded approval. See [`APPROVAL_POLICIES.md`](APPROVAL_POLICIES.md).
 
 If visual review must bind exact local images, add `--include-media` when creating the plan
 approval—not when creating the handoff. Approval verification and handoff creation will then
@@ -98,7 +104,7 @@ handoff-outbox/
 samsarix-campaign schema --kind handoff
 ```
 
-Its `artifacts` object declares each plan-export file, embedded `approval.json`, optional
+Its `artifacts` object declares each plan-export file, embedded single-or-set `approval.json`, optional
 `content-policy.json`, and optional `media-index.json` by fixed, packet-relative path, exact byte
 length, and lowercase SHA-256. The media index transitively declares each content-addressed image's
 path, byte length, checksum, content type, dimensions, source reference, alt text, and targets. The
