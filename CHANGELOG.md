@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented here.
 
+## 0.17.0 - 2026-08-10
+
+- Added bounded canonical UTF-8 CSV inspection with an exact ten-field header, optional BOM,
+  1,000,000-byte and 100-row ceilings, pipe-delimited list fields, and RFC 3339 intended times with
+  explicit known offsets.
+- Added stable schema-backed row/field diagnostics that aggregate invalid campaigns and required
+  platform coverage without writing partial output.
+- Added exclusive atomic source-package export with normalized campaign JSON, deterministic
+  sequence/slug paths, authoritative staged plan reload, and refusal to merge or overwrite an
+  existing destination.
+- Added `plan import`, public typed APIs, a bundled `plan-import-check` schema, realistic CSV
+  example, installed-wheel CI coverage, and current Buffer, Planable, and Hootsuite workflow
+  evidence and trust boundaries.
+
 ## 0.16.0 - 2026-08-08
 
 - Added immutable `plan-review` v1 records for source-bound `comment`, `request-changes`, and

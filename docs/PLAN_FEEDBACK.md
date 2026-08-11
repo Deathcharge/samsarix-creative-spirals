@@ -165,8 +165,9 @@ It does not decide whether a claim is true, a suggestion is good, legal review i
 human actually addressed a finding. Those require human judgment and, where appropriate, external
 organizational controls.
 
-The next onboarding milestone is canonical CSV/plan import. Official
+Canonical CSV/plan import is now a separate bounded onboarding path. Official
 [Buffer bulk upload](https://support.buffer.com/article/926-how-to-upload-posts-in-bulk-to-buffer)
 and [Planable import](https://help.planable.io/hc/en-us/articles/21715324907804-Import-posts-in-Planable)
-workflows confirm that spreadsheet authoring is a separate high-value workflow; it should not be
-conflated with immutable feedback evidence or weaken the JSON source-of-truth contract.
+workflows confirm that spreadsheet authoring is a separate high-value workflow; the implementation
+does not conflate it with immutable feedback evidence or weaken the generated JSON source-of-truth
+contract. See [Canonical CSV and plan import](PLAN_IMPORT.md).

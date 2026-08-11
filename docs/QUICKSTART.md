@@ -49,6 +49,23 @@ campaign may target no more than four images to one platform. Add a `platforms` 
 reference when a visual applies only to selected campaign platforms. Full rules and adapter safety
 requirements are in [MEDIA.md](MEDIA.md).
 
+### Spreadsheet-first alternative
+
+To start a complete plan from the canonical CSV template instead of one JSON file:
+
+```bash
+samsarix-campaign plan import examples/plan-import.csv \
+  --name "Imported release sequence" \
+  --required-platform x \
+  --required-platform linkedin \
+  --output imported-release
+samsarix-campaign plan check imported-release/plan.json
+```
+
+The importer validates every row before exclusively writing normalized campaign JSON and
+`plan.json`. It does not schedule, publish, merge with an existing directory, or interpret a
+workspace timezone. See [PLAN_IMPORT.md](PLAN_IMPORT.md).
+
 ## 3. Validate for automation
 
 ```bash

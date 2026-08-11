@@ -18,7 +18,7 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.16 alpha.** Source-bound comments and negative review decisions, deterministic
+> Maturity: **0.17 alpha.** Atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
 > multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
@@ -236,6 +236,22 @@ A plan keeps a launch sequence reviewable in Git while reusing standalone campai
 paths are portable, relative to the plan, and confined beneath its directory. Intended times must
 include `Z` or an explicit offset and are normalized to UTC.
 
+For spreadsheet-first authoring, import the bundled canonical template atomically before using the
+same plan workflow:
+
+```bash
+samsarix-campaign plan import examples/plan-import.csv \
+  --name "Release sequence" \
+  --required-platform x \
+  --required-platform linkedin \
+  --output imported-release
+samsarix-campaign plan check imported-release/plan.json
+```
+
+Every row must pass before any output is written. The new package contains normalized campaign JSON
+plus `plan.json`; the destination is never merged or overwritten. See
+[Canonical CSV and plan import](docs/PLAN_IMPORT.md) for the exact header and field contract.
+
 ```json
 {
   "schemaVersion": 1,
@@ -424,6 +440,7 @@ samsarix-campaign policy validate POLICY [--json]
 samsarix-campaign plan validate PLAN [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--json]
+samsarix-campaign plan import CSV --name NAME [--required-platform PLATFORM ...] [--output DIRECTORY] [--json]
 samsarix-campaign plan status PLAN [--policy POLICY] [--approval PATH] [--handoff DIRECTORY] [--publication PATH] [--at RFC3339] [--warnings-as-errors] [--require-scheduled] [--require-stage quality|approval|handoff|publication] [--html PATH] [--json]
 samsarix-campaign plan diff BEFORE AFTER [--json] [--exit-code]
 samsarix-campaign plan approval create PLAN --by LABEL [--policy POLICY] [--at RFC3339] [--note TEXT] [--warnings-as-errors] [--include-media] [--output PATH] [--json]
@@ -436,12 +453,12 @@ samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
 samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
-samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|plan-review|adapter|handoff|media-package|publication|readiness] [--output PATH]
+samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|plan-import|plan-review|adapter|handoff|media-package|publication|readiness] [--output PATH]
 ```
 
 Successful commands return exit code `0`. Validation and I/O failures return `1`; invalid CLI
-usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable errors go to
-stderr. Exit `4` means a requested diff detected changes, an approval or plan review is
+usage returns `2`; a valid campaign that fails `check` returns `3`. Human-readable exceptions go to
+stderr; bounded import diagnostics are reports and stay on stdout. Exit `4` means a requested diff detected changes, an approval or plan review is
 stale/invalid, `plan review verify --fail-on-blocking` found a current negative decision, a handoff
 is not current and intact, a publication ledger is incomplete/invalid, or a requested
 approval/handoff/publication readiness stage is unmet.
@@ -496,6 +513,7 @@ console command. The package has no third-party runtime dependencies.
 - `workflow.py` computes deterministic IDs and safely exports review bundles.
 - `quality.py` evaluates deterministic, machine-readable campaign quality gates.
 - `plans.py` validates, builds, checks, and exports bounded multi-campaign sequences.
+- `plan_import.py` validates bounded canonical CSV and exclusively writes complete source packages.
 - `review.py` computes semantic diffs and creates/verifies source-bound local approvals.
 - `plan_review.py` reviews and approves complete launch-plan state without publishing it.
 - `plan_feedback.py` records and verifies immutable feedback for exact plan revisions.
@@ -504,7 +522,7 @@ console command. The package has no third-party runtime dependencies.
 - `handoff.py` creates and verifies exclusive approved-plan packets and exact artifact bytes.
 - `publication.py` initializes and verifies handoff-bound operator outcome ledgers.
 - `readiness.py` consolidates time-aware quality and evidence state and renders offline HTML.
-- `schema.py` exposes all authoring and evidence JSON Schemas bundled in the wheel, including approval policies, sets, and plan reviews.
+- `schema.py` exposes all authoring and evidence JSON Schemas bundled in the wheel, including approval policies, sets, import diagnostics, and plan reviews.
 - `cli.py` maps these operations to stable commands and exit codes.
 
 Build and check functions have no file or network side effects. Load, explicit schema output, and
@@ -520,6 +538,9 @@ for trust boundaries and failure behavior.
   platforms, unrequested or non-canonical variant keys, and invalid hashtags are rejected.
 - Plans contain at most 100 items. Referenced campaign paths cannot be absolute, traverse parents,
   use platform-specific separators, or escape through symbolic links.
+- Canonical import reads at most 1 MB and 100 logical data rows, requires an exact UTF-8 header and
+  timezone-explicit times, reports all bounded diagnostics before writing, atomically reserves the
+  destination, and publishes a complete validated source package without replacement.
 - Export paths are generated from a sanitized name plus a content hash. Existing bundles are not
   overwritten without explicit opt-in, and symbolic-link bundle targets are rejected.
 - Discord broadcast mentions are surfaced as warnings. This tool never posts them.
@@ -547,7 +568,7 @@ for trust boundaries and failure behavior.
   they do not prove provider acceptance, remote visibility, authorship, or continued availability.
 - Media transformation, per-account capabilities and mention resolution, cryptographic approvals,
   hosted collaboration, network publishing, click collection, and analytics reporting are outside
-  the 0.16 scope. Calendar, readiness, review, and publication files record
+  the 0.17 scope. Calendar, readiness, review, and publication files record
   intent and local evidence; they do not schedule or publish anything.
 
 Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md).

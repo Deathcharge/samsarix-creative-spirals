@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://samsarix.com/schemas/creative-spirals/plan-import-check-v1.schema.json",
+  "title": "Samsarix Creative Spirals plan import check",
+  "description": "Machine-readable diagnostics from bounded canonical CSV inspection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "artifactType", "valid", "rowCount", "issues"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "artifactType": {"const": "plan-import-check"},
+    "valid": {"type": "boolean"},
+    "rowCount": {"type": "integer", "minimum": 0},
+    "issues": {
+      "type": "array",
+      "maxItems": 2500,
+      "items": {"$ref": "#/$defs/issue"}
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"valid": {"const": true}}, "required": ["valid"]},
+      "then": {"properties": {"issues": {"maxItems": 0}}},
+      "else": {"properties": {"issues": {"minItems": 1}}}
+    }
+  ],
+  "$defs": {
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "pattern": "^(?=.*\\S)[^\\u0000-\\u001F\\u007F-\\u009F\\uD800-\\uDFFF]*$"
+        },
+        "row": {"type": "integer", "minimum": 1},
+        "field": {"type": "string", "minLength": 1, "maxLength": 120}
+      }
+    }
+  }
+}

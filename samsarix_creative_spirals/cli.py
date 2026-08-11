@@ -54,6 +54,7 @@ from .plan_feedback import (
     parse_plan_review_timestamp,
     verify_campaign_plan_review,
 )
+from .plan_import import export_campaign_plan_import, inspect_campaign_plan_csv
 from .quality import check_campaign
 from .publication import (
     PublicationCheck,
@@ -87,6 +88,7 @@ from .schema import (
     load_media_package_schema,
     load_plan_approval_schema,
     load_plan_approval_set_schema,
+    load_plan_import_schema,
     load_plan_review_schema,
     load_plan_schema,
     load_publication_schema,
@@ -421,6 +423,41 @@ def _plan_export_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _plan_import_command(args: argparse.Namespace) -> int:
+    check = inspect_campaign_plan_csv(
+        args.csv,
+        name=args.name,
+        required_platforms=args.required_platforms,
+    )
+    if not check.valid:
+        if args.json:
+            _json_print(check.to_dict())
+        else:
+            print(f"CSV import invalid ({len(check.issues)} issue(s))")
+            for issue in check.issues:
+                location = f"row {issue.row}" if issue.row is not None else "file"
+                if issue.field is not None:
+                    location += f".{issue.field}"
+                print(f"- {issue.code} [{location}]: {issue.message}")
+        return 1
+    assert check.imported is not None
+    output = args.output or f"{Path(args.csv).stem}-import"
+    plan_path = export_campaign_plan_import(check.imported, output)
+    bundle = build_campaign_plan(load_campaign_plan(plan_path))
+    if args.json:
+        _json_print(
+            {
+                "check": check.to_dict(),
+                "path": str(plan_path),
+                "planId": bundle.plan_id,
+            }
+        )
+    else:
+        print(f"Imported {check.row_count} campaign(s) into {plan_path}")
+        print(f"Validated campaign plan {bundle.plan_id}")
+    return 0
+
+
 def _plan_diff_command(args: argparse.Namespace) -> int:
     result = diff_campaign_plans(
         load_campaign_plan(args.before),
@@ -737,6 +774,7 @@ def _schema_command(args: argparse.Namespace) -> int:
         "plan": load_plan_schema,
         "plan-approval": load_plan_approval_schema,
         "plan-approval-set": load_plan_approval_set_schema,
+        "plan-import": load_plan_import_schema,
         "plan-review": load_plan_review_schema,
         "publication": load_publication_schema,
         "readiness": load_readiness_schema,
@@ -915,6 +953,27 @@ def build_parser() -> argparse.ArgumentParser:
         "--json", action="store_true", help="emit machine-readable output"
     )
     plan_check_parser.set_defaults(handler=_plan_check_command)
+
+    plan_import_parser = plan_subparsers.add_parser(
+        "import", help="atomically import a canonical UTF-8 CSV into campaign and plan sources"
+    )
+    plan_import_parser.add_argument("csv", help="canonical Samsarix authoring CSV")
+    plan_import_parser.add_argument("--name", required=True, help="campaign-plan name")
+    plan_import_parser.add_argument(
+        "--required-platform",
+        dest="required_platforms",
+        action="append",
+        default=[],
+        choices=("x", "linkedin", "bluesky", "mastodon", "discord"),
+        help="require every imported campaign to request this platform; repeat as needed",
+    )
+    plan_import_parser.add_argument(
+        "--output", help="new source-package directory (default: CSV stem plus -import)"
+    )
+    plan_import_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable diagnostics and result"
+    )
+    plan_import_parser.set_defaults(handler=_plan_import_command)
 
     plan_status_parser = plan_subparsers.add_parser(
         "status", help="assess launch readiness and optionally write an offline HTML board"
@@ -1239,6 +1298,7 @@ def build_parser() -> argparse.ArgumentParser:
             "approval",
             "plan-approval",
             "plan-approval-set",
+            "plan-import",
             "plan-review",
             "publication",
             "adapter",

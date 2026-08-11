@@ -399,13 +399,25 @@ runs `31446907105` and `31446909057`; merge commit `d81da9a`; and post-merge run
 `d4b9afb`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#016-source-bound-plan-feedback-release-evidence).
 
-## Planned milestone — 0.17 canonical CSV and plan import
+## Active milestone — 0.17 canonical CSV and plan import
 
-Official Buffer and Planable workflows confirm that spreadsheet bulk authoring is a separate
-high-frequency use case. The next bounded slice should import a documented Samsarix CSV contract
-into normalized campaign files and a plan, report every row error without partial writes, preserve
-explicit UTC/timezone semantics, and round-trip through existing preview/check/diff/review/export
-gates. Provider-specific templates and direct upload remain separate adapters.
+- [x] Define one provider-neutral UTF-8 authoring header with bounded spreadsheet-friendly list,
+  explicit-offset time, and optional single-image metadata fields.
+- [x] Inspect every accepted row through the existing campaign contract and emit stable
+  schema-backed row/field diagnostics without partial writes.
+- [x] Export normalized campaign JSON and a complete plan through a private staged directory,
+  authoritative reload, and exclusive rename without merge or overwrite behavior.
+- [x] Add CLI, typed public API, bundled schema, realistic template, adversarial tests, installed
+  wheel CI journey, current official workflow evidence, and explicit spreadsheet/media boundaries.
+- [ ] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
+  capture final rollback evidence.
+
+Official Buffer, Planable, and Hootsuite workflows confirm that spreadsheet bulk authoring is a
+separate high-frequency use case. Samsarix imports its documented CSV contract into normalized
+campaign files and a plan, reports bounded row errors without partial writes, preserves explicit
+UTC/timezone semantics, and round-trips through existing preview/check/diff/review/export gates.
+Provider-specific templates and direct upload remain separate adapters. Contract details and
+official sources are in [`docs/PLAN_IMPORT.md`](docs/PLAN_IMPORT.md).
 
 ## Deliberate exclusions
 

@@ -63,7 +63,7 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media transformation or upload; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.16 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.17 add bounded plans, canonical CSV-to-plan import, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
 link attribution, and optional approval-bound exact image packets without adding a scheduler,

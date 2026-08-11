@@ -66,6 +66,13 @@ def load_plan_review_schema() -> dict[str, Any]:
     return cast(dict[str, Any], payload)
 
 
+def load_plan_import_schema() -> dict[str, Any]:
+    """Return a fresh copy of the public plan-import check JSON Schema."""
+    resource = files(__package__).joinpath("plan-import.schema.json")
+    payload = json.loads(resource.read_text(encoding="utf-8"))
+    return cast(dict[str, Any], payload)
+
+
 def load_handoff_schema() -> dict[str, Any]:
     """Return a fresh copy of the public approved-plan handoff JSON Schema."""
     resource = files(__package__).joinpath("handoff.schema.json")

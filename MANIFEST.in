@@ -10,5 +10,5 @@ include requirements.txt
 include requirements-dev.txt
 recursive-include samsarix_creative_spirals *.json py.typed
 recursive-include docs *.md
-recursive-include examples *.json *.md *.py
+recursive-include examples *.json *.md *.py *.csv
 recursive-include tests *.py *.json *.csv *.ics
