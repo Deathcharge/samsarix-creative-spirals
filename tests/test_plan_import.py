@@ -239,6 +239,58 @@ def test_inspection_covers_time_media_platform_and_metadata_diagnostics(tmp_path
         PlanImportIssue("bad-message", "line one\nline two")
 
 
+def test_inspection_preserves_strict_timestamp_and_media_path_validation(tmp_path: Path) -> None:
+    source = tmp_path / "strict-fields.csv"
+    rows = [
+        [
+            "Padded timestamp",
+            "",
+            "Body",
+            "",
+            "",
+            "x",
+            " 2026-08-10T09:00:00Z ",
+            "",
+            "",
+            "",
+        ],
+        [
+            "Padded media path",
+            "",
+            "Body",
+            "",
+            "",
+            "x",
+            "",
+            " media/launch.png ",
+            "Launch image",
+            "",
+        ],
+    ]
+    source.write_text(_csv_text(rows), encoding="utf-8")
+
+    check = inspect_campaign_plan_csv(source, name="Strict fields")
+
+    assert check.valid is False
+    assert any(
+        issue.code == "invalid-timestamp"
+        and issue.row == 2
+        and "surrounding whitespace" in issue.message
+        for issue in check.issues
+    )
+    assert any(
+        issue.code == "invalid-campaign"
+        and issue.row == 3
+        and "portable relative path" in issue.message
+        for issue in check.issues
+    )
+    validator = Draft202012Validator(load_plan_import_schema())
+    validator.validate(check.to_dict())
+    blank_message = check.to_dict()
+    blank_message["issues"][0]["message"] = "   "
+    assert validator.is_valid(blank_message) is False
+
+
 def test_export_cleans_private_stage_when_authoritative_reload_fails(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
@@ -343,6 +395,11 @@ def test_public_import_values_enforce_runtime_invariants(tmp_path: Path) -> None
     assert "message" in str(issue_error.value)
     assert "row" in str(issue_error.value)
     assert "field" in str(issue_error.value)
+    with pytest.raises(ConfigError, match="message must contain"):
+        PlanImportIssue("blank-message", "   ")
+
+    with pytest.raises(ConfigError, match="CampaignPlanImport value"):
+        export_campaign_plan_import(cast(Any, object()), tmp_path / "invalid-export")
 
     with pytest.raises(ConfigError) as item_error:
         ImportedCampaign(

@@ -61,7 +61,11 @@ class PlanImportIssue:
         issues: list[str] = []
         if not isinstance(self.code, str) or not _ISSUE_CODE_RE.fullmatch(self.code):
             issues.append("code must be a lowercase hyphenated diagnostic identifier")
-        if not isinstance(self.message, str) or not self.message or len(self.message) > 1000:
+        if (
+            not isinstance(self.message, str)
+            or not self.message.strip()
+            or len(self.message) > 1000
+        ):
             issues.append("message must contain between 1 and 1000 characters")
         elif any(unicodedata.category(character) in {"Cc", "Cs"} for character in self.message):
             issues.append("message must be a single line without control characters")
@@ -345,6 +349,16 @@ def _intended_at(value: str, *, row: int, issues: list[PlanImportIssue]) -> date
     if not value.strip():
         return None
     candidate = value.strip()
+    if candidate != value:
+        issues.append(
+            PlanImportIssue(
+                "invalid-timestamp",
+                "intended_at must not contain surrounding whitespace",
+                row=row,
+                field="intended_at",
+            )
+        )
+        return None
     if not _RFC3339_RE.fullmatch(candidate):
         issues.append(
             PlanImportIssue(
@@ -412,7 +426,8 @@ def _campaign_from_row(
         if values[source_field].strip():
             campaign[source_field] = values[source_field]
 
-    media_path = values["media_path"].strip()
+    media_path_value = values["media_path"]
+    media_path = media_path_value.strip()
     media_alt_text = values["media_alt_text"].strip()
     media_platforms_value = values["media_platforms"]
     if media_path or media_alt_text or media_platforms_value.strip():
@@ -434,7 +449,7 @@ def _campaign_from_row(
                     field="media_alt_text",
                 )
             )
-        media: dict[str, Any] = {"path": media_path, "altText": media_alt_text}
+        media: dict[str, Any] = {"path": media_path_value, "altText": media_alt_text}
         if media_platforms_value.strip():
             media["platforms"] = _tokens(
                 media_platforms_value,
@@ -601,6 +616,9 @@ def _clear_temporary_import(path: Path) -> None:
 
 def export_campaign_plan_import(imported: CampaignPlanImport, output: str | Path) -> Path:
     """Write a complete source package exclusively and return its plan path."""
+    imported_value: object = imported
+    if not isinstance(imported_value, CampaignPlanImport):
+        raise ConfigError("imported must be a CampaignPlanImport value")
     target = Path(os.path.abspath(output))
     if target.exists() or target.is_symlink():
         raise FileExistsError(f"refusing to overwrite existing import output: {target}")
