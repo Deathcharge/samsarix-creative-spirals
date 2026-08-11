@@ -1,5 +1,10 @@
 # Samsarix Creative Spirals
 
+[![CI](https://github.com/Deathcharge/samsarix-creative-spirals/actions/workflows/ci.yml/badge.svg)](https://github.com/Deathcharge/samsarix-creative-spirals/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Deathcharge/samsarix-creative-spirals?include_prereleases&label=release)](https://github.com/Deathcharge/samsarix-creative-spirals/releases/tag/v0.17.1)
+[![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
+[![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](pyproject.toml)
+
 Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
 drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
 input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
@@ -32,8 +37,6 @@ review/export step without connecting social accounts or sending draft content t
 Prerequisite: Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/Deathcharge/samsarix-creative-spirals.git
-cd samsarix-creative-spirals
 python -m venv .venv
 ```
 
@@ -47,12 +50,18 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
-Install and preview the included campaign:
+Install the signed-off alpha release directly from its immutable GitHub attachment:
 
 ```bash
-python -m pip install -e .
-samsarix-campaign preview examples/campaign.json
+python -m pip install https://github.com/Deathcharge/samsarix-creative-spirals/releases/download/v0.17.1/samsarix_creative_spirals-0.17.1-py3-none-any.whl
+samsarix-campaign --version
+samsarix-campaign init campaign.json
+samsarix-campaign preview campaign.json
 ```
+
+The release page also provides the source archive and `SHA256SUMS.txt` for offline integrity
+verification. Contributors can instead clone the repository and run
+`python -m pip install -e ".[dev]"` from its root.
 
 No API keys, accounts, database, network connection, or other Samsarix repository is required.
 
