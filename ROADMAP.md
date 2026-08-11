@@ -370,7 +370,7 @@ runs `31244227416` and `31244229167`; merge commit `acb21ce`; and post-merge run
 `c25e6ca`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#015-policy-bound-approval-quorum-release-evidence).
 
-## Active milestone — 0.16 source-bound plan feedback
+## Release milestone — 0.16 source-bound plan feedback
 
 - [x] Add immutable `comment`, `request-changes`, and `reject` records bound to one exact plan
   revision, while keeping positive release authorization in the quality-gated approval contract.
@@ -380,7 +380,7 @@ runs `31244227416` and `31244229167`; merge commit `acb21ce`; and post-merge run
   coverage without adding runtime dependencies, accounts, network access, or mutable service state.
 - [x] Document current Buffer, Sprout Social, and Planable feedback workflows plus the unsigned
   reviewer-label, local blocking, confidentiality, and resolution boundaries.
-- [ ] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
+- [x] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
   capture final rollback evidence.
 
 Connected review services keep comments, rejection notes, suggestions, notifications, accounts,
@@ -388,6 +388,16 @@ and version activity beside a draft. Samsarix supplies the portable artifact por
 feedback that can live in Git or an archive, turns stale automatically when source changes, and can
 bind reviewed image bytes without needing publisher credentials. Contract details and official
 sources are in [`docs/PLAN_FEEDBACK.md`](docs/PLAN_FEEDBACK.md).
+
+Reviewed technical evidence at `4803771`: 436 tests at 93.79% coverage, clean formatting, lint,
+strict typing, compilation, and thirteen schema checks; an external Python 3.11 installed-wheel
+journey produced current blocking review `scr_f56f16c874d9` and native CI exit 4; wheel SHA-256
+`2b0ac61f84e3654ab70e20e1a5124c48608d44bae1d80865512022f38e255476`; sdist SHA-256
+`cabb721a0a8b5563eb768134a76131271837153ed96748330a862a4663d27385`; reviewed push/PR
+runs `31446907105` and `31446909057`; merge commit `d81da9a`; and post-merge run
+`31447348731` all passed. Rollback is a revert of PR #18's merge or a pin to pre-0.16 main commit
+`d4b9afb`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#016-source-bound-plan-feedback-release-evidence).
 
 ## Planned milestone — 0.17 canonical CSV and plan import
 

@@ -63,7 +63,7 @@ publisher without depending on another Samsarix repository or the flagship appli
 **Deliberately out of scope:** automatic publishing; social authentication; background scheduling;
 analytics; AI generation; media transformation or upload; hosted collaborative approvals; cryptographic signer
 identity; account-specific capabilities; a web UI; database/cloud infrastructure; and private
-Helix integrations. Versions 0.4–0.15 add bounded plans, interchange, campaign and whole-plan
+Helix integrations. Versions 0.4–0.16 add bounded plans, interchange, campaign and whole-plan
 semantic diffs, source-bound local review metadata, portable image handoff, exact approved packet
 verification, offline launch readiness, platform-native content, policy-as-code, and deterministic
 link attribution, and optional approval-bound exact image packets without adding a scheduler,
@@ -1308,4 +1308,91 @@ a set. PyPI publication and external adoption validation remain owner-controlled
 Before public package publication, roll back by reverting merge commit
 `acb21ce6873d16d4a5fc9221397e1375ceef06b0` or pinning pre-0.15 main commit
 `c25e6ca1f9de6d7d5f8372eeddf66d67fcf1c7d8`. After publication, use normal version pinning and a
+corrective release; do not replace published artifacts silently.
+
+
+## 0.16 source-bound plan-feedback release evidence
+
+### Research and product decision
+
+Connected review products keep draft comments, rejection reasons, suggestions, notifications,
+accounts, and version activity together. Official Buffer, Sprout Social, and Planable workflows
+confirm that review feedback and change requests are routine campaign-operations needs. Exact
+official links and the bounded comparison are in [`PLAN_FEEDBACK.md`](PLAN_FEEDBACK.md).
+
+The local-first product decision is to make the portable evidence independently useful without
+imitating a hosted collaboration service. An immutable record binds feedback to one exact plan
+revision and optional exact-media snapshot; any source or bound-media change makes it stale.
+Current `request-changes` and `reject` decisions can fail CI, while `comment` remains informative.
+Positive release authorization deliberately remains in the separately quality-gated approval
+contract.
+
+Priority disposition: P1 “review findings cannot travel with the exact draft revision they
+describe” is closed by this slice. Authenticated identity, conversations, notifications, semantic
+resolution, and provider publishing remain deferred because they require hosted state, credentials,
+or a materially different trust boundary.
+
+### Bounded contract and implementation
+
+Implemented locally: immutable review/finding/check models; deterministic `scr_*` identity and
+full SHA-256 content hash; `comment`, `request-changes`, and `reject` decisions; one-to-fifty
+structured findings; optional plan-item, platform, and suggested-edit fields; strict item-target
+validation; optional exact `scm_*` media binding; tamper and staleness detection; stable `valid` and
+`blocking` semantics; exclusive non-overwriting export; a bundled Draft 2020-12 schema; typed public
+APIs; `plan review create` and `plan review verify`; and an opt-in `--fail-on-blocking` CI gate.
+
+Reviewer labels and review records are unsigned local metadata. Verification establishes canonical
+structure, exact source/media binding, and current decision state; it does not prove reviewer
+identity or authority, confidentiality, delivery, substantive resolution, or non-repudiation.
+Repository permissions or another trusted control remain necessary when those properties matter.
+
+### Verification and release disposition
+
+Implementation and accepted review fixes converge at exact code commit
+`4803771a9dfaf9b437ce4e22fb550011420de251`. [PR #18](https://github.com/Deathcharge/samsarix-creative-spirals/pull/18)
+merged that head to `main` as
+`d81da9ac2a601045048dc3f41a2a6c03edabd0c6`. This evidence section is a subsequent
+documentation-only main commit, so the artifact hashes identify the exact reviewed code tree rather
+than a self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests examples` | 0 | All 40 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests examples` | 0 | No findings. |
+| `python -m mypy` | 0 | Strict typing passed across 39 source files. |
+| `python -m pytest --cov --cov-report=term-missing` | 0 | 436 passed; 93.79% total coverage and 97% plan-feedback coverage. |
+| `python -m compileall -q samsarix_creative_spirals tests examples` | 0 | Package, tests, and examples compiled. |
+| Draft 2020-12 metaschema validation | 0 | All thirteen bundled schemas validated. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.16.0 sdist and then its universal wheel from exact reviewed code head `4803771`. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.16.0, plan `scp_d8a68cdb1054`, review `scr_f56f16c874d9`, current blocking verification, native `--fail-on-blocking` exit 4, and `pip check` passed outside the checkout. |
+| Hosted GitHub Actions after review fixes | 0 | [Push run 31446907105](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31446907105) and [PR run 31446909057](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31446909057) each passed the complete Python 3.10/3.13 matrix at reviewed head `4803771`. |
+| Post-merge GitHub Actions | 0 | [Main run 31447348731](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31447348731) passed both complete matrices at merge commit `d81da9a`. |
+| `git diff --check` | 0 | No whitespace errors at the reviewed code commit. |
+
+Isolated artifact digests from exact reviewed code commit `4803771`:
+
+- `samsarix_creative_spirals-0.16.0-py3-none-any.whl` — SHA-256
+  `2b0ac61f84e3654ab70e20e1a5124c48608d44bae1d80865512022f38e255476`.
+- `samsarix_creative_spirals-0.16.0.tar.gz` — SHA-256
+  `cabb721a0a8b5563eb768134a76131271837153ed96748330a862a4663d27385`.
+
+CodeRabbit posted four inline findings. All were validated and addressed: media-binding
+documentation now covers both approval and review records; invalid review timestamps report the
+review field; non-iterable finding containers enter aggregated `ConfigError` validation in both
+public paths; and exit-code documentation includes bound-media staleness. All four threads resolved,
+and the reviewed-head local and hosted gates passed after the fixes.
+
+Release disposition: **merged release candidate with one owner-controlled distribution gate**.
+The exact local source and sdist-derived wheel support the declared plan-feedback journey with no
+known locally actionable P0 or P1 defect. Public PyPI publication has not been performed and remains
+an explicit owner action. External-user adoption evidence likewise remains unavailable; competitor
+workflow evidence demonstrates the operational need, not product-market fit.
+
+Compatibility is additive: campaign, plan, adapter, approval, handoff, readiness, and publication
+contracts are unchanged. Plan-review v1, its schema, typed values, timestamp parser, and CLI commands
+join the pre-1.0 surface. Existing positive authorization continues to require plan approval.
+
+Before public package publication, roll back by reverting merge commit
+`d81da9ac2a601045048dc3f41a2a6c03edabd0c6` or pinning pre-0.16 main commit
+`d4b9afbc741d0471f62c1d6ab810e43aa6157d79`. After publication, use normal version pinning and a
 corrective release; do not replace published artifacts silently.
