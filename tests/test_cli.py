@@ -33,6 +33,21 @@ def _write_policy(path: Path, phrase: str = "internal only") -> None:
     )
 
 
+def test_cli_escapes_terminal_controls_in_validation_errors(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign_data["unknown\x1b]8;;https://example.invalid\x07field"] = "value"
+    path = tmp_path / "hostile.json"
+    _write_campaign(path, campaign_data)
+
+    assert main(["validate", str(path)]) == 1
+
+    captured = capsys.readouterr()
+    assert "\x1b" not in captured.err
+    assert "\\x1b" in captured.err
+    assert "\\x07" in captured.err
+
+
 def test_cli_core_journey(tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]) -> None:
     config_path = tmp_path / "campaign.json"
     assert main(["init", str(config_path)]) == 0

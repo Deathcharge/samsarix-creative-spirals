@@ -22,6 +22,7 @@ from .approval_policy import (
     load_campaign_plan_approval_evidence,
     verify_campaign_plan_approval_evidence,
 )
+from .filesystem import directory_identity, is_link_like, require_directory_identity
 from .media_package import (
     CampaignPlanMedia,
     CollectedCampaignPlanMedia,
@@ -436,33 +437,39 @@ def export_campaign_plan_handoff(
 
     root = Path(os.path.abspath(output_root))
     if root.exists():
-        if root.is_symlink():
-            raise OSError(f"refusing to export through a symbolic-link directory: {root}")
-        if not root.is_dir():
-            raise OSError(f"output root is not a directory: {root}")
+        if is_link_like(root):
+            raise OSError(
+                f"refusing to export through a symbolic-link or other link-like directory: {root}"
+            )
     else:
         root.mkdir(parents=True)
+    root_identity = directory_identity(root, label="handoff output root")
 
     packet_name = f"{_slugify(bundle.name)}-{handoff.handoff_id}"
     target = root / packet_name
-    if target.exists() or target.is_symlink():
+    if target.exists() or is_link_like(target):
         raise FileExistsError(f"handoff packet already exists: {target}")
     temporary = root / f".{packet_name}.{uuid.uuid4().hex}.tmp"
+    require_directory_identity(root, root_identity, label="handoff output root")
     temporary.mkdir(mode=0o700)
+    temporary_identity = directory_identity(temporary, label="temporary plan directory")
     try:
         _write_plan_artifacts(temporary, artifacts)
         if media is not None:
             _write_plan_artifacts(temporary, media.payloads())
         (temporary / "handoff.json").write_bytes(_handoff_payload(handoff))
+        require_directory_identity(root, root_identity, label="handoff output root")
+        if target.exists() or is_link_like(target):
+            raise FileExistsError(f"handoff packet appeared during export: {target}")
         temporary.replace(target)
     finally:
-        _clear_plan_temp(temporary)
+        _clear_plan_temp(temporary, temporary_identity)
     return target
 
 
 def _require_packet_json(root: Path, filename: str) -> Path:
     path = root / filename
-    if path.is_symlink() or not path.is_file():
+    if is_link_like(path) or not path.is_file():
         raise ConfigError(f"handoff {filename} must be a regular file")
     return path
 
@@ -470,7 +477,7 @@ def _require_packet_json(root: Path, filename: str) -> Path:
 def load_campaign_plan_handoff(path: str | Path) -> CampaignPlanHandoffPacket:
     """Load bounded handoff and approval metadata from a non-symlink packet directory."""
     root = Path(os.path.abspath(path))
-    if root.is_symlink() or not root.is_dir():
+    if is_link_like(root) or not root.is_dir():
         raise ConfigError("handoff path must be a non-symbolic-link directory")
     handoff_path = _require_packet_json(root, "handoff.json")
     approval_path = _require_packet_json(root, "approval.json")
@@ -478,11 +485,11 @@ def load_campaign_plan_handoff(path: str | Path) -> CampaignPlanHandoffPacket:
     approval = load_campaign_plan_approval_evidence(approval_path)
     content_policy_path = root / "content-policy.json"
     content_policy = None
-    if content_policy_path.exists() or content_policy_path.is_symlink():
+    if content_policy_path.exists() or is_link_like(content_policy_path):
         content_policy = load_content_policy(_require_packet_json(root, "content-policy.json"))
     media_path = root / "media-index.json"
     media = None
-    if media_path.exists() or media_path.is_symlink():
+    if media_path.exists() or is_link_like(media_path):
         media = load_campaign_plan_media(_require_packet_json(root, "media-index.json"))
     return CampaignPlanHandoffPacket(
         root=root,
@@ -532,7 +539,7 @@ def _check_packet_directory(
 ) -> None:
     directory = root / name
     expected = {path for path in expected_paths if path.startswith(f"{name}/")}
-    if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
+    if is_link_like(directory) or (directory.exists() and not directory.is_dir()):
         issues.append(
             HandoffIssue(
                 "artifact-type-invalid",
@@ -576,7 +583,7 @@ def _hash_expected_file(
     parent = root
     for segment in segments[:-1]:
         parent /= segment
-        if parent.is_symlink():
+        if is_link_like(parent):
             issues.append(
                 HandoffIssue(
                     "artifact-type-invalid",
@@ -586,7 +593,7 @@ def _hash_expected_file(
             )
             return None
     path = root.joinpath(*segments)
-    if path.is_symlink() or not path.exists():
+    if is_link_like(path) or not path.exists():
         issues.append(
             HandoffIssue("artifact-missing", "Expected packet artifact is missing.", relative_path)
         )
@@ -656,7 +663,7 @@ def _check_handoff_identity_and_order(
     content_policy: ContentPolicy | None = None,
 ) -> bool:
     handoff = packet.handoff
-    packet_root_valid = not packet.root.is_symlink() and packet.root.is_dir()
+    packet_root_valid = not is_link_like(packet.root) and packet.root.is_dir()
     if not packet_root_valid:
         issues.append(
             HandoffIssue(

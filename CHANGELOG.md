@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented here.
 
+## 0.17.1 - 2026-08-11
+
+- Reject Windows junctions and other reparse points at export, import, handoff, and exact-media
+  filesystem boundaries; recheck directory identities across publication and cleanup operations.
+- Verify the final opened exact-media handle remains beneath its campaign directory and reject
+  containment or ancestor changes during stable reads.
+- Apply the strict serialized publication contract to directly constructed public ledger objects
+  before export, verification, or readiness completion.
+- Escape terminal control and formatting characters in human-readable diagnostics.
+- Enforce campaign collection, diagnostic, CSV token, and CSV row bounds before allocating or
+  rendering excess elements.
+
 ## 0.17.0 - 2026-08-10
 
 - Added bounded canonical UTF-8 CSV inspection with an exact ten-field header, optional BOM,

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .filesystem import directory_identity, is_link_like, require_directory_identity
 from .models import CampaignBundle, CampaignConfig, ConfigError, SUPPORTED_PLATFORMS
 from .policy import ContentPolicy, ContentPolicyBinding
 from .quality import check_campaign
@@ -656,41 +657,50 @@ def _write_plan_artifacts(root: Path, artifacts: dict[str, bytes]) -> None:
         destination.write_bytes(payload)
 
 
-def _clear_plan_temp(path: Path) -> None:
+def _clear_plan_temp(path: Path, identity: tuple[int, int, int, int]) -> None:
     if not path.exists():
         return
+    require_directory_identity(path, identity, label="temporary plan directory")
     for child in path.iterdir():
-        if child.name in {"csv", "media"} and child.is_dir() and not child.is_symlink():
+        require_directory_identity(path, identity, label="temporary plan directory")
+        if child.name in {"csv", "media"} and child.is_dir() and not is_link_like(child):
+            child_identity = directory_identity(child, label="temporary artifact directory")
             for artifact in child.iterdir():
-                if not artifact.is_file() or artifact.is_symlink():
+                require_directory_identity(
+                    child, child_identity, label="temporary artifact directory"
+                )
+                if not artifact.is_file() or is_link_like(artifact):
                     raise OSError(f"refusing to clean unexpected temporary entry: {artifact}")
                 artifact.unlink()
             child.rmdir()
-        elif child.is_file() and not child.is_symlink():
+        elif child.is_file() and not is_link_like(child):
             child.unlink()
         else:
             raise OSError(f"refusing to clean unexpected temporary entry: {child}")
     path.rmdir()
 
 
-def _validate_existing_plan_target(target: Path) -> None:
+def _validate_existing_plan_target(target: Path) -> tuple[int, int, int, int]:
+    target_identity = directory_identity(target, label="plan bundle")
     allowed = {"adapter.json", "calendar.ics", "manifest.json", "csv"}
     unexpected = [entry for entry in target.iterdir() if entry.name not in allowed]
     if unexpected:
         raise OSError(f"refusing to overwrite bundle with unexpected entry: {unexpected[0]}")
     for filename in ("adapter.json", "calendar.ics", "manifest.json"):
         artifact = target / filename
-        if (artifact.exists() or artifact.is_symlink()) and (
-            artifact.is_symlink() or not artifact.is_file()
+        if (artifact.exists() or is_link_like(artifact)) and (
+            is_link_like(artifact) or not artifact.is_file()
         ):
             raise OSError(f"refusing to overwrite invalid plan artifact: {artifact}")
     csv_dir = target / "csv"
     if csv_dir.exists():
-        if csv_dir.is_symlink() or not csv_dir.is_dir():
+        if is_link_like(csv_dir) or not csv_dir.is_dir():
             raise OSError(f"refusing to overwrite invalid CSV directory: {csv_dir}")
         for csv_file in csv_dir.iterdir():
-            if csv_file.is_symlink() or not csv_file.is_file() or csv_file.suffix != ".csv":
+            if is_link_like(csv_file) or not csv_file.is_file() or csv_file.suffix != ".csv":
                 raise OSError(f"refusing to overwrite unexpected CSV entry: {csv_file}")
+    require_directory_identity(target, target_identity, label="plan bundle")
+    return target_identity
 
 
 def export_campaign_plan(
@@ -703,49 +713,72 @@ def export_campaign_plan(
     """Export a plan manifest, RFC 5545 calendar, and one CSV per used platform."""
     root = Path(os.path.abspath(output_root))
     if root.exists():
-        if root.is_symlink():
-            raise OSError(f"refusing to export through a symbolic-link directory: {root}")
-        if not root.is_dir():
-            raise OSError(f"output root is not a directory: {root}")
+        if is_link_like(root):
+            raise OSError(
+                f"refusing to export through a symbolic-link or other link-like directory: {root}"
+            )
     else:
         root.mkdir(parents=True)
+    root_identity = directory_identity(root, label="output root")
 
     bundle_name = f"{_slugify(bundle.name)}-{bundle.plan_id}"
     target = root / bundle_name
-    if target.exists() or target.is_symlink():
-        if target.is_symlink() or not target.is_dir():
+    target_identity = None
+    if target.exists() or is_link_like(target):
+        if is_link_like(target) or not target.is_dir():
             raise OSError(f"refusing to overwrite non-directory bundle path: {target}")
         if not overwrite:
             raise FileExistsError(
                 f"bundle already exists: {target}; pass --overwrite to replace it"
             )
-        _validate_existing_plan_target(target)
+        target_identity = _validate_existing_plan_target(target)
 
     stamp = generated_at or datetime.now(timezone.utc)
     if stamp.utcoffset() is None:
         raise ConfigError("generated_at must include timezone information")
     temporary = root / f".{bundle_name}.{uuid.uuid4().hex}.tmp"
+    require_directory_identity(root, root_identity, label="output root")
     temporary.mkdir(mode=0o700)
+    temporary_identity = directory_identity(temporary, label="temporary plan directory")
     try:
         _write_plan_artifacts(temporary, _plan_artifact_payloads(bundle, stamp))
         csv_dir = temporary / "csv"
 
-        if not target.exists():
+        require_directory_identity(root, root_identity, label="output root")
+        if target_identity is None:
+            if target.exists() or is_link_like(target):
+                raise FileExistsError(f"bundle path appeared during export: {target}")
             temporary.replace(target)
         else:
+            require_directory_identity(target, target_identity, label="plan bundle")
             target_csv = target / "csv"
             target_csv.mkdir(exist_ok=True)
+            if is_link_like(target_csv):
+                raise OSError(f"refusing to write through a link-like CSV directory: {target_csv}")
+            target_csv_identity = directory_identity(target_csv, label="plan CSV directory")
             written = {source.name for source in csv_dir.iterdir()}
             for source in sorted(csv_dir.iterdir()):
+                require_directory_identity(target, target_identity, label="plan bundle")
+                require_directory_identity(
+                    target_csv, target_csv_identity, label="plan CSV directory"
+                )
                 os.replace(source, target_csv / source.name)
             for stale in sorted(target_csv.iterdir()):
                 if stale.name not in written:
+                    require_directory_identity(
+                        target_csv, target_csv_identity, label="plan CSV directory"
+                    )
+                    if is_link_like(stale) or not stale.is_file():
+                        raise OSError(f"refusing to remove unexpected CSV entry: {stale}")
                     stale.unlink()
             csv_dir.rmdir()
+            require_directory_identity(target, target_identity, label="plan bundle")
             os.replace(temporary / "calendar.ics", target / "calendar.ics")
+            require_directory_identity(target, target_identity, label="plan bundle")
             os.replace(temporary / "adapter.json", target / "adapter.json")
+            require_directory_identity(target, target_identity, label="plan bundle")
             os.replace(temporary / "manifest.json", target / "manifest.json")
             temporary.rmdir()
     finally:
-        _clear_plan_temp(temporary)
+        _clear_plan_temp(temporary, temporary_identity)
     return target

@@ -2,7 +2,8 @@
 
 ## Supported versions
 
-The latest `0.17.x` release line is supported. Earlier pre-productization and
+The latest `0.17.x` release line is supported. Version 0.17.0 is superseded by the filesystem and
+validation hardening in 0.17.1. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -40,7 +41,8 @@ CSV, and iCalendar files selected by the invoking user. The supported workflow:
   data rows, requires an exact header and explicit-offset times, reuses campaign validation,
   aggregates bounded row/field diagnostics before writing, and never evaluates spreadsheet cells;
 - generates output names instead of trusting configuration as a filesystem path;
-- refuses implicit replacement of existing bundles and symbolic-link targets; CSV import also
+- refuses implicit replacement of existing bundles, symbolic links, Windows junctions, and other
+  reparse-point targets; rechecks directory identity around mutations; CSV import also
   stages and reloads a complete source package before atomically reserving the destination and
   publishing files without replacement;
 - prefixes text fields that begin with common spreadsheet formula markers in CSV exports so

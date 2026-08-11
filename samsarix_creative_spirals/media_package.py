@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .filesystem import directory_identity, is_link_like, require_directory_identity
 from .models import (
     ConfigError,
     SUPPORTED_PLATFORMS,
@@ -550,12 +551,36 @@ def _ensure_no_symlink_components(root: Path, segments: tuple[str, ...], *, fiel
     candidate = root
     for segment in segments:
         candidate = candidate / segment
-        if candidate.is_symlink():
-            raise ConfigError(f"{field} traverses a symbolic link: {candidate}")
+        if is_link_like(candidate):
+            raise ConfigError(
+                f"{field} traverses a symbolic link or other link-like entry: {candidate}"
+            )
     return candidate
 
 
-def _read_stable_media_file(path: Path, *, field: str) -> bytes:
+def _descriptor_path(descriptor: int) -> Path | None:
+    """Resolve an opened file handle without re-traversing its mutable pathname."""
+    if os.name == "nt":
+        import ctypes
+        import msvcrt
+
+        buffer = ctypes.create_unicode_buffer(32768)
+        length = ctypes.windll.kernel32.GetFinalPathNameByHandleW(
+            msvcrt.get_osfhandle(descriptor), buffer, len(buffer), 0
+        )
+        if not 0 < length < len(buffer):
+            return None
+        value = buffer.value
+        if value.startswith("\\\\?\\UNC\\"):
+            value = "\\\\" + value[8:]
+        elif value.startswith("\\\\?\\"):
+            value = value[4:]
+        return Path(value).resolve()
+    proc_path = Path(f"/proc/self/fd/{descriptor}")
+    return proc_path.resolve() if proc_path.exists() else None
+
+
+def _read_stable_media_file(path: Path, *, field: str, allowed_root: Path) -> bytes:
     try:
         named_before = os.stat(path, follow_symlinks=False)
         flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -568,6 +593,11 @@ def _read_stable_media_file(path: Path, *, field: str) -> bytes:
             opened_identity = (opened_before.st_dev, opened_before.st_ino)
             if named_identity != opened_identity:
                 raise ConfigError(f"{field} changed while it was being opened")
+            opened_path = _descriptor_path(descriptor)
+            if os.name == "nt" and opened_path is None:
+                raise ConfigError(f"cannot verify the opened path for {field}")
+            if opened_path is not None and not opened_path.is_relative_to(allowed_root):
+                raise ConfigError(f"{field} resolves outside its campaign directory")
             if not 1 <= opened_before.st_size <= MAX_PACKAGED_MEDIA_FILE_BYTES:
                 raise ConfigError(
                     f"{field} must contain between 1 and {MAX_PACKAGED_MEDIA_FILE_BYTES} bytes"
@@ -608,9 +638,13 @@ def collect_campaign_plan_media(
 ) -> CollectedCampaignPlanMedia:
     """Capture exact, bounded campaign-relative images beneath one trusted plan root."""
     root_input = Path(os.path.abspath(plan_root))
-    if root_input.is_symlink() or not root_input.is_dir():
-        raise ConfigError("plan_root must be a non-symbolic-link directory")
+    if is_link_like(root_input) or not root_input.is_dir():
+        raise ConfigError("plan_root must be a non-link directory")
     root = root_input.resolve()
+    try:
+        root_identity = directory_identity(root, label="plan root")
+    except OSError as error:
+        raise ConfigError(str(error)) from error
     assets: list[CampaignPlanMediaAsset] = []
     files: dict[str, bytes] = {}
     total_bytes = 0
@@ -631,7 +665,26 @@ def collect_campaign_plan_media(
             resolved = media_path.resolve(strict=False)
             if not resolved.is_relative_to(campaign_root):
                 raise ConfigError(f"{field} resolves outside its campaign directory")
-            payload = _read_stable_media_file(media_path, field=field)
+            try:
+                campaign_identity = directory_identity(
+                    campaign_root, label=f"{field} campaign directory"
+                )
+                require_directory_identity(root, root_identity, label="plan root")
+            except OSError as error:
+                raise ConfigError(str(error)) from error
+            payload = _read_stable_media_file(media_path, field=field, allowed_root=campaign_root)
+            try:
+                require_directory_identity(root, root_identity, label="plan root")
+                require_directory_identity(
+                    campaign_root,
+                    campaign_identity,
+                    label=f"{field} campaign directory",
+                )
+            except OSError as error:
+                raise ConfigError(str(error)) from error
+            resolved_after = media_path.resolve(strict=True)
+            if resolved_after != resolved or not resolved_after.is_relative_to(campaign_root):
+                raise ConfigError(f"{field} changed containment while it was being read")
             content_type, width, height, packet_suffix = inspect_static_image(
                 payload, suffix=media_path.suffix
             )

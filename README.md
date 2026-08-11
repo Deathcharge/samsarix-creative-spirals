@@ -18,7 +18,7 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.17 alpha.** Atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
+> Maturity: **0.17.1 alpha.** Atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
 > multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local

@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .filesystem import directory_identity, is_link_like, require_directory_identity
 from .models import CampaignConfig, ConfigError, SUPPORTED_PLATFORMS
 from .plans import CampaignPlan, load_campaign_plan
 from .workflow import _slugify
@@ -324,6 +325,7 @@ def _tokens(
     row: int,
     field: str,
     required: bool,
+    maximum: int,
     issues: list[PlanImportIssue],
 ) -> list[str]:
     if not value.strip():
@@ -332,7 +334,17 @@ def _tokens(
                 PlanImportIssue("missing-field", f"{field} must not be empty", row=row, field=field)
             )
         return []
-    tokens = [token.strip() for token in value.split("|")]
+    raw_tokens = value.split("|", maximum)
+    if len(raw_tokens) > maximum:
+        issues.append(
+            PlanImportIssue(
+                "too-many-values",
+                f"{field} must contain at most {maximum} values",
+                row=row,
+                field=field,
+            )
+        )
+    tokens = [token.strip() for token in raw_tokens[:maximum]]
     if any(not token for token in tokens):
         issues.append(
             PlanImportIssue(
@@ -423,9 +435,16 @@ def _campaign_from_row(
     issues: list[PlanImportIssue],
 ) -> tuple[CampaignConfig | None, datetime | None]:
     platforms = _tokens(
-        values["platforms"], row=row, field="platforms", required=True, issues=issues
+        values["platforms"],
+        row=row,
+        field="platforms",
+        required=True,
+        maximum=len(SUPPORTED_PLATFORMS),
+        issues=issues,
     )
-    hashtags = _tokens(values["hashtags"], row=row, field="hashtags", required=False, issues=issues)
+    hashtags = _tokens(
+        values["hashtags"], row=row, field="hashtags", required=False, maximum=10, issues=issues
+    )
     intended_at = _intended_at(values["intended_at"], row=row, issues=issues)
     campaign: dict[str, Any] = {
         "schemaVersion": 1,
@@ -468,6 +487,7 @@ def _campaign_from_row(
                 row=row,
                 field="media_platforms",
                 required=False,
+                maximum=len(SUPPORTED_PLATFORMS),
                 issues=issues,
             )
         campaign["media"] = [media]
@@ -523,12 +543,17 @@ def inspect_campaign_plan_csv(
         issue = PlanImportIssue("empty-file", "CSV must contain a header and at least one row")
         return CampaignPlanImportCheck(row_count=0, issues=(issue,))
 
+    records: list[list[str]] = []
     try:
-        records = list(csv.reader(io.StringIO(text, newline=""), strict=True))
+        reader = csv.reader(io.StringIO(text, newline=""), strict=True)
+        for record in reader:
+            records.append(record)
+            if len(records) > MAX_PLAN_IMPORT_ROWS + 1:
+                break
     except csv.Error as error:
         issue = PlanImportIssue("invalid-csv", f"CSV syntax is invalid: {error}")
         return CampaignPlanImportCheck(row_count=0, issues=(issue,))
-    row_count = max(0, len(records) - 1)
+    row_count = min(MAX_PLAN_IMPORT_ROWS + 1, max(0, len(records) - 1))
     issues: list[PlanImportIssue] = []
     normalized_name = _single_line_name(name, issues=issues)
     normalized_required = _required_platform_values(required_platforms, issues=issues)
@@ -613,38 +638,54 @@ def inspect_campaign_plan_csv(
     return CampaignPlanImportCheck(row_count=row_count, issues=(), imported=imported)
 
 
-def _clear_temporary_import(path: Path) -> None:
+def _clear_temporary_import(path: Path, identity: tuple[int, int, int, int]) -> None:
     if not path.exists():
         return
+    require_directory_identity(path, identity, label="import directory")
     expected = {"campaigns", "plan.json"}
     for child in path.iterdir():
         if child.name not in expected:
             raise OSError(f"refusing to clean unexpected import entry: {child}")
     campaigns = path / "campaigns"
     if campaigns.exists():
-        if campaigns.is_symlink() or not campaigns.is_dir():
+        if is_link_like(campaigns) or not campaigns.is_dir():
             raise OSError(f"refusing to clean invalid campaign directory: {campaigns}")
+        campaigns_identity = directory_identity(campaigns, label="import campaign directory")
         for campaign in campaigns.iterdir():
-            if campaign.is_symlink() or not campaign.is_file() or campaign.suffix != ".json":
+            require_directory_identity(path, identity, label="import directory")
+            require_directory_identity(
+                campaigns, campaigns_identity, label="import campaign directory"
+            )
+            if is_link_like(campaign) or not campaign.is_file() or campaign.suffix != ".json":
                 raise OSError(f"refusing to clean unexpected campaign entry: {campaign}")
             campaign.unlink()
         campaigns.rmdir()
     plan = path / "plan.json"
     if plan.exists():
-        if plan.is_symlink() or not plan.is_file():
+        require_directory_identity(path, identity, label="import directory")
+        if is_link_like(plan) or not plan.is_file():
             raise OSError(f"refusing to clean invalid plan entry: {plan}")
         plan.unlink()
     path.rmdir()
 
 
-def _publish_import_stage(stage: Path, target: Path) -> None:
+def _publish_import_stage(
+    stage: Path, target: Path, target_identity: tuple[int, int, int, int]
+) -> None:
     """Publish a validated stage into an exclusively reserved destination."""
     campaign_target = target / "campaigns"
+    require_directory_identity(target, target_identity, label="import output")
     campaign_target.mkdir(mode=0o700)
+    campaign_identity = directory_identity(campaign_target, label="import campaign output")
     for source in sorted((stage / "campaigns").iterdir(), key=lambda path: path.name):
+        require_directory_identity(target, target_identity, label="import output")
+        require_directory_identity(
+            campaign_target, campaign_identity, label="import campaign output"
+        )
         destination = campaign_target / source.name
         with source.open("rb") as source_handle, destination.open("xb") as target_handle:
             target_handle.write(source_handle.read())
+    require_directory_identity(target, target_identity, label="import output")
     with (
         (stage / "plan.json").open("rb") as source_handle,
         (target / "plan.json").open("xb") as target_handle,
@@ -660,11 +701,14 @@ def export_campaign_plan_import(imported: CampaignPlanImport, output: str | Path
     target = Path(os.path.abspath(output))
     parent = target.parent
     parent.mkdir(parents=True, exist_ok=True)
-    if parent.is_symlink() or not parent.is_dir():
-        raise OSError(f"import output parent is not a regular directory: {parent}")
+    if is_link_like(parent):
+        raise OSError(f"import output parent is link-like: {parent}")
+    parent_identity = directory_identity(parent, label="import output parent")
 
     temporary = parent / f".{target.name}.{uuid.uuid4().hex}.tmp"
+    require_directory_identity(parent, parent_identity, label="import output parent")
     temporary.mkdir(mode=0o700)
+    temporary_identity = directory_identity(temporary, label="import staging directory")
     try:
         campaign_directory = temporary / "campaigns"
         campaign_directory.mkdir(mode=0o700)
@@ -685,19 +729,21 @@ def export_campaign_plan_import(imported: CampaignPlanImport, output: str | Path
         if len(validated.items) != len(imported.items):
             raise OSError("import validation produced an unexpected item count")
         try:
+            require_directory_identity(parent, parent_identity, label="import output parent")
             target.mkdir(mode=0o700)
         except FileExistsError as error:
             raise FileExistsError(
                 f"refusing to overwrite existing import output: {target}"
             ) from error
+        target_identity = directory_identity(target, label="import output")
         try:
-            _publish_import_stage(temporary, target)
+            _publish_import_stage(temporary, target, target_identity)
         except Exception:
-            _clear_temporary_import(target)
+            _clear_temporary_import(target, target_identity)
             raise
-        _clear_temporary_import(temporary)
+        _clear_temporary_import(temporary, temporary_identity)
     except Exception:
         if temporary.exists():
-            _clear_temporary_import(temporary)
+            _clear_temporary_import(temporary, temporary_identity)
         raise
     return target / "plan.json"

@@ -410,7 +410,8 @@ def test_export_cleans_reserved_destination_when_publish_fails(
     assert check.imported is not None
     output = tmp_path / "output"
 
-    def fail_publish(stage: Path, target: Path) -> None:
+    def fail_publish(stage: Path, target: Path, target_identity: object) -> None:
+        del target_identity
         (target / "campaigns").mkdir()
         raise OSError(f"forced publish failure from {stage.name}")
 

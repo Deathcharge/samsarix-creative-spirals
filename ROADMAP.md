@@ -430,6 +430,24 @@ passed. Rollback is a revert of PR #19's merge or a pin to pre-0.17 main commit 
 review disposition, artifact evidence, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#017-canonical-csv-and-plan-import-release-evidence).
 
+## Security patch — 0.17.1 release hardening
+
+- [x] Complete a repository-wide, independent source security scan across all 21 production Python
+  files and supporting parser, filesystem, exact-media, evidence, output, packaging, and CI
+  surfaces.
+- [x] Reject Windows junctions and other reparse points anywhere a generated output boundary had
+  previously relied on `Path.is_symlink()` alone.
+- [x] Recheck directory identities across overwrite, publication, rollback, and temporary cleanup;
+  bind exact-media containment to the opened file handle where the platform exposes its final path.
+- [x] Revalidate directly constructed publication ledgers, terminal-escape human diagnostics, and
+  enforce collection/CSV bounds before excess allocation.
+- [x] Add Windows junction, direct-object, and terminal-control regression coverage and advance the
+  supported package to 0.17.1 before the first public release.
+
+The pre-fix scan at `ce4abb6` produced seven validated findings: one high, three medium, and three
+low. Version 0.17.0 was never tagged or published, so 0.17.1 becomes the first distributable
+release candidate rather than silently replacing an existing artifact.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from jsonschema import Draft202012Validator, FormatChecker
@@ -425,3 +425,27 @@ def test_verify_reports_naive_direct_dataclass_timestamps(
             publication,
             assessed_at=datetime(2026, 8, 5, 12),
         )
+
+
+def test_direct_publication_objects_cannot_bypass_status_validation(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    publication = _completed(
+        initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    )
+    forged = replace(
+        publication,
+        records=(
+            replace(publication.records[0], status=cast(Any, "forged")),
+            *publication.records[1:],
+        ),
+    )
+
+    check = verify_campaign_plan_publication(bundle, packet, forged, assessed_at=ASSESSED_AT)
+
+    assert check.current is False
+    assert check.complete is False
+    assert {issue.code for issue in check.issues} >= {"publication-invalid"}
+    with pytest.raises(ConfigError, match="status"):
+        export_campaign_plan_publication(forged, tmp_path / "forged.json")
