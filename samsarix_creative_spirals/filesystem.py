@@ -15,7 +15,7 @@ def is_link_like(path: Path) -> bool:
     """Return whether *path* is a symlink, junction, or other reparse point."""
     try:
         metadata = path.lstat()
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return False
     attributes = int(getattr(metadata, "st_file_attributes", 0))
     reparse_flag = int(getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
