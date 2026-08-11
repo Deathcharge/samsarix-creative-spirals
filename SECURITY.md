@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.15.x` release line is supported. Earlier pre-productization and
+The latest `0.16.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -46,6 +46,8 @@ files selected by the invoking user. The supported workflow:
 - validates bounded approval policies and deterministic multi-role approval sets, independently
   reverifies each embedded plan approval, and rejects duplicate evidence, missing role/count
   minimums, stale source, and mixed content-policy or exact-media bindings;
+- validates immutable plan-review records with at most 50 bounded findings, deterministic content
+  identity, exact plan/source verification, optional exact-media binding, and exclusive export;
 - creates approved handoff packets exclusively and verifies their current plan/approval identity,
   embedded approval-bound policy, producer version, fixed directory shape, exact regenerated
   bytes, declared sizes and SHA-256 values, regular-file types, and file stability during reads;
@@ -88,6 +90,13 @@ policy-satisfying set does not prove that separate humans, accounts, organizatio
 participated, and it does not enforce authorization or separation of duties. Use protected branch
 rules, required reviews, and CODEOWNERS for authenticated organizational controls; see
 `docs/APPROVAL_POLICIES.md`.
+
+Plan-review `reviewedBy`, decision, timestamp, findings, and suggestions are likewise untrusted
+metadata. A current `blocking` result means only that a valid local `request-changes` or `reject`
+record matches the exact current revision; it does not authenticate a reviewer, enforce a durable
+lock, prove notification or receipt, or determine whether feedback was resolved. Records may
+contain confidential claims, legal concerns, strategy, schedules, and media fingerprints. Protect
+them like campaign source and see `docs/PLAN_FEEDBACK.md`.
 
 Content policies perform literal substring checks on final rendered `PlatformDraft.content` only.
 They do not understand meaning, context, spelling variants, images, media alt text, facts, laws, or

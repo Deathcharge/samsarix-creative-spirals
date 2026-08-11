@@ -191,6 +191,128 @@ def test_cli_emits_plan_schema(capsys: Any) -> None:
     assert schema["title"] == "Samsarix Creative Spirals campaign plan"
 
 
+def test_cli_creates_and_verifies_source_bound_plan_review(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    review = tmp_path / "review.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Review workflow",
+                "items": [{"campaign": "campaign.json"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "plan",
+                "review",
+                "create",
+                str(plan),
+                "--decision",
+                "request-changes",
+                "--by",
+                "Brand reviewer",
+                "--at",
+                "2026-08-08T15:30:00Z",
+                "--finding",
+                "The opening claim needs evidence.",
+                "--item",
+                "1",
+                "--platform",
+                "linkedin",
+                "--suggestion",
+                "Link the benchmark or narrow the claim.",
+                "--output",
+                str(review),
+                "--json",
+            ]
+        )
+        == 0
+    )
+    created = json.loads(capsys.readouterr().out)
+    assert created["review"]["artifactType"] == "plan-review"
+    assert created["review"]["reviewId"].startswith("scr_")
+    assert created["review"]["findings"][0]["platform"] == "linkedin"
+
+    assert main(["plan", "review", "verify", str(plan), str(review), "--json"]) == 0
+    verified = json.loads(capsys.readouterr().out)
+    assert verified["valid"] is True
+    assert verified["blocking"] is True
+    assert (
+        main(
+            [
+                "plan",
+                "review",
+                "verify",
+                str(plan),
+                str(review),
+                "--fail-on-blocking",
+                "--json",
+            ]
+        )
+        == 4
+    )
+    assert json.loads(capsys.readouterr().out)["blocking"] is True
+
+    campaign_data["body"] = "A revised and supported launch claim."
+    _write_campaign(campaign, campaign_data)
+    assert main(["plan", "review", "verify", str(plan), str(review), "--json"]) == 4
+    stale = json.loads(capsys.readouterr().out)
+    assert stale["valid"] is False
+    assert stale["blocking"] is False
+
+
+def test_cli_review_rejects_ambiguous_finding_options(
+    tmp_path: Path, capsys: Any, campaign_data: dict[str, Any]
+) -> None:
+    campaign = tmp_path / "campaign.json"
+    plan = tmp_path / "plan.json"
+    _write_campaign(campaign, campaign_data)
+    plan.write_text(
+        json.dumps(
+            {
+                "schemaVersion": 1,
+                "name": "Review workflow",
+                "items": [{"campaign": "campaign.json"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    base = [
+        "plan",
+        "review",
+        "create",
+        str(plan),
+        "--decision",
+        "comment",
+        "--by",
+        "Reviewer",
+    ]
+    assert main([*base, "--finding", "One", "--finding", "Two", "--suggestion", "Edit"]) == 1
+    assert "exactly one --finding" in capsys.readouterr().err
+    assert main([*base, "--finding", "Targeted", "--platform", "x"]) == 1
+    assert "platform requires an item" in capsys.readouterr().err
+    assert main([*base, "--finding", "Observation", "--at", "yesterday"]) == 1
+    timestamp_error = capsys.readouterr().err
+    assert "reviewed_at" in timestamp_error
+    assert "approved_at" not in timestamp_error
+
+
+def test_cli_emits_plan_review_schema(capsys: Any) -> None:
+    assert main(["schema", "--kind", "plan-review"]) == 0
+    schema = json.loads(capsys.readouterr().out)
+    assert schema["properties"]["artifactType"]["const"] == "plan-review"
+    assert schema["properties"]["findings"]["maxItems"] == 50
+
+
 def test_cli_writes_plan_schema_with_kind_aware_message(tmp_path: Path, capsys: Any) -> None:
     output = tmp_path / "plan.schema.json"
 

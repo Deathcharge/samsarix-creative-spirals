@@ -95,6 +95,13 @@ content-derived. `CampaignPlanApprovalAssignment` binds one existing plan approv
 role. `CampaignPlanApprovalSet` is canonical `scas_*` evidence satisfying one policy, and
 `PlanApprovalSetCheck` reports independent verification of the complete set.
 
+`PlanReviewFinding` is one bounded feedback message with optional one-based item, canonical
+platform, and replacement suggestion. `CampaignPlanReview` is immutable source-bound `comment`,
+`request-changes`, or `reject` evidence with deterministic full hash and short `scr_*` identity.
+`PlanReviewCheck` reports whether it still describes current source/media and whether that current
+decision is blocking; `PlanReviewIssue` supplies stable mismatch codes. Review labels are not
+authenticated identities.
+
 ### Approved-handoff models
 
 `CampaignPlanHandoff` is the strict unsigned handoff v1 manifest. It contains the `sch_*` identity,
@@ -309,6 +316,22 @@ current source, policy requirements, and every member. `load_campaign_plan_appro
 and `verify_campaign_plan_approval_evidence(...)` dispatch between a legacy single approval and a
 new approval set for handoff/readiness consumers. See `docs/APPROVAL_POLICIES.md`.
 
+### Plan-feedback functions
+
+`create_campaign_plan_review(bundle, *, decision, reviewed_by, findings, reviewed_at=None,
+note=None, media=None) -> CampaignPlanReview` creates a canonical record for the exact plan and
+optional `CampaignPlanMedia` snapshot. It accepts `comment`, `request-changes`, or `reject`; positive
+authorization remains in `create_campaign_plan_approval`.
+
+`parse_plan_review_timestamp(value) -> datetime` parses an RFC 3339 review timestamp with an
+explicit known offset, normalizes it to UTC, and reports validation against `reviewed_at`.
+
+`export_campaign_plan_review(review, path) -> Path` writes one UTF-8 record exclusively.
+`load_campaign_plan_review(path) -> CampaignPlanReview` performs bounded strict parsing and
+recomputes its canonical identity. `verify_campaign_plan_review(bundle, review, *, media=None) ->
+PlanReviewCheck` reports stale source/plan/media evidence; a valid request-changes or reject result
+has `blocking=True`. See `docs/PLAN_FEEDBACK.md`.
+
 ### `build_campaign_plan_handoff(bundle, approval, *, generated_at, content_policy=None, media=None) -> CampaignPlanHandoff`
 
 Re-verifies the approval and recorded aggregate quality policy, requires a timezone-aware handoff
@@ -437,6 +460,11 @@ Loads the approval-policy v1 authoring schema. The CLI equivalent is
 Loads the plan-approval-set v1 evidence schema. The CLI equivalent is
 `samsarix-campaign schema --kind plan-approval-set`.
 
+### `load_plan_review_schema() -> dict[str, Any]`
+
+Loads the plan-review v1 evidence schema. The CLI equivalent is
+`samsarix-campaign schema --kind plan-review`; feedback semantics are in `docs/PLAN_FEEDBACK.md`.
+
 ### `load_adapter_schema() -> dict[str, Any]`
 
 Loads the versioned `samsarix.plan-drafts` adapter schema. The CLI equivalent is
@@ -495,9 +523,9 @@ else:
 
 ## Compatibility policy
 
-The package is pre-1.0. The exported names, campaign/plan/approval/approval-policy/approval-set/
+The package is pre-1.0. The exported names, campaign/plan/approval/approval-policy/approval-set/plan-review/
 handoff/media-package/publication/readiness JSON `schemaVersion: 1`, adapter `schemaVersion: 2`,
-manifest shape, and documented CLI behavior are the compatibility surface for 0.15.x. Approval-policy
+manifest shape, and documented CLI behavior are the compatibility surface for 0.16.x. Approval-policy
 and plan-approval-set v1 are additive; legacy single approvals and the fixed handoff `approval.json`
 path retain their prior behavior. Media-package v1 and optional plan-approval/handoff media fields
 remain additive; metadata-only calls and artifacts retain their prior output. Publication v1 remains

@@ -47,6 +47,7 @@ jobs:
           samsarix-campaign schema --kind plan-approval > /tmp/plan-approval.schema.json
           samsarix-campaign schema --kind approval-policy > /tmp/approval-policy.schema.json
           samsarix-campaign schema --kind plan-approval-set > /tmp/plan-approval-set.schema.json
+          samsarix-campaign schema --kind plan-review > /tmp/plan-review.schema.json
           samsarix-campaign schema --kind adapter > /tmp/adapter.schema.json
           samsarix-campaign schema --kind handoff > /tmp/handoff.schema.json
           samsarix-campaign schema --kind media-package > /tmp/media-package.schema.json
@@ -101,6 +102,8 @@ jobs:
           samsarix-campaign plan check examples/launch-plan.json --policy examples/content-policy.json --json
           samsarix-campaign plan preview examples/launch-plan.json --json
           samsarix-campaign plan diff examples/launch-plan.json examples/launch-plan.json --json --exit-code
+          samsarix-campaign plan review create examples/launch-plan.json --decision request-changes --by "CI brand reviewer" --at 2026-08-03T13:45:00Z --finding "Support the opening launch claim." --item 1 --platform linkedin --suggestion "Link the benchmark or narrow the claim." --output /tmp/plan.review.json --json
+          samsarix-campaign plan review verify examples/launch-plan.json /tmp/plan.review.json --json
           samsarix-campaign plan approval create examples/launch-plan.json --policy examples/content-policy.json --by "CI reviewer" --at 2026-08-03T14:15:00Z --output /tmp/plan.approval.json --json
           samsarix-campaign plan approval verify examples/launch-plan.json /tmp/plan.approval.json --policy examples/content-policy.json --json
           samsarix-campaign plan approval create examples/launch-plan.json --policy examples/content-policy.json --by "CI release owner" --at 2026-08-03T15:00:00Z --output /tmp/plan.release.approval.json --json
