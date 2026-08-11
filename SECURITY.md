@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-The latest `0.16.x` release line is supported. Earlier pre-productization and
+The latest `0.17.x` release line is supported. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -18,8 +18,8 @@ time SLA.
 
 ## Security and privacy boundary
 
-Samsarix Creative Spirals reads local UTF-8 JSON and writes local Markdown, JSON, CSV, and iCalendar
-files selected by the invoking user. The supported workflow:
+Samsarix Creative Spirals reads local UTF-8 JSON and canonical CSV and writes local Markdown, JSON,
+CSV, and iCalendar files selected by the invoking user. The supported workflow:
 
 - performs no network requests, subprocess execution, dynamic imports, telemetry,
   account access, or remote publishing;
@@ -36,8 +36,12 @@ files selected by the invoking user. The supported workflow:
   unknown/duplicate rule identity and unsupported controls, and does not execute regex or models;
 - confines plan campaign references beneath the plan directory and rejects absolute, parent,
   backslash, drive-qualified, and symbolic-link escape paths;
+- probes at most 1,000,001 bytes for canonical import, accepts at most 1,000,000 UTF-8 bytes and 100
+  data rows, requires an exact header and explicit-offset times, reuses campaign validation,
+  aggregates bounded row/field diagnostics before writing, and never evaluates spreadsheet cells;
 - generates output names instead of trusting configuration as a filesystem path;
-- refuses implicit replacement of existing bundles and symbolic-link targets;
+- refuses implicit replacement of existing bundles and symbolic-link targets; CSV import also
+  stages and reloads a complete source package before an exclusive directory rename;
 - prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
   spreadsheet applications treat them as text;
 - binds campaign approvals to the normalized campaign SHA-256 and plan approvals to the normalized
@@ -97,6 +101,12 @@ record matches the exact current revision; it does not authenticate a reviewer, 
 lock, prove notification or receipt, or determine whether feedback was resolved. Records may
 contain confidential claims, legal concerns, strategy, schedules, and media fingerprints. Protect
 them like campaign source and see `docs/PLAN_FEEDBACK.md`.
+
+Canonical authoring CSV can contain complete private drafts, links, schedules, and media metadata.
+Import treats cells as literal source rather than evaluating formulas, but spreadsheet software
+used before Samsarix may execute formulas or silently rewrite dates and encodings. Inspect the raw
+UTF-8 file when provenance matters. Import never copies or opens referenced media and never merges
+with an existing destination; see `docs/PLAN_IMPORT.md`.
 
 Content policies perform literal substring checks on final rendered `PlatformDraft.content` only.
 They do not understand meaning, context, spelling variants, images, media alt text, facts, laws, or

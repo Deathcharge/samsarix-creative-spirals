@@ -76,6 +76,11 @@ optionally bound into approvals. See `docs/POLICIES.md` for exact v1 semantics.
 `CampaignPlanCheck` provide the aggregate quality contract, including a one-based item number and
 optional campaign/platform context. Every model has `to_dict()` for stable JSON output.
 
+`ImportedCampaign` holds one normalized `CampaignConfig`, deterministic generated source path, and
+optional UTC intended time. `CampaignPlanImport` is a complete in-memory source package.
+`PlanImportIssue` supplies a stable code plus optional logical CSV row/field location;
+`CampaignPlanImportCheck` is the schema-backed, side-effect-free aggregate result.
+
 ### Semantic-review models
 
 `CampaignDiff` contains ordered `CampaignFieldChange` and `CampaignDraftChange` values plus the
@@ -234,6 +239,24 @@ for non-CLI callers that want the same timestamp contract as `approval create --
 Loads a fresh dictionary from the JSON Schema bundled in the installed wheel. It performs no
 network access and is useful for editor, form, or CI integration. The CLI exposes the same artifact
 through `samsarix-campaign schema`.
+
+### `PLAN_IMPORT_FIELDS`
+
+The exact ordered canonical CSV v1 header tuple. List-valued cells use `|` between values.
+
+### `inspect_campaign_plan_csv(path, *, name, required_platforms=()) -> CampaignPlanImportCheck`
+
+Uses a bounded 1,000,001-byte probe and accepts at most 1,000,000 bytes, accepts UTF-8 with an
+optional BOM, requires the exact canonical header, and validates at most 100 accepted data rows without writing. It aggregates bounded stable
+diagnostics for plan metadata, row shape, RFC 3339 time, list fields, optional single-image
+metadata, the existing campaign contract, and required-platform coverage. A valid result contains
+the normalized `CampaignPlanImport`.
+
+### `export_campaign_plan_import(imported, output) -> Path`
+
+Writes normalized `campaigns/*.json` and `plan.json` into a private temporary sibling, reloads the
+complete plan through the authoritative validator, and exclusively renames the finished source
+package into place. It refuses an existing destination and returns the final `plan.json` path.
 
 ### `load_campaign_plan(path) -> CampaignPlan`
 
@@ -434,6 +457,11 @@ manifest-last safety model applies as campaign export.
 
 Loads a fresh dictionary from the plan schema bundled in the wheel. The CLI equivalent is
 `samsarix-campaign schema --kind plan`.
+
+### `load_plan_import_schema() -> dict[str, Any]`
+
+Loads a fresh dictionary from the `plan-import-check` v1 diagnostic schema bundled in the wheel.
+The CLI equivalent is `samsarix-campaign schema --kind plan-import`.
 
 ### `load_content_policy_schema() -> dict[str, Any]`
 

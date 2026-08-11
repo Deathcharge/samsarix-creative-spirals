@@ -107,6 +107,16 @@ RFC 5545 calendar with UTF-8-safe 75-octet folding and CRLF line endings. Its de
 `adapter.json` preserves exact drafts and applicable media references for consumers of the
 versioned publisher-neutral contract.
 
+### `plan_import.py`
+
+Performs a bounded UTF-8 CSV probe, requires one exact source-authoring header, validates every
+accepted logical row through the existing campaign model, and aggregates stable row/field
+diagnostics without writing. A valid in-memory package uses deterministic sequence/slug paths.
+Explicit export writes normalized campaign JSON plus a plan into a private temporary sibling,
+reloads the whole plan through `plans.py`, and renames it exclusively into place. Media remains
+portable metadata; the module never evaluates spreadsheet formulas, opens media, or contacts a
+provider.
+
 ### `review.py`
 
 Compares normalized campaign fields and generated platform drafts in stable order. Local approval
@@ -181,16 +191,16 @@ labels and hashes are unsigned.
 ### `schema.py` and bundled JSON Schemas
 
 Package the authoring and interchange contracts with the wheel and return a fresh decoded
-dictionary to library callers. Campaign, content-policy, plan, campaign-approval, plan-approval,
-approval-policy, plan-approval-set, plan-review, media-package, handoff, publication, readiness, and adapter schemas help editors and generic
-validators, while runtime models remain
+dictionary to library callers. Campaign, content-policy, plan, plan-import-check,
+campaign-approval, plan-approval, approval-policy, plan-approval-set, plan-review, media-package,
+handoff, publication, readiness, and adapter schemas help editors and generic validators, while runtime models remain
 authoritative and provide more actionable error messages.
 
 ### `cli.py`
 
-Provides the single-campaign, diff, approval, plan-feedback, handoff, publication, readiness, and nested plan operations. Successful
-output and valid quality/review reports stay on stdout;
-configuration/I/O errors stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
+Provides the single-campaign, CSV-import, diff, approval, plan-feedback, handoff, publication, readiness, and nested plan operations. Successful
+output and quality/review/import reports stay on stdout;
+configuration/I/O exceptions stay on stderr. Validation/I/O errors return `1`, usage errors return `2`,
 quality-gate failures return `3`, semantic-change/stale-approval/invalid-handoff/incomplete-publication results return `4`,
 and success returns `0`. Readiness is informational unless an explicit stage is required; its
 quality gate uses `3` and its approval/handoff/publication gates use `4`.
@@ -200,6 +210,7 @@ quality gate uses `3` and its approval/handoff/publication gates use `4`.
 | Boundary | Untrusted input | Control |
 | --- | --- | --- |
 | Config file | Local path and bytes | 1 MB file cap, UTF-8 decoding, strict JSON object/schema. |
+| Canonical import CSV | Local bytes, exact header, plan metadata, and logical rows | Bounded 1,000,001-byte probe with a 1,000,000-byte acceptance ceiling; optional UTF-8 BOM; 100-row cap; strict CSV/header/row shape; existing campaign validation; explicit-offset time; bounded diagnostics; no writes on invalid input. |
 | Plan references | Relative campaign paths | 100-item cap, portable path rules, resolved containment beneath plan directory. |
 | Campaign fields | Baseline and per-platform text, URL, hashtags, platforms, limit overrides | Length bounds, control checks, URL scheme/credential checks, canonical/requested platform allowlists, hard platform ceilings. |
 | Link tracking | Common and per-platform query parameter names/values | Lowercase name grammar; parameter/value/count/final-URL bounds; requested-platform checks; existing-name collision rejection; deterministic percent encoding; no URL open or analytics collection. |
@@ -231,6 +242,8 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Export refuses an existing ID by default, which protects reviewed artifacts from accidental
   replacement.
 - New bundle creation uses a temporary sibling and atomic directory rename on the same filesystem.
+- CSV import validates every accepted row before output, reloads its staged plan, and exclusively
+  renames the complete source package; it never merges with an existing directory.
 - During an explicit overwrite, draft files are replaced before `manifest.json`; readers can treat
   the manifest as the commit marker.
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They
@@ -244,7 +257,7 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Readiness reports always record the assessment time and selected policies. Re-run them when time,
   source, evidence, or packet bytes may have changed; HTML files refuse implicit replacement.
 - Failures are surfaced synchronously with actionable exceptions/exit codes. There are no retry
-  loops, queues, concurrency, or shutdown concerns in the 0.16 scope.
+  loops, queues, concurrency, or shutdown concerns in the 0.17 scope.
 
 ## Dependency and cost model
 

@@ -60,6 +60,22 @@ samsarix-campaign check examples/campaign-variants.json
 Omitted fields inside a variant do not inherit. This lets a channel intentionally omit the baseline
 title, link, or hashtags. See `docs/VARIANTS.md` for the contract and review implications.
 
+`plan-import.csv` is the canonical spreadsheet-first source template. It imports two rows into a
+new directory only after every row and the complete staged plan pass validation:
+
+```bash
+samsarix-campaign plan import examples/plan-import.csv \
+  --name "Imported release sequence" \
+  --required-platform x \
+  --required-platform linkedin \
+  --output imported-release \
+  --json
+samsarix-campaign plan check imported-release/plan.json --json
+```
+
+The importer does not schedule posts, evaluate spreadsheet formulas, copy media, or overwrite an
+existing directory. See `docs/PLAN_IMPORT.md` for the exact field, time, and atomicity contract.
+
 `content-policy.json` demonstrates repository-owned literal phrase guardrails:
 
 ```bash

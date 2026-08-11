@@ -1,0 +1,3 @@
+name,title,body,link,hashtags,platforms,intended_at,media_path,media_alt_text,media_platforms
+Launch announcement,A reviewable release workflow,Samsarix turns campaign copy into deterministic reviewable drafts without connecting a social account.,https://github.com/Deathcharge/samsarix-creative-spirals,Samsarix|localfirst,x|linkedin|bluesky|mastodon|discord,2026-08-10T09:00:00-04:00,,,
+Launch follow-up,,Review the exact source diff and approval evidence before handing files to a separately permissioned publisher.,https://github.com/Deathcharge/samsarix-creative-spirals,Samsarix|contentops,x|linkedin|bluesky|mastodon|discord,2026-08-12T13:00:00Z,,,

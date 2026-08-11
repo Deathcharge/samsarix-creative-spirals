@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.16.0"
+    assert package.__version__ == "0.17.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -34,6 +34,8 @@ def test_public_api_is_deliberate() -> None:
         "CampaignPlanDiff",
         "CampaignPlanHandoff",
         "CampaignPlanHandoffPacket",
+        "CampaignPlanImport",
+        "CampaignPlanImportCheck",
         "CampaignPlanItem",
         "CampaignPlanMedia",
         "CampaignPlanMediaAsset",
@@ -50,8 +52,10 @@ def test_public_api_is_deliberate() -> None:
         "HandoffArtifact",
         "HandoffCheck",
         "HandoffIssue",
+        "ImportedCampaign",
         "LinkTracking",
         "MediaReference",
+        "PLAN_IMPORT_FIELDS",
         "PlanApprovalCheck",
         "PlanApprovalEvidenceCheck",
         "PlanApprovalSetCheck",
@@ -59,6 +63,7 @@ def test_public_api_is_deliberate() -> None:
         "PlanItemChange",
         "PlanItemSnapshot",
         "PlanIssue",
+        "PlanImportIssue",
         "PlanReviewCheck",
         "PlanReviewFinding",
         "PlanReviewIssue",
@@ -88,12 +93,14 @@ def test_public_api_is_deliberate() -> None:
         "export_campaign_plan",
         "export_campaign_plan_approval",
         "export_campaign_plan_approval_set",
+        "export_campaign_plan_import",
         "export_campaign_plan_review",
         "export_campaign_plan_handoff",
         "export_campaign_plan_publication",
         "export_campaign_plan_readiness_html",
         "evaluate_content_policy",
         "initialize_campaign_plan_publication",
+        "inspect_campaign_plan_csv",
         "load_adapter_schema",
         "load_approval_policy",
         "load_approval_policy_schema",
@@ -115,6 +122,7 @@ def test_public_api_is_deliberate() -> None:
         "load_media_package_schema",
         "load_plan_approval_schema",
         "load_plan_approval_set_schema",
+        "load_plan_import_schema",
         "load_plan_schema",
         "load_plan_review_schema",
         "load_publication_schema",
