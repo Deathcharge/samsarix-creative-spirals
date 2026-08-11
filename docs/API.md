@@ -255,8 +255,9 @@ the normalized `CampaignPlanImport`.
 ### `export_campaign_plan_import(imported, output) -> Path`
 
 Writes normalized `campaigns/*.json` and `plan.json` into a private temporary sibling, reloads the
-complete plan through the authoritative validator, and exclusively renames the finished source
-package into place. It refuses an existing destination and returns the final `plan.json` path.
+complete plan through the authoritative validator, atomically reserves the absent destination, and
+publishes every file without replacement with `plan.json` last. It refuses an existing destination
+and returns the final `plan.json` path.
 
 ### `load_campaign_plan(path) -> CampaignPlan`
 

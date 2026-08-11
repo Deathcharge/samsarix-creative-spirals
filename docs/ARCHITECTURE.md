@@ -113,7 +113,8 @@ Performs a bounded UTF-8 CSV probe, requires one exact source-authoring header, 
 accepted logical row through the existing campaign model, and aggregates stable row/field
 diagnostics without writing. A valid in-memory package uses deterministic sequence/slug paths.
 Explicit export writes normalized campaign JSON plus a plan into a private temporary sibling,
-reloads the whole plan through `plans.py`, and renames it exclusively into place. Media remains
+reloads the whole plan through `plans.py`, atomically reserves the absent destination, and publishes
+files without replacement with `plan.json` last. Media remains
 portable metadata; the module never evaluates spreadsheet formulas, opens media, or contacts a
 provider.
 
@@ -242,8 +243,9 @@ symlink, file-type, size, MIME, provider, and authorization controls in `docs/ME
 - Export refuses an existing ID by default, which protects reviewed artifacts from accidental
   replacement.
 - New bundle creation uses a temporary sibling and atomic directory rename on the same filesystem.
-- CSV import validates every accepted row before output, reloads its staged plan, and exclusively
-  renames the complete source package; it never merges with an existing directory.
+- CSV import validates every accepted row before output, reloads its staged plan, atomically reserves
+  the destination, and publishes files without replacement with `plan.json` last; it never merges
+  with an existing directory.
 - During an explicit overwrite, draft files are replaced before `manifest.json`; readers can treat
   the manifest as the commit marker.
 - Plan calendars use transparent events for scheduled items and tasks for unscheduled items. They

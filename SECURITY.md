@@ -41,7 +41,8 @@ CSV, and iCalendar files selected by the invoking user. The supported workflow:
   aggregates bounded row/field diagnostics before writing, and never evaluates spreadsheet cells;
 - generates output names instead of trusting configuration as a filesystem path;
 - refuses implicit replacement of existing bundles and symbolic-link targets; CSV import also
-  stages and reloads a complete source package before an exclusive directory rename;
+  stages and reloads a complete source package before atomically reserving the destination and
+  publishing files without replacement;
 - prefixes text fields that begin with common spreadsheet formula markers in CSV exports so
   spreadsheet applications treat them as text;
 - binds campaign approvals to the normalized campaign SHA-256 and plan approvals to the normalized

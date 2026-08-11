@@ -291,6 +291,56 @@ def test_inspection_preserves_strict_timestamp_and_media_path_validation(tmp_pat
     assert validator.is_valid(blank_message) is False
 
 
+def test_inspection_bounds_upstream_diagnostics(tmp_path: Path, monkeypatch: Any) -> None:
+    source = tmp_path / "bounded-errors.csv"
+    source.write_text(_csv_text(_valid_rows()[:1]), encoding="utf-8")
+
+    def fail_campaign(raw: object) -> Any:
+        del raw
+        raise ConfigError(["a" * 121 + " \x00 " + "x" * 1100, "\x00\t"])
+
+    monkeypatch.setattr(
+        "samsarix_creative_spirals.plan_import.CampaignConfig.from_dict",
+        staticmethod(fail_campaign),
+    )
+
+    check = inspect_campaign_plan_csv(source, name="Bounded diagnostics")
+
+    assert check.valid is False
+    assert [issue.field for issue in check.issues] == [None, None]
+    assert len(check.issues[0].message) == 1000
+    assert check.issues[1].message == "campaign validation failed"
+    assert all("\x00" not in issue.message and "\t" not in issue.message for issue in check.issues)
+    Draft202012Validator(load_plan_import_schema()).validate(check.to_dict())
+
+
+def test_inspection_uses_portable_fallback_and_reports_invalid_derived_slug(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    source = tmp_path / "unicode-name.csv"
+    rows = _valid_rows()[:1]
+    rows[0][0] = "日本語"
+    source.write_text(_csv_text(rows), encoding="utf-8")
+
+    check = inspect_campaign_plan_csv(source, name="Unicode source")
+
+    assert check.valid is True
+    assert check.imported is not None
+    assert check.imported.items[0].source == "campaigns/001-campaign.json"
+
+    monkeypatch.setattr("samsarix_creative_spirals.plan_import._slugify", lambda value: "../bad")
+    invalid = inspect_campaign_plan_csv(source, name="Invalid derived source")
+    assert invalid.valid is False
+    assert invalid.issues == (
+        PlanImportIssue(
+            "invalid-campaign-source",
+            "campaign name cannot produce a portable source filename",
+            row=2,
+            field="name",
+        ),
+    )
+
+
 def test_export_cleans_private_stage_when_authoritative_reload_fails(
     tmp_path: Path, monkeypatch: Any
 ) -> None:
@@ -319,6 +369,56 @@ def test_export_cleans_private_stage_when_authoritative_reload_fails(
     )
     with pytest.raises(OSError, match="unexpected item count"):
         export_campaign_plan_import(check.imported, output)
+    assert not output.exists()
+    assert not list(tmp_path.glob(".output.*.tmp"))
+
+
+def test_export_never_overwrites_destination_created_during_validation(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    source = tmp_path / "launch.csv"
+    source.write_text(_csv_text(_valid_rows()), encoding="utf-8")
+    check = inspect_campaign_plan_csv(source, name="Launch")
+    assert check.imported is not None
+    output = tmp_path / "output"
+    real_load = load_campaign_plan
+
+    def competing_writer(path: Path) -> Any:
+        validated = real_load(path)
+        output.mkdir()
+        (output / "sentinel.txt").write_text("competitor", encoding="utf-8")
+        return validated
+
+    monkeypatch.setattr(
+        "samsarix_creative_spirals.plan_import.load_campaign_plan", competing_writer
+    )
+
+    with pytest.raises(FileExistsError, match="refusing to overwrite"):
+        export_campaign_plan_import(check.imported, output)
+
+    assert (output / "sentinel.txt").read_text(encoding="utf-8") == "competitor"
+    assert {path.name for path in output.iterdir()} == {"sentinel.txt"}
+    assert not list(tmp_path.glob(".output.*.tmp"))
+
+
+def test_export_cleans_reserved_destination_when_publish_fails(
+    tmp_path: Path, monkeypatch: Any
+) -> None:
+    source = tmp_path / "launch.csv"
+    source.write_text(_csv_text(_valid_rows()), encoding="utf-8")
+    check = inspect_campaign_plan_csv(source, name="Launch")
+    assert check.imported is not None
+    output = tmp_path / "output"
+
+    def fail_publish(stage: Path, target: Path) -> None:
+        (target / "campaigns").mkdir()
+        raise OSError(f"forced publish failure from {stage.name}")
+
+    monkeypatch.setattr("samsarix_creative_spirals.plan_import._publish_import_stage", fail_publish)
+
+    with pytest.raises(OSError, match="forced publish failure"):
+        export_campaign_plan_import(check.imported, output)
+
     assert not output.exists()
     assert not list(tmp_path.glob(".output.*.tmp"))
 

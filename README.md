@@ -539,8 +539,8 @@ for trust boundaries and failure behavior.
 - Plans contain at most 100 items. Referenced campaign paths cannot be absolute, traverse parents,
   use platform-specific separators, or escape through symbolic links.
 - Canonical import reads at most 1 MB and 100 logical data rows, requires an exact UTF-8 header and
-  timezone-explicit times, reports all bounded diagnostics before writing, and exclusively renames
-  a complete validated source package into place.
+  timezone-explicit times, reports all bounded diagnostics before writing, atomically reserves the
+  destination, and publishes a complete validated source package without replacement.
 - Export paths are generated from a sanitized name plus a content hash. Existing bundles are not
   overwritten without explicit opt-in, and symbolic-link bundle targets are rejected.
 - Discord broadcast mentions are surfaced as warnings. This tool never posts them.

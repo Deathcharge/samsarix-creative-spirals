@@ -37,12 +37,12 @@ name,title,body,link,hashtags,platforms,intended_at,media_path,media_alt_text,me
 | `title` | no | Baseline title; one line, at most 200 characters. |
 | `body` | yes | Baseline body; 1–100,000 characters. Quoted CSV cells may contain line breaks. |
 | `link` | no | Absolute credential-free HTTP(S) URL. |
-| `hashtags` | no | Canonical hashtag names without `#`, separated by `|`. |
-| `platforms` | yes | One or more of `x`, `linkedin`, `bluesky`, `mastodon`, `discord`, separated by `|`. |
+| `hashtags` | no | Canonical hashtag names without `#`, separated by a pipe character. |
+| `platforms` | yes | One or more of `x`, `linkedin`, `bluesky`, `mastodon`, `discord`, separated by a pipe character. |
 | `intended_at` | no | Full RFC 3339 date-time with `Z` or a known explicit offset; normalized to UTC. |
 | `media_path` | no | One portable campaign-relative `.jpg`, `.jpeg`, or `.png` metadata path. |
 | `media_alt_text` | with media | Required non-empty alt text when `media_path` is present. |
-| `media_platforms` | no | Optional requested-platform subset separated by `|`; blank targets all row platforms. |
+| `media_platforms` | no | Optional requested-platform subset separated by a pipe character; blank targets all row platforms. |
 
 The import accepts an optional UTF-8 byte-order mark for spreadsheet compatibility. It does not
 guess encodings, delimiters, headers, locale dates, workspace timezones, or queue slots. The input
@@ -64,10 +64,11 @@ the plan name and required-platform policy, and checks every accepted logical da
 row numbers include the header as row 1.
 
 No output path is touched when inspection fails. On success,
-`export_campaign_plan_import(...)` writes a private temporary sibling, reloads the complete plan
-through the authoritative runtime validator, and renames the finished directory into place. It
-refuses an existing destination instead of merging, deleting, or overwriting source work. An I/O
-failure cleans only the private temporary shape created by that call.
+`export_campaign_plan_import(...)` writes a private temporary sibling and reloads the complete plan
+through the authoritative runtime validator. It then atomically reserves the absent destination,
+publishes each file without replacement, and publishes `plan.json` last as the completeness marker.
+It refuses an existing or concurrently created destination instead of merging, deleting, or
+overwriting source work. An I/O failure cleans only shapes created by that call.
 
 `plan import --json` emits the check object and plan identity on success. Invalid input emits the
 schema-backed `plan-import-check` object and returns exit `1`; it still writes no package. Use
@@ -88,7 +89,7 @@ Bulk spreadsheet authoring is a common entry path, but connected tools make diff
 
 Samsarix keeps the familiar spreadsheet entry point but produces provider-neutral, Git-reviewable
 source instead of scheduling remote posts. The conservative 100-row/1 MB envelope, explicit
-offsets, existing campaign validation, and atomic package write avoid silent plan-limit truncation,
+offsets, existing campaign validation, and exclusive package write avoid silent plan-limit truncation,
 locale-dependent times, partial imports, and account coupling. This evidence supports the workflow
 need; it does not establish external-user adoption or claim direct compatibility with a provider's
 template.

@@ -400,7 +400,19 @@ def _intended_at(value: str, *, row: int, issues: list[PlanImportIssue]) -> date
 
 def _campaign_issue_field(message: str) -> str | None:
     match = _ISSUE_FIELD_RE.match(message)
-    return match.group(1) if match else None
+    if match is None:
+        return None
+    field = match.group(1)
+    return field if len(field) <= 120 else None
+
+
+def _bounded_issue_message(message: object) -> str:
+    text = str(message)
+    without_controls = "".join(
+        " " if unicodedata.category(character) in {"Cc", "Cs"} else character for character in text
+    )
+    collapsed = " ".join(without_controls.split())
+    return collapsed[:1000] if collapsed else "campaign validation failed"
 
 
 def _campaign_from_row(
@@ -466,7 +478,7 @@ def _campaign_from_row(
         issues.extend(
             PlanImportIssue(
                 "invalid-campaign",
-                message,
+                _bounded_issue_message(message),
                 row=row,
                 field=_campaign_issue_field(message),
             )
@@ -562,7 +574,18 @@ def inspect_campaign_plan_csv(
             issues=issues,
         )
         if campaign is not None:
-            source_name = f"campaigns/{record_index - 1:03d}-{_slugify(campaign.name)}.json"
+            slug = _slugify(campaign.name)
+            source_name = f"campaigns/{record_index - 1:03d}-{slug}.json"
+            if not _SOURCE_RE.fullmatch(source_name):
+                issues.append(
+                    PlanImportIssue(
+                        "invalid-campaign-source",
+                        "campaign name cannot produce a portable source filename",
+                        row=record_index,
+                        field="name",
+                    )
+                )
+                continue
             imported_items.append(
                 ImportedCampaign(
                     sequence=record_index - 1,
@@ -614,14 +637,27 @@ def _clear_temporary_import(path: Path) -> None:
     path.rmdir()
 
 
+def _publish_import_stage(stage: Path, target: Path) -> None:
+    """Publish a validated stage into an exclusively reserved destination."""
+    campaign_target = target / "campaigns"
+    campaign_target.mkdir(mode=0o700)
+    for source in sorted((stage / "campaigns").iterdir(), key=lambda path: path.name):
+        destination = campaign_target / source.name
+        with source.open("rb") as source_handle, destination.open("xb") as target_handle:
+            target_handle.write(source_handle.read())
+    with (
+        (stage / "plan.json").open("rb") as source_handle,
+        (target / "plan.json").open("xb") as target_handle,
+    ):
+        target_handle.write(source_handle.read())
+
+
 def export_campaign_plan_import(imported: CampaignPlanImport, output: str | Path) -> Path:
     """Write a complete source package exclusively and return its plan path."""
     imported_value: object = imported
     if not isinstance(imported_value, CampaignPlanImport):
         raise ConfigError("imported must be a CampaignPlanImport value")
     target = Path(os.path.abspath(output))
-    if target.exists() or target.is_symlink():
-        raise FileExistsError(f"refusing to overwrite existing import output: {target}")
     parent = target.parent
     parent.mkdir(parents=True, exist_ok=True)
     if parent.is_symlink() or not parent.is_dir():
@@ -648,8 +684,20 @@ def export_campaign_plan_import(imported: CampaignPlanImport, output: str | Path
         validated: CampaignPlan = load_campaign_plan(plan_path)
         if len(validated.items) != len(imported.items):
             raise OSError("import validation produced an unexpected item count")
-        temporary.rename(target)
-    except Exception:
+        try:
+            target.mkdir(mode=0o700)
+        except FileExistsError as error:
+            raise FileExistsError(
+                f"refusing to overwrite existing import output: {target}"
+            ) from error
+        try:
+            _publish_import_stage(temporary, target)
+        except Exception:
+            _clear_temporary_import(target)
+            raise
         _clear_temporary_import(temporary)
+    except Exception:
+        if temporary.exists():
+            _clear_temporary_import(temporary)
         raise
     return target / "plan.json"
