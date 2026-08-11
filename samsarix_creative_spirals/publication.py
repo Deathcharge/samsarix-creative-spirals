@@ -389,10 +389,26 @@ def load_campaign_plan_publication(path: str | Path) -> CampaignPlanPublication:
     return CampaignPlanPublication.from_dict(_load_json_object(path, kind="publication ledger"))
 
 
+def _validated_publication_object(
+    publication: CampaignPlanPublication,
+) -> CampaignPlanPublication:
+    """Apply the serialized contract to a directly constructed public value."""
+    if not isinstance(publication, CampaignPlanPublication):
+        raise ConfigError("publication must be a CampaignPlanPublication value")
+    try:
+        CampaignPlanPublication.from_dict(publication.to_dict())
+    except ConfigError:
+        raise
+    except (AttributeError, TypeError, ValueError) as error:
+        raise ConfigError(f"publication object is structurally invalid: {error}") from error
+    return publication
+
+
 def export_campaign_plan_publication(
     publication: CampaignPlanPublication, path: str | Path
 ) -> Path:
     """Write a new ledger without replacing existing operator evidence."""
+    publication = _validated_publication_object(publication)
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     payload = json.dumps(publication.to_dict(), ensure_ascii=False, indent=2) + "\n"
@@ -440,6 +456,24 @@ def verify_campaign_plan_publication(
     handoff_check = verify_campaign_plan_handoff(bundle, packet, content_policy=content_policy)
     for issue in handoff_check.issues:
         integrity(f"handoff-{issue.code}", issue.message)
+    try:
+        publication = _validated_publication_object(publication)
+    except ConfigError as error:
+        integrity("publication-invalid", f"Ledger structure is invalid: {error}")
+        return PublicationCheck(
+            publication_id="scpub_invalid",
+            plan_id=bundle.plan_id,
+            current=False,
+            complete=False,
+            counts=(
+                ("records", 0),
+                ("pending", 0),
+                ("published", 0),
+                ("failed", 0),
+                ("skipped", 0),
+            ),
+            issues=tuple(issues),
+        )
     if publication.plan_id != bundle.plan_id:
         integrity("plan-id-changed", "Ledger plan ID does not match current source.")
     if publication.source_hash != bundle.source_hash:

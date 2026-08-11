@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use Samsarix Creative Spirals, please cite this software."
+title: "Samsarix Creative Spirals"
+type: software
+version: 0.17.1
+date-released: 2026-08-11
+authors:
+  - family-names: Ward
+    given-names: Andrew John
+  - name: Samsarix LLC
+repository-code: "https://github.com/Deathcharge/samsarix-creative-spirals"
+url: "https://samsarix.com"
+license: MPL-2.0
+contact:
+  - name: Samsarix LLC
+    email: contact@samsarix.com

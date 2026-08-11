@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import unicodedata
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -96,6 +97,19 @@ from .schema import (
 )
 from .templates import starter_campaign
 from .workflow import build_campaign, export_campaign, load_campaign
+
+
+def _terminal_safe(value: object) -> str:
+    """Render untrusted diagnostics without emitting terminal control characters."""
+    result: list[str] = []
+    for character in str(value):
+        category = unicodedata.category(character)
+        if category in {"Cc", "Cf", "Cs"} or ord(character) == 127:
+            codepoint = ord(character)
+            result.append(f"\\x{codepoint:02x}" if codepoint <= 0xFF else f"\\u{codepoint:04x}")
+        else:
+            result.append(character)
+    return "".join(result)
 
 
 def _json_print(value: object) -> None:
@@ -226,8 +240,8 @@ def _print_handoff_check(result: HandoffCheck) -> None:
     status = "valid" if result.valid else "invalid"
     print(f"Approved handoff {status} for {result.plan_id}: {result.handoff_id}")
     for issue in result.issues:
-        location = f" [{issue.path}]" if issue.path else ""
-        print(f"error:{location} {issue.message}")
+        location = f" [{_terminal_safe(issue.path)}]" if issue.path else ""
+        print(f"error:{location} {_terminal_safe(issue.message)}")
 
 
 def _print_publication_check(result: PublicationCheck) -> None:
@@ -1324,7 +1338,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return int(args.handler(args))
     except (ConfigError, OSError) as error:
-        print(f"error: {error}", file=sys.stderr)
+        print(f"error: {_terminal_safe(error)}", file=sys.stderr)
         return 1
     except BrokenPipeError:
         return 0

@@ -1492,3 +1492,25 @@ Before public package publication, roll back by reverting merge commit
 `db15096212a2644d1621b7e0c2fb3f61524f0e41` or pinning pre-0.17 main commit
 `bc9270f951944adacbbc4bc746021a054da5f72b`. After publication, use normal version pinning and a
 corrective release; do not replace published artifacts silently.
+
+
+## 0.17.1 pre-release security hardening
+
+A standard repository-wide Codex Security scan reviewed all 21 production Python files at
+`ce4abb6ec604a090e8bd748edc1e6ea528f22198` and classified all 108 tracked paths. The sealed scan
+`fe636c60-28b1-4d25-8799-e508759840ec` reported seven source-backed findings: one high-severity
+Windows junction output-redirection path, three medium publication/terminal/media-integrity gaps,
+and three low bounded-resource or local race paths.
+
+The 0.17.1 patch treats Windows junctions and any reparse point as link-like, rechecks stable
+directory identities around mutations and cleanup, checks the final opened exact-media handle
+against its allowed campaign root on Windows, revalidates direct publication objects through the
+serialized contract, escapes terminal-control diagnostics, bounds campaign validation work, and
+stops CSV parsing once one excess row proves the row-limit failure. The earlier 0.17.0 artifacts
+were not tagged, released, or uploaded to PyPI.
+
+Local verification after remediation: clean Black, Flake8, and strict mypy checks across 43 source
+files; 456 tests passed at 92.93% branch coverage on Python 3.11, including an actual Windows
+directory-junction regression; and package/tests/examples compiled successfully. Distribution
+hashes, hosted CI identity, and final merge/tag identity are recorded after the exact release tree
+is built and merged.

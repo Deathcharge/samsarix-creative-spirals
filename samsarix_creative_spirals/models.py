@@ -55,6 +55,24 @@ _WINDOWS_RESERVED_NAMES = {
     *(f"com{index}" for index in range(1, 10)),
     *(f"lpt{index}" for index in range(1, 10)),
 }
+MAX_CONFIG_ISSUES = 200
+MAX_UNKNOWN_FIELDS = 20
+
+
+def _diagnostic_key(value: object) -> str:
+    """Render an untrusted mapping key without terminal control characters."""
+    return ascii(str(value))[1:-1]
+
+
+def _unknown_fields(value: Mapping[Any, Any], allowed: set[str]) -> list[str]:
+    unknown: list[str] = []
+    for key in value:
+        if key not in allowed:
+            if len(unknown) == MAX_UNKNOWN_FIELDS:
+                unknown.append("additional fields omitted")
+                break
+            unknown.append(_diagnostic_key(key))
+    return sorted(unknown)
 
 
 class ConfigError(ValueError):
@@ -63,7 +81,10 @@ class ConfigError(ValueError):
     def __init__(self, issues: list[str] | tuple[str, ...] | str):
         if isinstance(issues, str):
             issues = [issues]
-        self.issues = tuple(issues)
+        bounded = tuple(issues[:MAX_CONFIG_ISSUES])
+        if len(issues) > MAX_CONFIG_ISSUES:
+            bounded = (*bounded, "additional validation issues omitted")
+        self.issues = bounded
         super().__init__("; ".join(self.issues))
 
 
@@ -183,7 +204,7 @@ def _content_hashtags(value: object, *, field: str, issues: list[str]) -> list[s
     if len(value) > 10:
         issues.append(f"{field} must contain at most 10 items")
     seen: set[str] = set()
-    for index, item in enumerate(value):
+    for index, item in enumerate(value[:10]):
         item_field = f"{field}[{index}]"
         if not isinstance(item, str):
             issues.append(f"{item_field} must be a string")
@@ -219,7 +240,9 @@ def _tracking_parameter_map(
     if len(value) > MAX_TRACKING_PARAMETERS:
         issues.append(f"{field} must contain at most {MAX_TRACKING_PARAMETERS} parameters")
     parameters: dict[str, str] = {}
-    for key, raw_value in value.items():
+    for index, (key, raw_value) in enumerate(value.items()):
+        if index >= MAX_TRACKING_PARAMETERS:
+            break
         if not isinstance(key, str) or not _TRACKING_PARAMETER_RE.fullmatch(key):
             issues.append(f"{field} parameter names must match {_TRACKING_PARAMETER_RE.pattern}")
             continue
@@ -310,7 +333,9 @@ def _tracking_platform_parameter_maps(
             "linkTracking.platformParameters must contain at most "
             f"{len(SUPPORTED_PLATFORMS)} platforms"
         )
-    for key, parameter_value in value.items():
+    for index, (key, parameter_value) in enumerate(value.items()):
+        if index >= len(SUPPORTED_PLATFORMS):
+            break
         if not isinstance(key, str) or key not in SUPPORTED_PLATFORMS:
             issues.append(
                 "linkTracking.platformParameters keys must be canonical platforms: "
@@ -347,7 +372,7 @@ def _parse_link_tracking(
     if not isinstance(value, Mapping):
         issues.append("linkTracking must be an object")
         return None
-    unknown = sorted(str(key) for key in value if key not in {"parameters", "platformParameters"})
+    unknown = _unknown_fields(value, {"parameters", "platformParameters"})
     if unknown:
         issues.append(f"linkTracking has unknown field(s): {', '.join(unknown)}")
 
@@ -447,7 +472,7 @@ class CampaignConfig:
             raise ConfigError("campaign configuration must be a JSON object")
 
         issues: list[str] = []
-        unknown = sorted(str(key) for key in raw if key not in _CAMPAIGN_KEYS)
+        unknown = _unknown_fields(raw, _CAMPAIGN_KEYS)
         if unknown:
             issues.append(f"unknown field(s): {', '.join(unknown)}")
 
@@ -480,8 +505,10 @@ class CampaignConfig:
         else:
             if not platforms_value:
                 issues.append("platforms must contain at least one platform")
+            if len(platforms_value) > len(SUPPORTED_PLATFORMS):
+                issues.append(f"platforms must contain at most {len(SUPPORTED_PLATFORMS)} items")
             seen_platforms: set[str] = set()
-            for index, value in enumerate(platforms_value):
+            for index, value in enumerate(platforms_value[: len(SUPPORTED_PLATFORMS)]):
                 if not isinstance(value, str):
                     issues.append(f"platforms[{index}] must be a string")
                     continue
@@ -505,7 +532,9 @@ class CampaignConfig:
                     f"platformVariants must contain at most {len(SUPPORTED_PLATFORMS)} entries"
                 )
             parsed_variants: dict[str, PlatformContentVariant] = {}
-            for key, variant_value in platform_variants_value.items():
+            for index, (key, variant_value) in enumerate(platform_variants_value.items()):
+                if index >= len(SUPPORTED_PLATFORMS):
+                    break
                 if not isinstance(key, str):
                     issues.append("platformVariants keys must be platform strings")
                     continue
@@ -522,10 +551,8 @@ class CampaignConfig:
                     issues.append(f"{field} must be an object")
                     continue
 
-                unknown_variant = sorted(
-                    str(item_key)
-                    for item_key in variant_value
-                    if item_key not in {"title", "body", "link", "hashtags"}
+                unknown_variant = _unknown_fields(
+                    variant_value, {"title", "body", "link", "hashtags"}
                 )
                 if unknown_variant:
                     issues.append(f"{field} has unknown field(s): {', '.join(unknown_variant)}")
@@ -594,7 +621,13 @@ class CampaignConfig:
         if not isinstance(platform_limits_value, Mapping):
             issues.append("platformLimits must be an object mapping platforms to integers")
         else:
-            for key, value in platform_limits_value.items():
+            if len(platform_limits_value) > len(SUPPORTED_PLATFORMS):
+                issues.append(
+                    f"platformLimits must contain at most {len(SUPPORTED_PLATFORMS)} entries"
+                )
+            for index, (key, value) in enumerate(platform_limits_value.items()):
+                if index >= len(SUPPORTED_PLATFORMS):
+                    break
                 if not isinstance(key, str):
                     issues.append("platformLimits keys must be platform strings")
                     continue
@@ -636,9 +669,7 @@ class CampaignConfig:
                 if not isinstance(media_item, Mapping):
                     issues.append(f"{field} must be an object")
                     continue
-                unknown_media = sorted(
-                    str(key) for key in media_item if key not in {"path", "altText", "platforms"}
-                )
+                unknown_media = _unknown_fields(media_item, {"path", "altText", "platforms"})
                 if unknown_media:
                     issues.append(f"{field} has unknown field(s): {', '.join(unknown_media)}")
 

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .filesystem import directory_identity, is_link_like, require_directory_identity
 from .formatters import format_platform
 from .models import CampaignBundle, CampaignConfig, ConfigError
 
@@ -146,11 +147,13 @@ def _manifest(bundle: CampaignBundle, exported_at: datetime) -> dict[str, Any]:
     }
 
 
-def _clear_temp_directory(path: Path) -> None:
+def _clear_temp_directory(path: Path, identity: tuple[int, int, int, int]) -> None:
     if not path.exists():
         return
+    require_directory_identity(path, identity, label="temporary export directory")
     for child in path.iterdir():
-        if child.is_file() and not child.is_symlink():
+        require_directory_identity(path, identity, label="temporary export directory")
+        if child.is_file() and not is_link_like(child):
             child.unlink()
         else:
             raise OSError(f"refusing to clean unexpected temporary entry: {child}")
@@ -166,24 +169,27 @@ def export_campaign(
 ) -> Path:
     """Persist a bundle beneath a generated safe path and return that path."""
     root = Path(os.path.abspath(output_root))
-    if root.exists() and root.is_symlink():
-        raise OSError(f"refusing to export through a symbolic-link directory: {root}")
+    if root.exists() and is_link_like(root):
+        raise OSError(f"refusing to export through a link-like directory: {root}")
     root.mkdir(parents=True, exist_ok=True)
-    if not root.is_dir():
-        raise OSError(f"output root is not a directory: {root}")
+    root_identity = directory_identity(root, label="output root")
 
     bundle_name = f"{_slugify(bundle.name)}-{bundle.campaign_id}"
     target = root / bundle_name
-    if target.exists() or target.is_symlink():
-        if target.is_symlink() or not target.is_dir():
+    target_identity = None
+    if target.exists() or is_link_like(target):
+        if is_link_like(target) or not target.is_dir():
             raise OSError(f"refusing to overwrite non-directory bundle path: {target}")
         if not overwrite:
             raise FileExistsError(
                 f"bundle already exists: {target}; pass --overwrite to replace it"
             )
+        target_identity = directory_identity(target, label="campaign bundle")
 
     temporary = root / f".{bundle_name}.{uuid.uuid4().hex}.tmp"
+    require_directory_identity(root, root_identity, label="output root")
     temporary.mkdir(mode=0o700)
+    temporary_identity = directory_identity(temporary, label="temporary export directory")
     try:
         for draft in bundle.drafts:
             (temporary / f"{draft.platform}.md").write_text(
@@ -198,16 +204,22 @@ def export_campaign(
             newline="\n",
         )
 
-        if not target.exists():
+        require_directory_identity(root, root_identity, label="output root")
+        if target_identity is None:
+            if target.exists() or is_link_like(target):
+                raise FileExistsError(f"bundle path appeared during export: {target}")
             temporary.replace(target)
         else:
+            require_directory_identity(target, target_identity, label="campaign bundle")
             draft_files = sorted(
                 path for path in temporary.iterdir() if path.name != "manifest.json"
             )
             for source in draft_files:
+                require_directory_identity(target, target_identity, label="campaign bundle")
                 os.replace(source, target / source.name)
+            require_directory_identity(target, target_identity, label="campaign bundle")
             os.replace(temporary / "manifest.json", target / "manifest.json")
             temporary.rmdir()
     finally:
-        _clear_temp_directory(temporary)
+        _clear_temp_directory(temporary, temporary_identity)
     return target
