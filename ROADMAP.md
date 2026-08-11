@@ -448,6 +448,14 @@ The pre-fix scan at `ce4abb6` produced seven validated findings: one high, three
 low. Version 0.17.0 was never tagged or published, so 0.17.1 becomes the first distributable
 release candidate rather than silently replacing an existing artifact.
 
+Reviewed implementation head `515b782` merged through PR #20 as `11707dd`; 456 tests passed at
+92.93% coverage locally, the actual Windows junction regression passed, and post-merge Python
+3.10/3.13 run `31460298842` completed every quality, build, and installed-wheel step. The exact
+0.17.1 wheel SHA-256 is `e9184ba147d933c76e0383e13faabb3284e41e9ec844107437e6e5a30bddd5b5`;
+the sdist SHA-256 is `47ce6a05c643609515b3f8f39b3f3dca973468e90621389ccfb162835ec98732`.
+An isolated Python 3.11 wheel journey imported a publishable two-row plan as
+`scp_668860e86792` and passed `pip check`.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

@@ -1512,5 +1512,23 @@ were not tagged, released, or uploaded to PyPI.
 Local verification after remediation: clean Black, Flake8, and strict mypy checks across 43 source
 files; 456 tests passed at 92.93% branch coverage on Python 3.11, including an actual Windows
 directory-junction regression; and package/tests/examples compiled successfully. Distribution
-hashes, hosted CI identity, and final merge/tag identity are recorded after the exact release tree
-is built and merged.
+metadata passed `twine check`. Reviewed head `515b782` merged through
+[PR #20](https://github.com/Deathcharge/samsarix-creative-spirals/pull/20) as exact release tree
+`11707dd288f4b4c8392d5d6c69599b6caa57b693`. Both final PR matrices passed in runs
+`31460139483` and `31460142314`; CodeRabbit completed with a rate-limit disposition and no posted
+finding. [Post-merge run 31460298842](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31460298842)
+passed the complete Python 3.10/3.13 quality, build, and installed-wheel matrices.
+
+Exact distributions built from merge tree `11707dd`:
+
+- `samsarix_creative_spirals-0.17.1-py3-none-any.whl` — 128,362 bytes; SHA-256
+  `e9184ba147d933c76e0383e13faabb3284e41e9ec844107437e6e5a30bddd5b5`.
+- `samsarix_creative_spirals-0.17.1.tar.gz` — 270,618 bytes; SHA-256
+  `47ce6a05c643609515b3f8f39b3f3dca973468e90621389ccfb162835ec98732`.
+
+An isolated Python 3.11 installation of that exact wheel reported version 0.17.1, emitted the
+bundled plan-import schema, imported the two-row example as publishable plan
+`scp_668860e86792`, and passed `pip check`. This evidence-only documentation commit is intentionally
+outside the tagged source tree so the published artifact digests remain self-consistent. Roll back
+before distribution by reverting merge `11707dd` or pinning `ce4abb6`; after distribution, publish
+a higher corrective version rather than replacing artifacts.
