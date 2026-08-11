@@ -399,17 +399,18 @@ runs `31446907105` and `31446909057`; merge commit `d81da9a`; and post-merge run
 `d4b9afb`. Full review disposition, artifact evidence, compatibility notes, and limitations are in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#016-source-bound-plan-feedback-release-evidence).
 
-## Active milestone — 0.17 canonical CSV and plan import
+## Completed milestone — 0.17 canonical CSV and plan import
 
 - [x] Define one provider-neutral UTF-8 authoring header with bounded spreadsheet-friendly list,
   explicit-offset time, and optional single-image metadata fields.
 - [x] Inspect every accepted row through the existing campaign contract and emit stable
   schema-backed row/field diagnostics without partial writes.
 - [x] Export normalized campaign JSON and a complete plan through a private staged directory,
-  authoritative reload, and exclusive rename without merge or overwrite behavior.
+  authoritative reload, atomic destination reservation, no-replace file creation, and a final
+  `plan.json` completeness marker.
 - [x] Add CLI, typed public API, bundled schema, realistic template, adversarial tests, installed
   wheel CI journey, current official workflow evidence, and explicit spreadsheet/media boundaries.
-- [ ] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
+- [x] Complete hosted CI and automated review, record exact distribution hashes, merge to main, and
   capture final rollback evidence.
 
 Official Buffer, Planable, and Hootsuite workflows confirm that spreadsheet bulk authoring is a
@@ -418,6 +419,16 @@ campaign files and a plan, reports bounded row errors without partial writes, pr
 UTC/timezone semantics, and round-trips through existing preview/check/diff/review/export gates.
 Provider-specific templates and direct upload remain separate adapters. Contract details and
 official sources are in [`docs/PLAN_IMPORT.md`](docs/PLAN_IMPORT.md).
+
+Reviewed technical evidence at `ec316fb`: 453 tests at 93.60% coverage, clean formatting, lint,
+strict typing, and compilation; an external Python 3.11 exact-wheel journey imported two rows as
+publishable plan `scp_c4d28898fe27`; wheel SHA-256
+`ae1db9ce4e1add829383f349bb1409ac14752654ea55f1cccc5b873f52f93f15`; sdist SHA-256
+`c6372731cfca3e67c3ccbb8f14e4022ae5a12f937020a4f3f8c1d250268e7aa1`; reviewed push/PR runs
+`31451449749` and `31451452730`; merge commit `db15096`; and post-merge run `31451729185` all
+passed. Rollback is a revert of PR #19's merge or a pin to pre-0.17 main commit `bc9270f`. Full
+review disposition, artifact evidence, compatibility notes, and limitations are in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#017-canonical-csv-and-plan-import-release-evidence).
 
 ## Deliberate exclusions
 

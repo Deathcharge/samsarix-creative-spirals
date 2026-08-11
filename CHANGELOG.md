@@ -9,9 +9,9 @@ All notable changes to this project are documented here.
   explicit known offsets.
 - Added stable schema-backed row/field diagnostics that aggregate invalid campaigns and required
   platform coverage without writing partial output.
-- Added exclusive atomic source-package export with normalized campaign JSON, deterministic
-  sequence/slug paths, authoritative staged plan reload, and refusal to merge or overwrite an
-  existing destination.
+- Added exclusive source-package export with normalized campaign JSON, deterministic sequence/slug
+  paths, authoritative staged plan reload, atomic destination reservation, no-replace file creation,
+  and refusal to merge or overwrite an existing destination.
 - Added `plan import`, public typed APIs, a bundled `plan-import-check` schema, realistic CSV
   example, installed-wheel CI coverage, and current Buffer, Planable, and Hootsuite workflow
   evidence and trust boundaries.

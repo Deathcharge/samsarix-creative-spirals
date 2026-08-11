@@ -1396,3 +1396,99 @@ Before public package publication, roll back by reverting merge commit
 `d81da9ac2a601045048dc3f41a2a6c03edabd0c6` or pinning pre-0.16 main commit
 `d4b9afbc741d0471f62c1d6ab810e43aa6157d79`. After publication, use normal version pinning and a
 corrective release; do not replace published artifacts silently.
+
+
+## 0.17 canonical CSV and plan import release evidence
+
+### Research and product decision
+
+Official Buffer, Planable, and Hootsuite workflows confirm that spreadsheet bulk authoring remains
+a common campaign-operations entry point. Buffer documents a case-sensitive UTF-8 bulk template,
+review/error handling, and a 100-post paid-plan bound; Planable documents a predefined CSV below 1
+MB with workspace-timezone interpretation; Hootsuite documents bulk composition for hundreds of
+calendar posts. Exact official links and the bounded comparison are in
+[`PLAN_IMPORT.md`](PLAN_IMPORT.md).
+
+The local-first product decision is to accept one provider-neutral, explicit-offset authoring
+contract and produce normal Samsarix sources rather than schedule remote posts. The import is
+independently useful with a spreadsheet, Git, and local files: it does not require an account,
+credentials, another Samsarix repository, provider APIs, or mutable service state. Provider-specific
+templates and direct upload remain separate adapter concerns.
+
+Priority disposition: P1 “a team must hand-author every campaign JSON file before using the plan
+workflow” is closed by this slice. Template autodetection, implicit workspace timezones, multiple
+images, direct provider scheduling, and hosted collaboration remain deferred because they weaken
+the canonical boundary or introduce a materially different account/network trust model.
+
+### Bounded contract and implementation
+
+Implemented locally: one exact ten-field UTF-8 CSV header with optional BOM; 1,000,000-byte and
+100-row ceilings; pipe-separated lists; strict RFC 3339 intended times with known offsets; optional
+single-image metadata without dereferencing bytes; complete campaign-model validation; stable,
+bounded row/field diagnostics; Unicode-name fallback slugs plus defensive derived-path validation;
+immutable typed import/check values; one bundled Draft 2020-12 diagnostic schema; public APIs;
+`plan import`; a realistic template; and installed-wheel CI coverage.
+
+Inspection has no filesystem side effects. Export first writes and authoritatively reloads a private
+staged source package, then atomically reserves the absent destination, creates each final file with
+no-replace semantics, and publishes `plan.json` last as the completeness marker. A destination that
+exists or appears concurrently is preserved. Publication failures clean only the expected shape
+owned by the current call; the exporter never merges with or deletes a competing destination.
+
+CSV cells remain untrusted literal content. The importer never evaluates spreadsheet formulas,
+opens links, loads credentials, contacts providers, reads or copies media bytes, or claims provider
+acceptance. Formula-prefix neutralization remains the responsibility of later Samsarix CSV exports.
+
+### Verification and release disposition
+
+Implementation and accepted review fixes converge at exact code commit
+`ec316fbffd02fa7091a3baa893958ed634f802da`. [PR #19](https://github.com/Deathcharge/samsarix-creative-spirals/pull/19)
+merged that head to `main` as
+`db15096212a2644d1621b7e0c2fb3f61524f0e41`. This evidence section is a subsequent
+documentation-only main commit, so the artifact hashes identify the exact reviewed code tree rather
+than a self-referential source archive.
+
+| Verification | Exit | Actual result |
+| --- | ---: | --- |
+| `python -m black --check samsarix_creative_spirals tests` | 0 | All 41 files unchanged. |
+| `python -m flake8 samsarix_creative_spirals tests` | 0 | No findings. |
+| `python -m mypy samsarix_creative_spirals tests` | 0 | Strict typing passed across 41 source files. |
+| `python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing -q` | 0 | 453 passed; 93.60% total coverage and 94% plan-import coverage. |
+| `python -m compileall -q samsarix_creative_spirals` | 0 | Package compiled. |
+| Sdist-derived universal-wheel build | 0 | Built the 0.17.0 sdist and then its universal wheel from exact reviewed code head `ec316fb`. |
+| Python 3.11 external installed-wheel journey | 0 | Distribution/runtime 0.17.0, bundled plan-import schema, two-row import, publishable plan `scp_c4d28898fe27`, and `pip check` passed outside the checkout. |
+| Hosted GitHub Actions after review fixes | 0 | [Push run 31451449749](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31451449749) and [PR run 31451452730](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31451452730) each passed the complete Python 3.10/3.13 matrix at reviewed head `ec316fb`. |
+| Post-merge GitHub Actions | 0 | [Main run 31451729185](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/31451729185) passed both complete matrices at merge commit `db15096`. |
+| `git diff --check` | 0 | No whitespace errors at the reviewed code commit. |
+
+Isolated artifact digests from exact reviewed code commit `ec316fb`:
+
+- `samsarix_creative_spirals-0.17.0-py3-none-any.whl` — 125,121 bytes; SHA-256
+  `ae1db9ce4e1add829383f349bb1409ac14752654ea55f1cccc5b873f52f93f15`.
+- `samsarix_creative_spirals-0.17.0.tar.gz` — 265,105 bytes; SHA-256
+  `c6372731cfca3e67c3ccbb8f14e4022ae5a12f937020a4f3f8c1d250268e7aa1`.
+
+CodeRabbit posted five inline findings after the first hardening pass. All were validated and
+addressed: Markdown table delimiters are unambiguous; final-destination reservation is race-safe;
+publication uses no-replace file creation and failure cleanup; upstream campaign diagnostics are
+control-free and bounded; and derived source filenames cannot escape structured row diagnostics.
+Regression tests cover a competing writer, publish failure, oversized/control-bearing upstream
+messages, Unicode fallback names, and an invalid derived slug. Incremental automated re-review was
+rate-limited after the fix commit, but its status completed successfully and both final hosted
+matrices plus all local gates passed on that exact head.
+
+Release disposition: **merged release candidate with one owner-controlled distribution gate**.
+The exact local source and sdist-derived wheel support the declared spreadsheet-to-plan journey with
+no known locally actionable P0 or P1 defect. Public PyPI publication has not been performed and
+remains an explicit owner action. External-user adoption evidence likewise remains unavailable;
+competitor workflow evidence demonstrates the operational need, not product-market fit.
+
+Compatibility is additive: campaign, plan, adapter, review, approval, handoff, readiness, and
+publication contracts are unchanged. Plan-import-check v1, its schema, typed values, CSV contract,
+and CLI command join the pre-1.0 surface. Generated campaign and plan JSON use existing v1 schemas,
+so downstream consumers can treat imported sources exactly like hand-authored sources.
+
+Before public package publication, roll back by reverting merge commit
+`db15096212a2644d1621b7e0c2fb3f61524f0e41` or pinning pre-0.17 main commit
+`bc9270f951944adacbbc4bc746021a054da5f72b`. After publication, use normal version pinning and a
+corrective release; do not replace published artifacts silently.
