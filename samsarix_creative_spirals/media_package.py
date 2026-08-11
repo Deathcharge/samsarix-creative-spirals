@@ -565,8 +565,12 @@ def _descriptor_path(descriptor: int) -> Path | None:
         import msvcrt
 
         buffer = ctypes.create_unicode_buffer(32768)
-        length = ctypes.windll.kernel32.GetFinalPathNameByHandleW(
-            msvcrt.get_osfhandle(descriptor), buffer, len(buffer), 0
+        windll = getattr(ctypes, "windll", None)
+        get_osfhandle = getattr(msvcrt, "get_osfhandle", None)
+        if windll is None or get_osfhandle is None:
+            return None
+        length = windll.kernel32.GetFinalPathNameByHandleW(
+            get_osfhandle(descriptor), buffer, len(buffer), 0
         )
         if not 0 < length < len(buffer):
             return None
