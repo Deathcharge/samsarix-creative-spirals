@@ -133,10 +133,10 @@ behavior.
 | `media` | no | Up to 20 portable JPEG/PNG references, with required alt text and at most four images targeted to each platform. |
 
 Media paths are metadata relative to the campaign file. Ordinary validate, preview, check, diff,
-approval, export, and handoff workflows do not dereference them. Add `--include-media` specifically
-to plan approval creation to inspect and bind the exact local JPEG/PNG bytes; a later handoff then
-packages those same approval-bound bytes automatically. References participate in campaign hashes,
-diffs, approvals, manifests, and adapter v2 output. See
+approval, export, and handoff workflows do not dereference them. Add `--include-media` to plan
+approval or plan review creation to inspect and bind the exact local JPEG/PNG bytes; a later handoff
+then packages those same approval-bound bytes automatically. References participate in campaign
+hashes, diffs, approvals, manifests, and adapter v2 output. See
 [Portable media references](docs/MEDIA.md) for targeting, path rules, platform rationale, and the
 filesystem/provider checks required of an external adapter.
 
@@ -310,10 +310,11 @@ Review files are immutable, deterministic `scr_*` artifacts and can optionally b
 bytes with `--include-media`. Positive authorization stays in the quality-gated `plan approval`
 workflow. See [Source-bound plan feedback](docs/PLAN_FEEDBACK.md).
 
-When a plan references real images and review must cover their exact pixels, create the plan
-approval with `--include-media`. Samsarix resolves each reference beneath its campaign directory,
-rejects symbolic links and unstable reads, validates bounded static JPEG/PNG structure and
-dimensions, and records a content-addressed `scm_*` snapshot in the approval. The portable ceiling
+When a plan references real images and review must cover their exact pixels, create the plan review
+or plan approval with `--include-media`. Samsarix resolves each reference beneath its campaign
+directory, rejects symbolic links and unstable reads, validates bounded static JPEG/PNG structure
+and dimensions, and records a content-addressed `scm_*` snapshot in that artifact. Only an approval
+can authorize a later handoff. The portable ceiling
 is 2,000,000 bytes per file, 36,152,319 pixels, 400 plan references, and 100 MB of unique image
 bytes per packet. Provider, account, and Mastodon-instance rules still require downstream
 revalidation.

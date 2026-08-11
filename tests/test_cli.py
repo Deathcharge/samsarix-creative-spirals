@@ -300,6 +300,10 @@ def test_cli_review_rejects_ambiguous_finding_options(
     assert "exactly one --finding" in capsys.readouterr().err
     assert main([*base, "--finding", "Targeted", "--platform", "x"]) == 1
     assert "platform requires an item" in capsys.readouterr().err
+    assert main([*base, "--finding", "Observation", "--at", "yesterday"]) == 1
+    timestamp_error = capsys.readouterr().err
+    assert "reviewed_at" in timestamp_error
+    assert "approved_at" not in timestamp_error
 
 
 def test_cli_emits_plan_review_schema(capsys: Any) -> None:

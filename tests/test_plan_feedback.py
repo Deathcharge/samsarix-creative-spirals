@@ -20,6 +20,7 @@ from samsarix_creative_spirals import (
     load_campaign_plan,
     load_campaign_plan_review,
     load_plan_review_schema,
+    parse_plan_review_timestamp,
     verify_campaign_plan_review,
 )
 
@@ -243,6 +244,14 @@ def test_public_review_values_enforce_bounded_invariants(
     assert "timezone" in str(caught.value)
     assert "findings" in str(caught.value)
 
+    with pytest.raises(ConfigError, match="findings must contain PlanReviewFinding values"):
+        create_campaign_plan_review(
+            bundle,
+            decision="comment",
+            reviewed_by="Reviewer",
+            findings=cast(Any, None),
+        )
+
 
 def test_review_runtime_guards_cover_direct_and_malformed_values(
     tmp_path: Path, campaign_data: dict[str, Any]
@@ -264,6 +273,8 @@ def test_review_runtime_guards_cover_direct_and_malformed_values(
         reviewed_by="Reviewer",
         findings=(PlanReviewFinding("Current observation."),),
     )
+    with pytest.raises(ConfigError, match="findings must contain PlanReviewFinding values"):
+        replace(review, findings=cast(Any, None))
     malformed_findings = {**review.to_dict(), "findings": {}}
     with pytest.raises(ConfigError, match="findings must be a non-empty array"):
         CampaignPlanReview.from_dict(malformed_findings)
@@ -314,3 +325,11 @@ def test_review_runtime_guards_cover_direct_and_malformed_values(
             reviewed_by="Reviewer",
             findings=cast(Any, ("not-a-finding",)),
         )
+
+
+def test_parse_plan_review_timestamp_uses_review_field_name() -> None:
+    parsed = parse_plan_review_timestamp("2026-08-08T11:30:00-04:00")
+    assert parsed == datetime(2026, 8, 8, 15, 30, tzinfo=timezone.utc)
+
+    with pytest.raises(ConfigError, match="reviewed_at"):
+        parse_plan_review_timestamp("yesterday")

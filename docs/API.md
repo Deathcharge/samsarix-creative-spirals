@@ -323,6 +323,9 @@ note=None, media=None) -> CampaignPlanReview` creates a canonical record for the
 optional `CampaignPlanMedia` snapshot. It accepts `comment`, `request-changes`, or `reject`; positive
 authorization remains in `create_campaign_plan_approval`.
 
+`parse_plan_review_timestamp(value) -> datetime` parses an RFC 3339 review timestamp with an
+explicit known offset, normalizes it to UTC, and reports validation against `reviewed_at`.
+
 `export_campaign_plan_review(review, path) -> Path` writes one UTF-8 record exclusively.
 `load_campaign_plan_review(path) -> CampaignPlanReview` performs bounded strict parsing and
 recomputes its canonical identity. `verify_campaign_plan_review(bundle, review, *, media=None) ->

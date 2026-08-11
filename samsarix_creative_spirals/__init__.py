@@ -81,6 +81,7 @@ from .plan_feedback import (
     create_campaign_plan_review,
     export_campaign_plan_review,
     load_campaign_plan_review,
+    parse_plan_review_timestamp,
     verify_campaign_plan_review,
 )
 from .approval_policy import (
@@ -254,6 +255,7 @@ __all__ = [
     "load_publication_schema",
     "load_readiness_schema",
     "parse_approval_timestamp",
+    "parse_plan_review_timestamp",
     "render_campaign_plan_readiness_html",
     "render_plan_adapter",
     "render_plan_calendar",

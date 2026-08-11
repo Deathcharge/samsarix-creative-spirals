@@ -48,6 +48,15 @@ _PLAN_ID_RE = re.compile(r"^scp_[0-9a-f]{12}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
+def parse_plan_review_timestamp(value: str) -> datetime:
+    """Parse a CLI/API review timestamp using the plan-review contract."""
+    issues: list[str] = []
+    parsed = _parse_timestamp(value, field="reviewed_at", issues=issues)
+    if issues or parsed is None:
+        raise ConfigError(issues)
+    return parsed
+
+
 def _canonical_json(value: object) -> bytes:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
         "utf-8"
@@ -194,7 +203,11 @@ class CampaignPlanReview:
             timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
         else:
             timestamp = self.reviewed_at.astimezone(timezone.utc)
-        findings = tuple(self.findings)
+        try:
+            findings = tuple(self.findings)
+        except TypeError:
+            issues.append("findings must contain PlanReviewFinding values")
+            findings = ()
         if not 1 <= len(findings) <= MAX_PLAN_REVIEW_FINDINGS:
             issues.append(f"findings must contain between 1 and {MAX_PLAN_REVIEW_FINDINGS} items")
         if any(not isinstance(finding, PlanReviewFinding) for finding in findings):
@@ -401,7 +414,11 @@ def create_campaign_plan_review(
     timestamp = reviewed_at or datetime.now(timezone.utc)
     if not isinstance(timestamp, datetime) or timestamp.utcoffset() is None:
         issues.append("reviewed_at must include timezone information")
-    normalized_findings = tuple(findings)
+    try:
+        normalized_findings = tuple(findings)
+    except TypeError:
+        issues.append("findings must contain PlanReviewFinding values")
+        normalized_findings = ()
     if not 1 <= len(normalized_findings) <= MAX_PLAN_REVIEW_FINDINGS:
         issues.append(f"findings must contain between 1 and {MAX_PLAN_REVIEW_FINDINGS} items")
     if any(not isinstance(finding, PlanReviewFinding) for finding in normalized_findings):

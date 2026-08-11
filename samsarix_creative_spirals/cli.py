@@ -51,6 +51,7 @@ from .plan_feedback import (
     create_campaign_plan_review,
     export_campaign_plan_review,
     load_campaign_plan_review,
+    parse_plan_review_timestamp,
     verify_campaign_plan_review,
 )
 from .quality import check_campaign
@@ -544,7 +545,7 @@ def _plan_review_create_command(args: argparse.Namespace) -> int:
         if args.include_media
         else None
     )
-    reviewed_at = parse_approval_timestamp(args.reviewed_at) if args.reviewed_at else None
+    reviewed_at = parse_plan_review_timestamp(args.reviewed_at) if args.reviewed_at else None
     review = create_campaign_plan_review(
         bundle,
         decision=args.decision,

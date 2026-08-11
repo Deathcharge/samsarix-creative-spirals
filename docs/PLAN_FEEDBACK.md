@@ -69,10 +69,10 @@ media snapshot. Its JSON includes:
 - the complete normalized `review` record; and
 - stable `issues` when the record is stale or its media is missing/changed.
 
-Exit `4` normally means the record no longer matches current plan state. Add `--fail-on-blocking`
-to also return `4` for a current `request-changes` or `reject` decision, making the record an
-explicit CI gate. A stale negative decision is not reported as blocking because it describes a
-prior revision. Verification does not decide whether
+Exit `4` normally means the record no longer matches the current plan or bound-media state. Add
+`--fail-on-blocking` to also return `4` for a current `request-changes` or `reject` decision, making
+the record an explicit CI gate. A stale negative decision is not reported as blocking because it
+describes a prior revision. Verification does not decide whether
 all feedback was substantively addressed; the next reviewer examines the semantic diff and new
 drafts.
 

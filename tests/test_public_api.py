@@ -120,6 +120,7 @@ def test_public_api_is_deliberate() -> None:
         "load_publication_schema",
         "load_readiness_schema",
         "parse_approval_timestamp",
+        "parse_plan_review_timestamp",
         "render_campaign_plan_readiness_html",
         "render_plan_adapter",
         "render_plan_calendar",
