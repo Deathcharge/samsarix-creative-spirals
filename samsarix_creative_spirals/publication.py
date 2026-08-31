@@ -8,7 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -428,6 +428,90 @@ def _expected_records(bundle: CampaignPlanBundle) -> tuple[tuple[int, str, str],
         for item in bundle.items
         for draft in item.bundle.drafts
     )
+
+
+def record_campaign_plan_publication(
+    bundle: CampaignPlanBundle,
+    packet: CampaignPlanHandoffPacket,
+    publication: CampaignPlanPublication,
+    *,
+    sequence: int,
+    platform: str,
+    status: Literal["published", "failed", "skipped"],
+    recorded_by: str,
+    occurred_at: datetime,
+    url: str | None = None,
+    note: str | None = None,
+    replace_outcome: bool = False,
+    assessed_at: datetime | None = None,
+    content_policy: ContentPolicy | None = None,
+) -> CampaignPlanPublication:
+    """Return a new verified ledger snapshot recording one operator-attested outcome.
+
+    No files are changed and no provider is contacted. Failed attempts may be retried;
+    changing a published/skipped outcome requires explicit replacement. Exact repeats
+    are idempotent. Use the exclusive exporter to retain the previous snapshot.
+    """
+    timestamp = assessed_at if assessed_at is not None else datetime.now(timezone.utc)
+    if not isinstance(timestamp, datetime) or timestamp.utcoffset() is None:
+        raise ConfigError("assessed_at must be a datetime with timezone information")
+    if not isinstance(occurred_at, datetime) or occurred_at.utcoffset() is None:
+        raise ConfigError("occurred_at must be a datetime with timezone information")
+    if not isinstance(sequence, int) or isinstance(sequence, bool) or not 1 <= sequence <= 100:
+        raise ConfigError("sequence must be an integer between 1 and 100")
+    if not isinstance(platform, str) or platform not in SUPPORTED_PLATFORMS:
+        raise ConfigError(f"platform must be one of: {', '.join(SUPPORTED_PLATFORMS)}")
+    if not isinstance(status, str) or status not in {"published", "failed", "skipped"}:
+        raise ConfigError("status must be published, failed, or skipped")
+    if not isinstance(replace_outcome, bool):
+        raise ConfigError("replace_outcome must be a boolean")
+
+    before = verify_campaign_plan_publication(
+        bundle, packet, publication, assessed_at=timestamp, content_policy=content_policy
+    )
+    if not before.current:
+        detail = ", ".join(issue.code for issue in before.issues if issue.severity == "error")
+        raise ConfigError(f"cannot record an outcome on a non-current publication ledger: {detail}")
+    index = next(
+        (
+            index
+            for index, record in enumerate(publication.records)
+            if record.sequence == sequence and record.platform == platform
+        ),
+        None,
+    )
+    if index is None:
+        raise ConfigError("no publication record matches the requested sequence and platform")
+    previous = PublicationRecord.from_dict(publication.records[index].to_dict(), index=index)
+    raw: dict[str, Any] = {
+        "sequence": sequence,
+        "campaignId": previous.campaign_id,
+        "platform": platform,
+        "status": status,
+        "recordedBy": recorded_by,
+        "occurredAt": _format_utc(occurred_at),
+    }
+    if url is not None:
+        raw["url"] = url
+    if note is not None:
+        raw["note"] = note
+    outcome = PublicationRecord.from_dict(raw, index=index)
+    if outcome == previous:
+        return publication
+    if previous.status in {"published", "skipped"} and not replace_outcome:
+        raise ConfigError("changing a published or skipped record requires replace_outcome=True")
+    if previous.occurred_at is not None and occurred_at < previous.occurred_at:
+        raise ConfigError("occurred_at must not be earlier than the previous recorded outcome")
+    records = list(publication.records)
+    records[index] = outcome
+    result = replace(publication, records=tuple(records))
+    after = verify_campaign_plan_publication(
+        bundle, packet, result, assessed_at=timestamp, content_policy=content_policy
+    )
+    if not after.current:
+        detail = ", ".join(issue.code for issue in after.issues if issue.severity == "error")
+        raise ConfigError(f"recorded outcome would invalidate the publication ledger: {detail}")
+    return result
 
 
 def verify_campaign_plan_publication(

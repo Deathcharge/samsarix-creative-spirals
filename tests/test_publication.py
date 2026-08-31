@@ -21,6 +21,7 @@ from samsarix_creative_spirals import (
     load_campaign_plan_handoff,
     load_campaign_plan_publication,
     load_publication_schema,
+    record_campaign_plan_publication,
     verify_campaign_plan_publication,
 )
 
@@ -28,6 +29,22 @@ APPROVED_AT = datetime(2026, 8, 3, 14, tzinfo=timezone.utc)
 HANDOFF_AT = datetime(2026, 8, 4, 9, tzinfo=timezone.utc)
 CREATED_AT = datetime(2026, 8, 4, 10, tzinfo=timezone.utc)
 ASSESSED_AT = datetime(2026, 8, 5, 12, tzinfo=timezone.utc)
+
+
+def _record(
+    bundle: Any, packet: Any, publication: CampaignPlanPublication, **changes: Any
+) -> CampaignPlanPublication:
+    arguments: dict[str, Any] = {
+        "sequence": 1,
+        "platform": "x",
+        "status": "published",
+        "recorded_by": "Release operator",
+        "occurred_at": datetime(2026, 8, 4, 11, tzinfo=timezone.utc),
+        "url": "https://social.example/samsarix/123",
+        "assessed_at": ASSESSED_AT,
+    }
+    arguments.update(changes)
+    return record_campaign_plan_publication(bundle, packet, publication, **arguments)
 
 
 def _write_json(path: Path, value: object) -> None:
@@ -62,6 +79,224 @@ def _workflow(root: Path, campaign_data: dict[str, Any]) -> tuple[Any, Any, Path
         bundle, approval, root / "handoffs", generated_at=HANDOFF_AT
     )
     return bundle, load_campaign_plan_handoff(packet_path), plan_path
+
+
+def test_record_outcomes_preserves_sources_and_completes_the_journey(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    before = original.to_dict()
+    first = _record(bundle, packet, original)
+    assert original.to_dict() == before
+    assert first.publication_id != original.publication_id
+    assert first.records[1] == original.records[1]
+    assert first.source_hash == original.source_hash
+    assert first.handoff_hash == original.handoff_hash
+    assert first.created_at == original.created_at
+    assert _record(bundle, packet, first) == first
+    complete = _record(
+        bundle, packet, first, platform="linkedin", status="skipped", url=None, note="Not needed."
+    )
+    assert verify_campaign_plan_publication(
+        bundle, packet, complete, assessed_at=ASSESSED_AT
+    ).complete
+    Draft202012Validator(load_publication_schema(), format_checker=FormatChecker()).validate(
+        complete.to_dict()
+    )
+    path = export_campaign_plan_publication(complete, tmp_path / "complete.json")
+    assert load_campaign_plan_publication(path) == complete
+    with pytest.raises(ConfigError, match="overwrite"):
+        export_campaign_plan_publication(first, path)
+    assert load_campaign_plan_publication(path) == complete
+
+
+def test_failed_attempt_can_be_retried_without_inheriting_old_metadata(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    failed = _record(
+        bundle, packet, original, status="failed", url=None, note="Service rejected it."
+    )
+    check = verify_campaign_plan_publication(bundle, packet, failed, assessed_at=ASSESSED_AT)
+    assert check.current and not check.complete
+    retried = _record(bundle, packet, failed)
+    assert failed.records[0].status == "failed"
+    assert retried.records[0].status == "published"
+    assert retried.records[0].note is None
+
+
+def test_record_preserves_unselected_direct_values_and_normalizes_only_the_target(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = _completed(
+        initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    )
+    original = replace(
+        original,
+        records=(original.records[0], replace(original.records[1], note="  Kept as given  ")),
+    )
+    changed = _record(bundle, packet, original, replace_outcome=True, recorded_by=" New operator ")
+    assert changed.records[0].recorded_by == "New operator"
+    assert changed.records[1] is original.records[1]
+    assert _record(bundle, packet, changed, recorded_by=" New operator ") is changed
+
+
+@pytest.mark.parametrize("status", ["published", "skipped"])
+def test_terminal_correction_requires_explicit_replacement(
+    tmp_path: Path, campaign_data: dict[str, Any], status: str
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    first = _record(
+        bundle,
+        packet,
+        original,
+        status=status,
+        url="https://example.com/post" if status == "published" else None,
+        note="Intentional omission" if status == "skipped" else None,
+    )
+    with pytest.raises(ConfigError, match="replace_outcome"):
+        _record(bundle, packet, first, status="failed", url=None, note="Correcting the outcome.")
+    corrected = _record(
+        bundle,
+        packet,
+        first,
+        status="failed",
+        url=None,
+        note="Correcting the outcome.",
+        replace_outcome=True,
+    )
+    assert corrected.records[0].url is None
+    assert corrected.records[0].status == "failed"
+
+
+@pytest.mark.parametrize(
+    "changes, message",
+    [
+        ({"sequence": True}, "sequence"),
+        ({"sequence": 0}, "sequence"),
+        ({"sequence": 101}, "sequence"),
+        ({"sequence": 2}, "no publication record"),
+        ({"platform": "discord"}, "no publication record"),
+        ({"platform": []}, "platform"),
+        ({"status": "pending"}, "status"),
+        ({"status": []}, "status"),
+        ({"replace_outcome": "yes"}, "boolean"),
+        ({"recorded_by": ""}, "recordedBy"),
+        ({"recorded_by": "bad\x1blabel"}, "recordedBy"),
+        ({"url": None}, "url"),
+        ({"url": "https://name:secret@example.com/post"}, "credentials"),
+        ({"status": "failed", "url": None}, "note"),
+        ({"status": "skipped", "note": "Skip it"}, "url"),
+        ({"note": "n" * 501}, "note"),
+        ({"occurred_at": datetime(2026, 8, 4)}, "timezone"),
+        ({"occurred_at": "2026-08-04T11:00:00Z"}, "datetime"),
+        ({"assessed_at": datetime(2026, 8, 5)}, "timezone"),
+        ({"assessed_at": "2026-08-05T12:00:00Z"}, "datetime"),
+        ({"occurred_at": APPROVED_AT}, "outcome-before-handoff"),
+        ({"occurred_at": datetime(2027, 1, 1, tzinfo=timezone.utc)}, "outcome-in-future"),
+    ],
+)
+def test_record_rejects_invalid_input_without_mutating_ledger(
+    tmp_path: Path, campaign_data: dict[str, Any], changes: dict[str, Any], message: str
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    before = original.to_dict()
+    with pytest.raises(ConfigError, match=message):
+        _record(bundle, packet, original, **changes)
+    assert original.to_dict() == before
+
+
+def test_record_rejects_backdated_retry_and_stale_or_malformed_evidence(
+    tmp_path: Path, campaign_data: dict[str, Any]
+) -> None:
+    bundle, packet, _ = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    failed = _record(bundle, packet, original, status="failed", url=None, note="Unavailable")
+    with pytest.raises(ConfigError, match="previous recorded outcome"):
+        _record(bundle, packet, failed, occurred_at=CREATED_AT)
+    for invalid in (
+        replace(original, source_hash="a" * 64),
+        replace(original, records=original.records[:1]),
+        replace(original, records=(replace(original.records[0], status="published"),)),
+    ):
+        with pytest.raises(ConfigError, match="non-current publication ledger"):
+            _record(bundle, packet, invalid)
+    (packet.root / "calendar.ics").write_text("tampered", encoding="utf-8")
+    with pytest.raises(ConfigError, match="non-current publication ledger"):
+        _record(bundle, packet, original)
+
+
+def test_cli_record_creates_new_snapshot_and_rejects_overwrite_or_stale_evidence(
+    tmp_path: Path, campaign_data: dict[str, Any], capsys: Any
+) -> None:
+    from samsarix_creative_spirals.cli import main
+
+    bundle, packet, plan_path = _workflow(tmp_path, campaign_data)
+    original = initialize_campaign_plan_publication(bundle, packet, created_at=CREATED_AT)
+    path = export_campaign_plan_publication(original, tmp_path / "pending.json")
+    output = tmp_path / "published.json"
+    arguments = [
+        "plan",
+        "publication",
+        "record",
+        str(plan_path),
+        str(packet.root),
+        str(path),
+        "--item",
+        "1",
+        "--platform",
+        "x",
+        "--status",
+        "published",
+        "--by",
+        "Operator",
+        "--at",
+        "2026-08-04T11:00:00Z",
+        "--url",
+        "https://social.example/post/1",
+        "--assessed-at",
+        "2026-08-05T12:00:00Z",
+        "--output",
+        str(output),
+    ]
+    assert main(arguments + ["--json"]) == 0
+    response = json.loads(capsys.readouterr().out)
+    assert response["previousPublicationId"] == original.publication_id
+    assert response["publication"]["records"][0]["status"] == "published"
+    assert response["publication"]["records"][1]["status"] == "pending"
+    assert load_campaign_plan_publication(path) == original
+    written = output.read_bytes()
+    assert main(arguments) == 1
+    assert "overwrite" in capsys.readouterr().err
+    assert output.read_bytes() == written
+    arguments[-1] = str(tmp_path / "second.json")
+    assert main(arguments) == 0
+    assert "not platform-verified proof" in capsys.readouterr().out
+    arguments[-1] = str(tmp_path / "should-not-exist.json")
+    arguments[arguments.index("--item") + 1] = "2"
+    assert main(arguments) == 1
+    assert not Path(arguments[-1]).exists()
+    assert "no publication record" in capsys.readouterr().err
+    arguments[arguments.index("--item") + 1] = "1"
+    arguments[arguments.index("--at") + 1] = "not-a-date"
+    assert main(arguments) == 1
+    assert "--at" in capsys.readouterr().err
+    assert not Path(arguments[-1]).exists()
+    arguments[arguments.index("--at") + 1] = "2026-08-04T11:00:00Z"
+    arguments[arguments.index("--assessed-at") + 1] = "2026-08-05"
+    assert main(arguments) == 1
+    assert "--assessed-at" in capsys.readouterr().err
+    assert not Path(arguments[-1]).exists()
+    arguments[arguments.index("--assessed-at") + 1] = "2026-08-05T12:00:00Z"
+    (packet.root / "calendar.ics").write_text("tampered", encoding="utf-8")
+    assert main(arguments) == 1
+    assert not Path(arguments[-1]).exists()
+    assert "non-current" in capsys.readouterr().err
 
 
 def _completed(publication: CampaignPlanPublication) -> CampaignPlanPublication:

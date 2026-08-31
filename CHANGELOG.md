@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented here.
 
+## 0.18.0 - 2026-08-31
+
+- Add `plan publication record` and `record_campaign_plan_publication` to record one operator
+  outcome without hand-editing JSON, changing draft identity, or contacting a provider.
+- Verify current source, exact handoff, canonical coverage, and chronology before and after each
+  change; retain prior snapshots through exclusive file creation.
+- Support failed-attempt retries, idempotent exact repeats, and explicit corrections of published
+  or skipped outcomes. Reject backdated retries and implicit terminal replacements.
+- Exercise the installed CLI through every draft's outcome to publication-complete readiness in CI.
+- Preserve all existing JSON schemas and operator-attestation trust boundaries.
+
 ## 0.17.1 - 2026-08-11
 
 - Reject Windows junctions and other reparse points at export, import, handoff, and exact-media

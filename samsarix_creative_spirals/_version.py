@@ -3,4 +3,4 @@
 
 """Single package-version source shared by metadata-bearing artifacts."""
 
-__version__ = "0.17.1"
+__version__ = "0.18.0"

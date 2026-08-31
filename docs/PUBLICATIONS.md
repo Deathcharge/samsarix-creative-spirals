@@ -39,7 +39,24 @@ Initialization verifies the current plan, embedded approval, optional embedded p
 metadata, and exact packet bytes. It then writes one `pending` record for every generated
 `(sequence, platform)` pair. Existing ledger files are never replaced.
 
-After the manual or separately authorized downstream step, edit each record. For example:
+After the manual or separately authorized downstream step, record an outcome in a new snapshot:
+
+```bash
+samsarix-campaign plan publication record \
+  examples/launch-plan.json \
+  handoff-outbox/local-first-release-sequence-sch_0123456789ab \
+  launch-plan.publication.json \
+  --item 1 --platform mastodon --status published --by "Release operator" \
+  --at 2026-08-10T13:04:00Z --url https://social.example/@samsarix/123 \
+  --output launch-plan.publication-1.json
+```
+
+Use the new snapshot as input for the next outcome, selecting its one-based plan item and exact
+platform. Supply the actual handoff directory returned by `plan handoff create`, not the example
+ID above. The outcome timestamp is explicit; `--assessed-at` optionally pins verification time
+for deterministic replay (default: current UTC time).
+
+The result contains this record; manual authoring of the v1 JSON contract remains supported:
 
 ```json
 {
@@ -73,11 +90,11 @@ Verify the complete record and optionally require it in consolidated status:
 samsarix-campaign plan publication verify \
   examples/launch-plan.json \
   handoff-outbox/local-first-release-sequence-sch_0123456789ab \
-  launch-plan.publication.json
+  launch-plan.publication-1.json
 
 samsarix-campaign plan status examples/launch-plan.json \
   --handoff handoff-outbox/local-first-release-sequence-sch_0123456789ab \
-  --publication launch-plan.publication.json \
+  --publication launch-plan.publication-1.json \
   --require-stage publication \
   --json
 ```
@@ -85,6 +102,63 @@ samsarix-campaign plan status examples/launch-plan.json \
 `publication verify` returns `0` only when the ledger is current and every record is `published`
 or `skipped`. It returns `4` for a current but pending/failed ledger or for stale bindings and
 chronology. Malformed JSON, invalid record combinations, I/O failures, and invalid URLs return `1`.
+
+## Recording, retrying, and correcting outcomes
+
+The `record` command verifies current source, exact handoff bytes, ledger coverage, and chronology
+before making a change. It validates the resulting ledger again before writing. A current ledger
+may still contain pending or failed outcomes; those do not prevent recording other outcomes.
+
+- Pending records may become published, failed, or skipped.
+- Failed attempts may be recorded again or retried as published/skipped. A retry never inherits
+  the previous note or URL; supply the full new outcome.
+- Changing a published or skipped outcome requires `--replace-outcome`. This can record a
+  correction as any of the three outcome states; it does not delete or retry anything remotely.
+- Repeating an identical normalized outcome is idempotent: the publication ID stays unchanged and
+  no replacement flag is needed. An explicitly requested new output file is still created.
+- Retry/correction times must not precede the previous recorded outcome. All times must remain
+  between handoff generation and the assessment time. An outcome may precede ledger creation
+  when recording a historical downstream action.
+- There is no reset-to-pending command. A changed campaign requires a new approval/handoff and
+  ledger, not an attempt to carry forward stale outcomes.
+
+For example, record a failure, then a later successful retry using the failed snapshot:
+
+```bash
+samsarix-campaign plan publication record PLAN HANDOFF pending.json \
+  --item 1 --platform x --status failed --by "Release operator" \
+  --at 2026-08-10T13:00:00Z --note "Provider unavailable; no post confirmed." \
+  --output failed.json
+samsarix-campaign plan publication record PLAN HANDOFF failed.json \
+  --item 1 --platform x --status published --by "Release operator" \
+  --at 2026-08-10T13:05:00Z --url https://social.example/post/123 \
+  --output retried.json
+```
+
+Replace `PLAN` and `HANDOFF` with your current source and verified packet paths. `--output` is
+required and exclusive: existing files, including the input, are never replaced. Commit snapshots
+to Git or apply your own retention policy if you need history. Snapshots are not linked, signed,
+authenticated, or append-only; concurrent operators can produce divergent snapshots, and the
+command does not infer which file is latest or merge them. Use repository review to choose one
+input for the next step. A supplied `--policy` must match the handoff's embedded content policy.
+
+`record` returns `0` for a saved valid snapshot, even for a failed outcome or an incomplete ledger;
+it is not a completion gate. It returns `1` for validation/I/O errors and `2` for invalid CLI
+arguments. `--json` returns `path`, `previousPublicationId`, `publicationId`, and the full
+`publication` v1 object. Use `verify` or readiness for completion gating.
+
+### Current workflow evidence (2026-08-31)
+
+Buffer documents explicit retries after channel refresh and warns that a failed status can require
+checking the native platform before attempting another post. Postiz's authenticated post-list API
+exposes release URLs. These establish practical reconciliation needs, not evidence of Samsarix
+adoption: [Buffer retry guidance](https://support.buffer.com/en-us/articles/refreshing-a-channel-in-buffer-7oDS4jk7l1),
+[failure caveats](https://support.buffer.com/en-us/articles/facebook-error-library-x7IMglwe8J),
+and [Postiz post list](https://docs.postiz.com/public-api/posts/list).
+
+Samsarix's corresponding workflow is deliberately an offline operator record. Saving `published`
+does not inspect the URL, retry the provider, resolve ambiguous delivery, or prevent duplicate
+remote posts. Check the actual platform before a separately authorized retry.
 
 ## Contract
 

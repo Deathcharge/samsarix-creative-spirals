@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use Samsarix Creative Spirals, please cite this software."
 title: "Samsarix Creative Spirals"
 type: software
-version: 0.17.1
-date-released: 2026-08-11
+version: 0.18.0
+date-released: 2026-08-31
 authors:
   - family-names: Ward
     given-names: Andrew John

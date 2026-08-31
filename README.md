@@ -1,7 +1,7 @@
 # Samsarix Creative Spirals
 
 [![CI](https://github.com/Deathcharge/samsarix-creative-spirals/actions/workflows/ci.yml/badge.svg)](https://github.com/Deathcharge/samsarix-creative-spirals/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Deathcharge/samsarix-creative-spirals?include_prereleases&label=release)](https://github.com/Deathcharge/samsarix-creative-spirals/releases/tag/v0.17.1)
+[![Release](https://img.shields.io/github/v/release/Deathcharge/samsarix-creative-spirals?include_prereleases&label=release)](https://github.com/Deathcharge/samsarix-creative-spirals/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](pyproject.toml)
 
@@ -23,7 +23,7 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.17.1 alpha.** Atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
+> Maturity: **0.18.0 alpha.** Validated publication-outcome recording, atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
 > multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
@@ -50,10 +50,10 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
-Install the signed-off alpha release directly from its immutable GitHub attachment:
+Install the version-pinned alpha release from its GitHub attachment:
 
 ```bash
-python -m pip install https://github.com/Deathcharge/samsarix-creative-spirals/releases/download/v0.17.1/samsarix_creative_spirals-0.17.1-py3-none-any.whl
+python -m pip install https://github.com/Deathcharge/samsarix-creative-spirals/releases/download/v0.18.0/samsarix_creative_spirals-0.18.0-py3-none-any.whl
 samsarix-campaign --version
 samsarix-campaign init campaign.json
 samsarix-campaign preview campaign.json
@@ -392,14 +392,28 @@ samsarix-campaign plan publication init \
   --output launch-plan.publication.json
 ```
 
-Edit each `pending` record to `published`, `failed`, or `skipped`, adding the required operator,
-time, URL, or note fields. Then verify exact coverage and current bindings:
+Record an outcome in a new snapshot after the downstream action. This never posts to a provider
+or overwrites an existing file:
+
+```bash
+samsarix-campaign plan publication record \
+  examples/launch-plan.json \
+  handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
+  launch-plan.publication.json \
+  --item 1 --platform x --status published --by "Release operator" \
+  --at 2026-08-31T13:00:00Z --url https://social.example/post/123 \
+  --output launch-plan.publication-1.json
+```
+
+Use each latest snapshot as the next input. `failed` and `skipped` require `--note` instead of a
+URL. Retry failed outcomes normally; changing an already published/skipped outcome requires
+`--replace-outcome`. Then verify exact coverage and current bindings:
 
 ```bash
 samsarix-campaign plan publication verify \
   examples/launch-plan.json \
   handoff-outbox/RELEASE-SEQUENCE-SCH_ID \
-  launch-plan.publication.json
+  launch-plan.publication-1.json
 ```
 
 Completion means every exact draft is recorded as `published` or intentionally `skipped`.
@@ -460,6 +474,7 @@ samsarix-campaign plan review verify PLAN REVIEW [--fail-on-blocking] [--json]
 samsarix-campaign plan handoff create PLAN APPROVAL [--policy POLICY] [--at RFC3339] [--output DIRECTORY] [--json]
 samsarix-campaign plan handoff verify PLAN HANDOFF [--policy POLICY] [--json]
 samsarix-campaign plan publication init PLAN HANDOFF [--policy POLICY] [--at RFC3339] [--output PATH] [--json]
+samsarix-campaign plan publication record PLAN HANDOFF PUBLICATION --item N --platform PLATFORM --status published|failed|skipped --by LABEL --at RFC3339 --output PATH [--url URL] [--note NOTE] [--replace-outcome] [--assessed-at RFC3339] [--policy POLICY] [--json]
 samsarix-campaign plan publication verify PLAN HANDOFF PUBLICATION [--policy POLICY] [--at RFC3339] [--json]
 samsarix-campaign plan export PLAN [--output DIRECTORY] [--overwrite] [--json]
 samsarix-campaign schema [--kind campaign|content-policy|plan|approval|plan-approval|approval-policy|plan-approval-set|plan-import|plan-review|adapter|handoff|media-package|publication|readiness] [--output PATH]

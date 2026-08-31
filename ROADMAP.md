@@ -1,6 +1,6 @@
 # Samsarix Creative Spirals roadmap
 
-Last updated: 2026-08-02
+Last updated: 2026-08-31
 
 ## Product position
 
@@ -455,6 +455,20 @@ Reviewed implementation head `515b782` merged through PR #20 as `11707dd`; 456 t
 the sdist SHA-256 is `47ce6a05c643609515b3f8f39b3f3dca973468e90621389ccfb162835ec98732`.
 An isolated Python 3.11 wheel journey imported a publishable two-row plan as
 `scp_668860e86792` and passed `pip check`.
+
+## Active milestone — 0.18 validated publication outcomes
+
+- [x] Replace the hand-edit-only outcome workflow with a typed API and `plan publication record`.
+- [x] Verify exact current evidence before and after changes, preserve previous snapshots, reject
+  backdated retries, and require explicit corrections of published/skipped outcomes.
+- [x] Preserve publication v1 compatibility and the offline operator-attestation boundary.
+- [x] Add outcome/retry/correction tests and an installed-CLI completion journey in hosted CI.
+- [ ] Complete full local/artifact verification, hosted review, merge, and distribution evidence.
+
+This closes a usability gap in the already implemented post-handoff journey instead of adding a
+provider account model. Official workflow evidence and exact semantics are in
+[`docs/PUBLICATIONS.md`](docs/PUBLICATIONS.md#recording-retrying-and-correcting-outcomes).
+External user pilots remain the highest-value validation gap; feature completion is not adoption.
 
 ## Deliberate exclusions
 

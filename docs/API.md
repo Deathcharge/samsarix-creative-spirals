@@ -391,6 +391,21 @@ Verifies the exact current handoff, requires a timezone-aware creation time at o
 generation, and creates one canonical `pending` record per generated `(sequence, platform)` draft.
 It performs no file write or network call.
 
+### `record_campaign_plan_publication(bundle, packet, publication, *, sequence, platform, status, recorded_by, occurred_at, url=None, note=None, replace_outcome=False, assessed_at=None, content_policy=None) -> CampaignPlanPublication`
+
+Returns an immutable new snapshot for exactly one existing one-based plan item/platform record.
+The original ledger is unchanged. Both input and output must verify current against the plan and
+exact packet; pending/failed records are allowed. Required status metadata follows the existing v1
+contract. `occurred_at` must be timezone-aware and cannot precede the prior outcome. An identical
+normalized repeat preserves identity; changing published/skipped results requires the explicit
+boolean `replace_outcome=True`. Failed outcomes can be retried without that flag. Metadata is fully
+replaced rather than merged, so old failure notes or URLs do not leak into the new outcome.
+
+Raises `ConfigError` for invalid arguments, missing targets, stale evidence, implicit terminal
+replacement, or invalid chronology. It performs no writes or provider actions; save with the
+exclusive exporter. Snapshots are not an authenticated audit chain and no latest-file or concurrent
+merge behavior is implied. See [recording semantics](PUBLICATIONS.md#recording-retrying-and-correcting-outcomes).
+
 ### `export_campaign_plan_publication(publication, path) -> Path`
 
 Writes one UTF-8 ledger with exclusive-create behavior. Existing operator evidence is never

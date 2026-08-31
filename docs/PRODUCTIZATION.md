@@ -1532,3 +1532,53 @@ bundled plan-import schema, imported the two-row example as publishable plan
 outside the tagged source tree so the published artifact digests remain self-consistent. Roll back
 before distribution by reverting merge `11707dd` or pinning `ce4abb6`; after distribution, publish
 a higher corrective version rather than replacing artifacts.
+
+## 0.18 validated publication-outcome recording
+
+### Product decision and baseline
+
+The 2026-08-31 continuation began from clean, synchronized main `1949985`, following the public
+0.17.1 prerelease. The local Python 3.11 baseline passed 456 tests with 92.91% coverage. Existing
+publication ledgers could be initialized and verified, but the documented operator journey
+required editing structured JSON by hand. This was an actionable P1 usability/reliability gap:
+ordinary post-handoff outcome updates were easier to mis-key than campaign preparation itself.
+
+Current official Buffer failure/retry documentation and Postiz's post-list contract support the
+need for reconciliation and deliberate retries; links and bounded conclusions are in
+[`PUBLICATIONS.md`](PUBLICATIONS.md#current-workflow-evidence-2026-08-31). These are workflow signals,
+not user-demand or adoption evidence for Samsarix. The product remains a credential-free local CLI
+and library for creators, release operators, and small Git-native content teams.
+
+### Implementation and acceptance
+
+- [x] Add a typed immutable `record_campaign_plan_publication` operation and CLI `plan publication
+  record`, selecting an exact existing one-based item/platform pair.
+- [x] Reuse publication v1 validation and exact handoff verification before and after recording.
+- [x] Support pending outcomes, failed retries, idempotent exact repeats, and explicit
+  published/skipped corrections without backdating or inheriting stale metadata.
+- [x] Save new snapshots with exclusive-create semantics; preserve the input and existing outputs.
+- [x] Cover malformed arguments, stale/altered evidence, chronology, terminal replacement,
+  metadata clearing, schema conformance, CLI diagnostics, and overwrite protection in tests.
+- [x] Replace manual ledger edits in installed-wheel CI with the actual CLI recording journey.
+- [x] Update README, API contract, workflow guide, roadmap, changelog, version, and citation.
+- [ ] Verify the final exact commit locally, in an isolated installation, and on hosted CI.
+- [ ] Inspect review feedback, merge, publish versioned GitHub artifacts, and record exact evidence.
+
+No new runtime dependencies, network calls, credentials, telemetry, schema versions, or provider
+actions are introduced. `record` success means a valid snapshot was saved, not that publishing
+succeeded or all outcomes are complete. `verify` and readiness retain their separate completion
+gates. Old v1 ledgers remain readable; previous hashes and schema semantics are unchanged.
+
+### Risks, deferrals, and distribution
+
+Snapshots preserve earlier files but are not linked or authenticated history. Concurrent operators
+can branch from the same input; no automatic latest-file selection or merge is claimed. Git review
+remains the collaboration boundary. URL validation does not establish delivery; operators must
+check native platforms before retrying ambiguous provider failures. The command has zero provider
+cost and retains no additional data outside requested local files.
+
+Highest-value next work is external pilot feedback on the full import/review/handoff/reconciliation
+journey. Automatic synchronization, batch provider adapters, and signed append-only history are P2
+expansions requiring separate contracts, not necessary parts of this local slice. PyPI still needs
+owner-configured credentials or trusted publishing; GitHub wheel/sdist distribution is available.
+No external accounts, paid services, legal-license changes, or cross-repository edits are required.
