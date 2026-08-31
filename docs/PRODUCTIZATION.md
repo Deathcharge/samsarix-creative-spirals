@@ -1648,3 +1648,58 @@ snapshot files when using the new command; no automatic merge, signing, or provi
 is introduced. For rollback, pin the earlier `v0.17.1` distribution or revert merge `d9c5cde` on a
 new reviewed branch. Published tags/assets must not be overwritten; ship a higher corrective
 version for any future defect. This evidence-only update is intentionally outside the release tag.
+
+## 0.19 standalone plan onboarding and evaluation
+
+### Evidence and decision
+
+The continuation started from clean synchronized main `3b3dbe7`, whose preceding 0.18 release had
+485 passing tests, 93.13% coverage, published verified artifacts, and green hosted CI. Inspection
+found an adoption gap: wheel users could initialize a single campaign but not a complete plan;
+the main walkthrough depended on checkout examples, old intended dates, and manual path handling.
+The existing evaluation helper was ephemeral local tooling, not a reproducible public artifact.
+
+Current official Buffer templates/CSV drafts and Postiz draft creation support lowering authoring
+friction. Sources and precise conclusions are in [`EVALUATION.md`](EVALUATION.md#current-design-evidence).
+This is not demand validation. A consenting external pilot remains necessary; the agent has not
+contacted users, invented feedback, or added telemetry.
+
+### Implemented slice
+
+- [x] `starter_campaign_plan` returns the existing validated immutable source-package type with
+  announcement/follow-up campaigns and fixed portable paths, without I/O or another repository.
+- [x] `plan init` reuses the existing staged/reloaded/exclusive source exporter. Existing targets
+  are preserved. Default sources have no intended times; explicit start times normalize to UTC
+  with a follow-up 48 elapsed hours later. One to five selected channels normalize canonically.
+- [x] Reject invalid/duplicate channels, malformed names, naive dates, unknown offsets, and date
+  overflow before file creation; test independent source values, selected-channel consistency,
+  schema validity, quality, repeat attempts, and CLI diagnostics.
+- [x] `examples/evaluate_release.py` runs only the installed CLI, creates its own source, exercises
+  stale approval rejection/recovery, writes a verified handoff and simulated skip snapshots, and
+  retains a local report and HTML board. It works outside the checkout and refuses existing runs.
+- [x] Add the same evaluation to installed-wheel CI and tests; use bounded child invocations and
+  explicit UTF-8 pipes for Windows portability.
+- [x] Add public API, onboarding, pilot protocol, changelog/version, and current roadmap guidance.
+- [ ] Finish final local checks, build and isolated wheel evaluation, hosted review/CI, and merge.
+- [ ] Publish exact release artifacts plus the standalone runner and record hashes/rollback.
+
+P1 first-plan onboarding and reproducible technical-evaluation gaps are addressed by this slice.
+No new JSON schemas or runtime dependencies are added. The helper intentionally uses subprocesses
+to test the CLI; the core package's no-network/no-subprocess operation is unchanged. Sample links,
+content, reviewer labels, times, and skipped outcomes are explicitly fictional; successful output
+is technical evidence only, not editorial approval, actual publishing, or adoption evidence.
+
+The only data written is under the requested new output and its staged source package. Existing
+directories are never overwritten or deleted. A failed evaluation retains its partial run for
+inspection. Output paths and content should be treated as local data, and shared pilot notes must
+be consented and redacted. Provider cost remains zero. PyPI configuration and external-user pilot
+feedback remain external gates; custom scenario catalogs, team templates, and provider adapters
+are deferred pending evidence that users need them.
+
+Local verification for this candidate: `py -3.11 -m black --check samsarix_creative_spirals tests
+examples` (46 files unchanged); `py -3.11 -m flake8 samsarix_creative_spirals tests examples`
+(clean); `py -3.11 -m mypy` (44 source files, strict); `py -3.11 -m pytest -q
+--cov=samsarix_creative_spirals --cov-report=term` (508 passed, 93.20% coverage); and
+`py -3.11 -m compileall -q samsarix_creative_spirals tests examples` (passed).
+The evaluation integration test executes the helper outside the checkout, validates ten simulated
+skips and stale-approval rejection, and checks refusal/preservation on a repeated output directory.

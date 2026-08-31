@@ -479,6 +479,20 @@ contains the exact sdist-derived wheel, source archive, and checksums. CodeRabbi
 before merging PR #22. Full artifact and rollback evidence is in
 [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#018-published-release-evidence).
 
+## Active milestone — 0.19 standalone plan onboarding
+
+- [x] Create editable two-campaign sources from the installed CLI without checkout examples.
+- [x] Support explicit channel selection and optional UTC-normalized times; remain unscheduled
+  by default and reuse exclusive staged source export.
+- [x] Provide an executable synthetic evaluation through approval invalidation, handoff,
+  reconciliation, and an offline board, using the installed CLI outside the checkout.
+- [x] Document concrete consenting-user pilot tasks and private feedback observations.
+- [ ] Finish final local/artifact verification, hosted CI/review, merge, and release evidence.
+
+Official template/draft workflows support reducing first-use friction; they do not substitute for
+real pilot evidence. The evaluation runner is explicitly synthetic and never publishes. See
+[`docs/EVALUATION.md`](docs/EVALUATION.md) for the full contract and research sources.
+
 ## Deliberate exclusions
 
 - No automatic publishing, OAuth token storage, analytics scraping, hosted draft database, or

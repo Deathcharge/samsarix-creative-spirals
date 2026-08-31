@@ -10,7 +10,7 @@ from jsonschema import Draft202012Validator
 
 
 def test_public_api_is_deliberate() -> None:
-    assert package.__version__ == "0.18.0"
+    assert package.__version__ == "0.19.0"
     assert package.__all__ == [
         "__version__",
         "ApprovalCheck",
@@ -133,6 +133,7 @@ def test_public_api_is_deliberate() -> None:
         "render_campaign_plan_readiness_html",
         "render_plan_adapter",
         "render_plan_calendar",
+        "starter_campaign_plan",
         "verify_campaign_approval",
         "verify_campaign_plan_approval",
         "verify_campaign_plan_approval_evidence",

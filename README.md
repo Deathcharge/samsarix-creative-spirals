@@ -23,7 +23,7 @@ show the current quality, schedule, approval, handoff, and optional publication 
 It is for solo creators, developer advocates, and small content teams that want a scriptable
 review/export step without connecting social accounts or sending draft content to a service.
 
-> Maturity: **0.18.0 alpha.** Validated publication-outcome recording, atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
+> Maturity: **0.19.0 alpha.** Standalone plan starters, a reproducible offline evaluation, validated publication-outcome recording, atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
 > multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
 > deterministic link tracking, portable phrase policies, platform-native content variants,
 > federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
@@ -53,7 +53,7 @@ source .venv/bin/activate
 Install the version-pinned alpha release from its GitHub attachment:
 
 ```bash
-python -m pip install https://github.com/Deathcharge/samsarix-creative-spirals/releases/download/v0.18.0/samsarix_creative_spirals-0.18.0-py3-none-any.whl
+python -m pip install https://github.com/Deathcharge/samsarix-creative-spirals/releases/download/v0.19.0/samsarix_creative_spirals-0.19.0-py3-none-any.whl
 samsarix-campaign --version
 samsarix-campaign init campaign.json
 samsarix-campaign preview campaign.json
@@ -64,6 +64,27 @@ verification. Contributors can instead clone the repository and run
 `python -m pip install -e ".[dev]"` from its root.
 
 No API keys, accounts, database, network connection, or other Samsarix repository is required.
+
+## Start a complete release plan
+
+The installed package can create its own examples—no checkout required:
+
+```bash
+samsarix-campaign plan init my-release --platform x --platform linkedin
+samsarix-campaign plan preview my-release/plan.json
+samsarix-campaign plan check my-release/plan.json
+```
+
+Edit the announcement and follow-up files in `my-release/campaigns/`, replacing sample copy and
+`example.com` links before real use. Omit `--platform` for all five channels. Times are absent by
+default; `--start-at RFC3339` assigns an announcement time and a follow-up 48 elapsed hours later.
+These are intended times, not scheduling instructions. Existing destinations are never replaced.
+
+For an executable starter → approval → stale-source rejection → handoff → reconciliation journey,
+download `evaluate_release.py` from the release and run
+`python evaluate_release.py --output evaluation-run`. It uses only synthetic source and simulated
+skips, retains a local HTML board/report, and performs no provider actions. See the
+[evaluation and pilot guide](docs/EVALUATION.md) for expected results and private feedback steps.
 
 ## Core journey
 
@@ -461,6 +482,7 @@ samsarix-campaign approval create CONFIG --by LABEL [--policy POLICY] [--at RFC3
 samsarix-campaign approval verify CONFIG APPROVAL [--policy POLICY] [--json]
 samsarix-campaign policy validate POLICY [--json]
 samsarix-campaign plan validate PLAN [--json]
+samsarix-campaign plan init DIRECTORY [--name NAME] [--platform PLATFORM] [--start-at RFC3339] [--json]
 samsarix-campaign plan preview PLAN [--json]
 samsarix-campaign plan check PLAN [--policy POLICY] [--warnings-as-errors] [--json]
 samsarix-campaign plan import CSV --name NAME [--required-platform PLATFORM ...] [--output DIRECTORY] [--json]

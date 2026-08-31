@@ -97,7 +97,7 @@ from .schema import (
     load_publication_schema,
     load_readiness_schema,
 )
-from .templates import starter_campaign
+from .templates import starter_campaign, starter_campaign_plan
 from .workflow import build_campaign, export_campaign, load_campaign
 
 
@@ -388,6 +388,38 @@ def _approval_verify_command(args: argparse.Namespace) -> int:
     else:
         _print_approval_check(result)
     return 0 if result.valid else 4
+
+
+def _plan_init_command(args: argparse.Namespace) -> int:
+    issues: list[str] = []
+    start_at = (
+        _parse_timestamp(args.start_at, field="--start-at", issues=issues)
+        if args.start_at is not None
+        else None
+    )
+    if issues:
+        raise ConfigError(issues)
+    options = {"platforms": args.platforms} if args.platforms is not None else {}
+    sources = starter_campaign_plan(name=args.name, start_at=start_at, **options)
+    path = export_campaign_plan_import(sources, args.output)
+    bundle = build_campaign_plan(load_campaign_plan(path))
+    if args.json:
+        _json_print(
+            {
+                "path": str(path),
+                "planId": bundle.plan_id,
+                "items": len(bundle.items),
+                "requiredPlatforms": list(bundle.required_platforms),
+                "scheduled": start_at is not None,
+            }
+        )
+    else:
+        print(f"Created starter plan {bundle.plan_id} in {_terminal_safe(path)}")
+        print("Edit both campaign files and replace example.com links before real use.")
+        print("Next: run plan preview, plan check, then review and approve your own content.")
+        if start_at is None:
+            print("No intended times were assigned. This does not schedule or publish anything.")
+    return 0
 
 
 def _plan_validate_command(args: argparse.Namespace) -> int:
@@ -986,6 +1018,28 @@ def build_parser() -> argparse.ArgumentParser:
         "plan", help="validate, review, approve, or export a multi-campaign plan"
     )
     plan_subparsers = plan_parser.add_subparsers(dest="plan_command")
+
+    plan_init_parser = plan_subparsers.add_parser(
+        "init", help="create an editable two-campaign source plan in a new directory"
+    )
+    plan_init_parser.add_argument(
+        "output", help="new source directory; never merged or overwritten"
+    )
+    plan_init_parser.add_argument("--name", default="Release sequence", help="plan display name")
+    plan_init_parser.add_argument(
+        "--platform",
+        dest="platforms",
+        action="append",
+        choices=("x", "linkedin", "bluesky", "mastodon", "discord"),
+        help="required channel (repeatable; default: all five)",
+    )
+    plan_init_parser.add_argument(
+        "--start-at", help="RFC 3339 intended announcement time; follow-up is 48 hours later"
+    )
+    plan_init_parser.add_argument(
+        "--json", action="store_true", help="emit machine-readable output"
+    )
+    plan_init_parser.set_defaults(handler=_plan_init_command)
 
     plan_validate_parser = plan_subparsers.add_parser(
         "validate", help="validate a plan and all referenced campaigns"

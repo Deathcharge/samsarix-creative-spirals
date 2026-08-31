@@ -2,6 +2,11 @@
 
 Samsarix Creative Spirals needs Python 3.10+ and no API credentials.
 
+For the shortest complete workflow without a checkout, install the release wheel from the README,
+run `samsarix-campaign plan init my-release`, then follow [EVALUATION.md](EVALUATION.md).
+That guide includes an executable offline journey and a real-user pilot checklist. The optional
+examples below assume this checkout; prior-revision diff inputs must be supplied by the user.
+
 ## 1. Install from this checkout
 
 ```bash
@@ -182,24 +187,24 @@ samsarix-campaign export campaign.json --output outbox --overwrite
 
 ## 6. Review and export a complete campaign plan
 
-The included plan references two standalone campaign files and declares the channels every item
-must cover:
+Create an unscheduled plan whose sources are safe to edit independently of repository examples.
+The new plan references two campaign files and declares the channels every item must cover.
+Edit the sample copy and links and review the preview before running the approval commands:
 
 ```bash
-samsarix-campaign plan validate examples/launch-plan.json --json
-samsarix-campaign plan preview examples/launch-plan.json
-samsarix-campaign plan check examples/launch-plan.json
-samsarix-campaign plan diff launch-plan-before.json examples/launch-plan.json --json --exit-code
-samsarix-campaign plan review create examples/launch-plan.json --decision request-changes --by "Brand reviewer" --finding "Support the opening claim." --item 1 --platform linkedin
-samsarix-campaign plan approval create examples/launch-plan.json --by "Launch reviewer"
-samsarix-campaign plan approval verify examples/launch-plan.json examples/launch-plan.json.approval.json
-samsarix-campaign plan export examples/launch-plan.json --output plan-outbox
+samsarix-campaign plan init launch-plan
+samsarix-campaign plan validate launch-plan/plan.json --json
+samsarix-campaign plan preview launch-plan/plan.json
+samsarix-campaign plan check launch-plan/plan.json
+samsarix-campaign plan approval create launch-plan/plan.json --by "Launch reviewer"
+samsarix-campaign plan approval verify launch-plan/plan.json launch-plan/plan.json.approval.json
+samsarix-campaign plan export launch-plan/plan.json --output plan-outbox
 ```
 
 For a multi-role gate, create independent approvals and collect them under the included policy:
 
 ```bash
-samsarix-campaign plan approval collect examples/launch-plan.json \
+samsarix-campaign plan approval collect launch-plan/plan.json \
   --approval-policy examples/approval-policy.json \
   --approval brand=brand.approval.json \
   --approval release-owner=release-owner.approval.json \
@@ -228,7 +233,7 @@ The exported directory contains:
 
 ```text
 plan-outbox/
-└── local-first-release-sequence-scp_<content-id>/
+└── release-sequence-scp_<content-id>/
     ├── manifest.json
     ├── adapter.json
     ├── calendar.ics
@@ -254,8 +259,8 @@ publisher workflow:
 
 ```bash
 samsarix-campaign plan handoff create \
-  examples/launch-plan.json \
-  examples/launch-plan.json.approval.json \
+  launch-plan/plan.json \
+  launch-plan/plan.json.approval.json \
   --output handoff-outbox
 ```
 
@@ -264,8 +269,8 @@ before downstream use:
 
 ```bash
 samsarix-campaign plan handoff verify \
-  examples/launch-plan.json \
-  handoff-outbox/local-first-release-sequence-sch_<handoff-id>
+  launch-plan/plan.json \
+  handoff-outbox/release-sequence-sch_<handoff-id>
 ```
 
 Verification returns `4` when current source or approval is stale, a rendered file changed, a file
@@ -284,15 +289,15 @@ offline board:
 
 ```bash
 samsarix-campaign plan status \
-  examples/launch-plan.json \
-  --handoff handoff-outbox/local-first-release-sequence-sch_<handoff-id> \
-  --at 2026-08-05T12:00:00Z \
-  --require-scheduled \
+  launch-plan/plan.json \
+  --handoff handoff-outbox/release-sequence-sch_<handoff-id> \
   --require-stage handoff \
   --html launch-readiness.html \
   --json
 ```
 
+Substitute the actual handoff directory printed in step 7. The default starter is unscheduled;
+add intended times before approval if you want `--require-scheduled` to gate readiness.
 The report compares scheduled times with the current clock. Use `--at RFC3339` for a reproducible
 CI snapshot. The HTML contains the complete drafts and should be protected like the campaign
 source. It does not schedule or publish anything; see [READINESS.md](READINESS.md).

@@ -1,5 +1,12 @@
 # Examples
 
+For a self-contained first-use path, install the package and run
+`samsarix-campaign plan init my-release`. It creates its own editable sources without needing any
+files from this directory. `python examples/evaluate_release.py --output evaluation-run` then
+demonstrates the complete installed-CLI journey with synthetic input and simulated skipped
+outcomes. It also works when copied outside the checkout. See `docs/EVALUATION.md` for the
+expected artifacts, failure behavior, and a privacy-conscious real-user pilot protocol.
+
 `campaign.json` is a complete input for the primary CLI journey:
 
 ```bash
@@ -152,7 +159,8 @@ samsarix-campaign plan publication verify \
   launch-plan.publication.json
 ```
 
-Initialization creates one pending record per exact platform draft. Edit outcomes according to
+Initialization creates one pending record per exact platform draft. Use `plan publication record`
+to save each outcome in a new snapshot according to
 `docs/PUBLICATIONS.md`; the verifier returns `4` until every record is published or intentionally
 skipped. A static completed ledger is deliberately not bundled because it would be falsely bound
 to an unrelated handoff.
