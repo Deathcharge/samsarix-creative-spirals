@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here.
 
+## 0.19.0 - 2026-08-31
+
+- Add `plan init` and `starter_campaign_plan` for an independently usable two-campaign source
+  scaffold, with selectable channels, no implicit schedule, and optional explicit UTC-normalized
+  announcement/follow-up times 48 elapsed hours apart.
+- Reuse the exclusive staged source-package exporter; existing destinations are never merged,
+  replaced, or used as cleanup targets.
+- Add a standalone offline evaluation runner that exercises the installed CLI through starter
+  creation, quality, approval invalidation/recovery, handoff, reconciliation, and an HTML board.
+  Outcomes are explicitly simulated skips; it never contacts or publishes to a provider.
+- Add an evaluator guide with copy-pasteable onboarding, failure expectations, and a private
+  feedback protocol that distinguishes technical checks from actual adoption evidence.
+
 ## 0.18.0 - 2026-08-31
 
 - Add `plan publication record` and `record_campaign_plan_publication` to record one operator

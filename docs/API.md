@@ -3,6 +3,25 @@
 The supported public API is intentionally small. Imports not listed here are internal and may
 change without notice.
 
+## Starter source packages
+
+### `starter_campaign_plan(*, name="Release sequence", platforms=SUPPORTED_PLATFORMS, start_at=None) -> CampaignPlanImport`
+
+Returns a fresh validated two-item announcement/follow-up source package. Save it with
+`export_campaign_plan_import(starter, directory)`; the returned path is its `plan.json`. The
+builder has no I/O, wall-clock dependency, approval side effects, or network access.
+
+`platforms` is a bounded sequence of one to five unique canonical channel names, normalized into
+canonical order and required for both campaigns. `name` follows the existing 120-character plan
+name contract. An optional timezone-aware `start_at` normalizes to UTC; the follow-up is exactly
+48 elapsed hours later. Invalid channels, dates, name, or overflow raise `ConfigError`. Default
+plans omit intended times. Fixed portable filenames do not derive from user names.
+
+The returned `CampaignPlanImport` is the existing immutable source-package type, not evidence of a
+CSV read. Its exporter uses the established staged, reload-validated, exclusive publication path.
+This addition changes no JSON schemas. Sample copy/links must be replaced before real use; quality
+validity does not mean editorial approval. See [evaluation guide](EVALUATION.md).
+
 ## Models
 
 ### `CampaignConfig`

@@ -156,6 +156,7 @@ from .schema import (
     load_readiness_schema,
 )
 from .workflow import build_campaign, export_campaign, load_campaign
+from .templates import starter_campaign_plan
 
 __all__ = [
     "__version__",
@@ -279,6 +280,7 @@ __all__ = [
     "render_campaign_plan_readiness_html",
     "render_plan_adapter",
     "render_plan_calendar",
+    "starter_campaign_plan",
     "verify_campaign_approval",
     "verify_campaign_plan_approval",
     "verify_campaign_plan_approval_evidence",

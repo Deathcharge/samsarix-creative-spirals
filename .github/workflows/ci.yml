@@ -41,6 +41,9 @@ jobs:
         run: |
           python -m pip install --force-reinstall --no-deps dist/*.whl
           samsarix-campaign --version
+          # Run from outside the checkout: no repository examples or editable imports required.
+          cp examples/evaluate_release.py /tmp/samsarix-evaluate-release.py
+          (cd /tmp && python samsarix-evaluate-release.py --output /tmp/samsarix-offline-evaluation)
           samsarix-campaign schema > /tmp/campaign.schema.json
           samsarix-campaign schema --kind plan > /tmp/plan.schema.json
           samsarix-campaign schema --kind approval > /tmp/approval.schema.json
