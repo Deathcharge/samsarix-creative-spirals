@@ -44,6 +44,10 @@ checkout. They exercise the installed console entry point and the complete offli
 including a Unicode output path. Jobs have a 15-minute timeout. Windows uses PowerShell and runner
 temporary directories, not POSIX `/tmp` assumptions. macOS is not currently a hosted test target.
 
+Versioned export fixtures are exact byte contracts. `.gitattributes` disables Git line-ending
+conversion for `tests/fixtures/**`, preserving both LF JSON/CSV and CRLF calendar bytes even when
+`core.autocrlf=true`. Do not normalize bytes in the fixture assertions to accommodate a checkout.
+
 ## Change guidelines
 
 - Keep public API additions small and typed.

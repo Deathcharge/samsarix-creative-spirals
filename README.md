@@ -5,31 +5,22 @@
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](pyproject.toml)
 
-Samsarix Creative Spirals is a local-first CLI and typed Python library that turns approved source
-drafts into copy-ready files for X, LinkedIn, Bluesky, Mastodon, and Discord. It validates campaign
-input, supports deliberate per-platform copy, applies platform-aware limits, checks complete launch sequences, and exports review bundles,
-publisher-neutral CSV, and portable calendars. Portable image references, source-bound review
-feedback, semantic diffs, and
-deterministic link attribution, portable content-policy profiles, source-bound campaign and plan
-approval records, and multi-role approval policies make exact changes and guardrails visible before
-handoff.
-Approved handoff packets then bind current source, approval metadata, exact rendered files, and
-optionally the exact reviewed JPEG/PNG bytes for offline verification immediately before downstream
-use. A handoff-bound publication ledger can
-then reconcile operator-recorded published, failed, skipped, and pending outcomes without opening
-a URL or claiming provider verification. A consolidated readiness command and offline HTML board
-show the current quality, schedule, approval, handoff, and optional publication stage in one place.
+Samsarix Creative Spirals is a local-first campaign operations CLI and typed Python library for
+creators, developer advocates, and small content teams. Turn an announcement or a complete release
+sequence into reviewable, platform-bounded drafts for X, LinkedIn, Bluesky, Mastodon, and Discord.
 
-It is for solo creators, developer advocates, and small content teams that want a scriptable
-review/export step without connecting social accounts or sending draft content to a service.
+Prepare source → check and compare changes → record source-bound approval → verify an exact
+handoff packet → record downstream outcomes. Work with ordinary JSON, publisher-neutral CSV,
+portable calendars, copy-ready Markdown, and an offline readiness board. Optional per-platform
+copy, phrase policies, link tracking, multi-role review, and exact JPEG/PNG handoff support more
+demanding workflows without connecting accounts or uploading private drafts.
 
-> Maturity: **0.19.0 alpha.** Standalone plan starters, a reproducible offline evaluation, validated publication-outcome recording, atomic canonical CSV-to-plan import, source-bound comments and negative review decisions, deterministic
-> multi-role approval quorums, approval-bound static-image packets, publication reconciliation,
-> deterministic link tracking, portable phrase policies, platform-native content variants,
-> federated-platform drafts, campaign-plan quality gates, whole-plan semantic review and local
-> approvals, portable image metadata, approved handoff verification, and
-> launch-readiness reporting are implemented and tested. Automatic
-> publishing,
+It complements your publishing process; it does not replace a connected social publisher.
+Approval labels and recorded outcomes are unsigned local assertions, not authenticated identity
+or proof that a provider accepted a post.
+
+> Maturity: **0.19.0 alpha, ready for genuine evaluation.** The complete local workflow is
+> implemented and tested; real-user adoption is not yet validated. Automatic publishing,
 > scheduling, analytics, and AI generation are deliberately not included.
 
 ## Fastest successful path
@@ -549,8 +540,11 @@ python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing
 python -m build
 ```
 
-CI runs these checks on Python 3.10 and 3.13 and smoke-tests the built wheel, schema resource, and
-console command. The package has no third-party runtime dependencies.
+Linux CI runs these checks on Python 3.10 and 3.13 and smoke-tests the built wheel, schema resources,
+and example workflows. Native Windows jobs test and build on the same versions, then evaluate the
+installed wheel in a fresh environment outside the checkout, including a Unicode output path.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the exact matrix and limits. The package has no
+third-party runtime dependencies.
 
 ## Architecture and boundaries
 
@@ -621,8 +615,8 @@ Security reports belong at `support@samsarix.com`; see [SECURITY.md](SECURITY.md
 
 ## Distribution and license
 
-The simplest distribution is a source checkout or locally built wheel installed with `pipx` or
-`pip`. The package is not currently published on PyPI, so do not assume
+Use the version-pinned GitHub release wheel above, or a source checkout and locally built wheel
+installed with `pipx` or `pip`. The package is not currently published on PyPI, so do not assume
 `pip install samsarix-creative-spirals` resolves from the public index.
 
 The code is licensed under [MPL-2.0](LICENSE), a file-level copyleft license selected to keep

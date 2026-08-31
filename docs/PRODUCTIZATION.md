@@ -1,6 +1,20 @@
 # Productization record
 
-Last updated: 2026-08-02
+Last updated: 2026-08-31
+
+## Current disposition
+
+**Published 0.19.0 alpha, ready for genuine evaluation.** The standalone CLI/library now supports
+the complete source-to-review-to-handoff-to-outcome journey without credentials, private services,
+or runtime dependencies. The original brief defines viability as coherent, useful, testable,
+technically supportable, and ready for genuine validation; it does not require a fabricated claim
+of market fit. The external pilot remains unchecked in the roadmap.
+
+The sections below preserve baseline findings and successive release evidence. In particular,
+the early 0.3 results are historical, not the current package version or test count. See the
+[0.19 release evidence](#019-published-release-evidence) and
+[final engineering acceptance audit](#final-engineering-acceptance-audit) for the current gates,
+commands, limitations, and follow-ups.
 
 ## Repository assessment
 
@@ -348,7 +362,7 @@ No locally actionable P0 remains.
   only internal binding and chronology under the trusted local verifier; it cannot establish
   provider acceptance, authorship, visibility, unchanged content, or continued availability.
 
-## Final verification results
+## Historical 0.3 final verification results
 
 Final local environment: Windows, Python 3.11.9. The complete quality suite was rerun in a fresh
 virtual environment installed from the pinned `requirements-dev.txt`; wheel smoke checks were also
@@ -395,12 +409,13 @@ is not an untested claim.
 
 For validation, distribute as a Git checkout or wheel and install with `pipx`/`pip`. Public PyPI
 publication is appropriate after hosted CI is green and the owner configures a trusted publisher.
-The core tool has no operating cost and can remain a free local utility. Paid support, warranties,
+The core tool has no required hosting or provider API fees and can remain a free local utility.
+Local CPU/storage, maintenance, and CI resources still have costs. Paid support, warranties,
 or separately permissioned publishing/team integrations are plausible sustainability paths; the
 local preview/export core should remain useful without them and must never silently send draft
 content.
 
-## Release disposition
+## Historical 0.3 release disposition
 
 **0.3 release candidate; all declared technical acceptance gates pass.** The product journey,
 package artifacts, tests, hosted CI, branding, licensing, and documentation meet the 0.3 acceptance
@@ -1749,3 +1764,118 @@ unavailable; the synthetic evaluation does not satisfy the external pilot milest
 schemas, runtime dependencies, and unsigned-evidence semantics are unchanged. Revert merge
 `a04bb49` on a reviewed branch or pin `v0.18.0` for rollback; never replace published assets or tags.
 If a defect needs correction, publish a higher version with new verification evidence.
+
+## Final engineering acceptance audit
+
+Audited on 2026-08-31 against the original productization brief, not a newly reduced feature list.
+The original baseline lacked an independently runnable product, truthful integrations, tests,
+CI, and consistent packaging. The release evidence above records how those issues were replaced
+with a complete, locally operated campaign workflow. The latest application code, tests, schemas,
+and evaluation runner are unchanged from `v0.19.0`; this closing pass improves cross-platform
+verification and the accuracy of current documentation.
+
+### Requirement-level evidence
+
+| Requirement | Inspected evidence and disposition |
+| --- | --- |
+| Protect existing work and other repositories | Closing pass began on clean `main` at `af7ff30`; changes use `codex/windows-release-verification`. No history rewrite or other-repository mutation. Historical work was preserved in normal commits and release records. |
+| Audit and choose a defensible independent product | Baseline command results, P0/P1/P2 dispositions, architecture decisions, current official competitor research, and exclusions are retained above and in `ROADMAP.md`. Target: creators, release operators, and small teams preparing reviewable multi-platform campaigns. |
+| Complete the primary journey | `plan init` → quality/review → stale-source rejection → exact handoff → immutable operator-outcome snapshots → readiness report runs through the installed CLI outside checkout. `examples/evaluate_release.py` exercises two campaigns and ten simulated outcomes with explicit dates and no provider action. |
+| Installation, first run, and standalone operation | Public 0.19 wheel URL returned HTTP 200 again. Hosted Windows installs a freshly built wheel with `--no-deps` into a new venv; Linux runs its installed-wheel smoke suite. `pyproject.toml` has no runtime dependencies; shipped imports have no private Helix requirement. |
+| CLI/library contract and failure behavior | Typed public exports, 14 bundled schemas, version/help/schema commands, structured exit codes, and command-level tests. `tests/test_templates.py` covers invalid creation options, existing output refusal, stale approval, and repeat-evaluation preservation. Other suites cover malformed/bounded inputs, retries/corrections, missing evidence, and exact exports. |
+| Review, media, policies, interoperability, and persistence | Versioned fixtures and the plan, feedback, approval-policy, handoff, media-package, publication, readiness, policy, tracking, and variant suites cover the implemented milestones. They test real local artifacts, not provider mock success presented as publishing. |
+| Engineering and packaging gates | Format, lint, strict types, compilation, tests with the 90% coverage gate, sdist/wheel builds, installed entry point, and complete evaluator pass. Exact commands and per-platform results are below. |
+| Security, privacy, reliability, and cost | Root security guidance and previous hardening evidence remain applicable. This pass adds bounded Windows CI and a scoped two-file security review. Outputs remain local, evidence unsigned, and provider actions absent. There are no required provider fees; CPU/storage/CI resources still cost time or money. |
+| Accurate branding, licensing, and new-user documentation | README, quickstart, evaluation guide, API docs, metadata, NOTICE, citation, contacts, and MPL-2.0 identity checked. Legacy baseline and 0.3 results are now explicitly historical. No registered-trademark, ownership-chain legal opinion, authenticated-approval, or market-fit claim is made. |
+| Distribution, review, and release state | GitHub hosts the 0.19 wheel, source archive, evaluator, and checksums; hashes and installed-artifact evidence are retained above. PR #26 carries this closing CI/documentation work. PyPI remains an optional unconfigured channel, not a dependency of the documented install. |
+| External follow-ups and sustainability | Consenting-user pilot, optional PyPI setup, and counsel/ownership-chain review remain explicit below. Paid support or separately permissioned integrations are possible future models, not implemented billing or validated demand. |
+
+No locally actionable P0/P1 defect remains known after the closing fix. This supports completion
+of the requested engineering productization and a **published, technically verified alpha ready
+for genuine validation**. It does not establish demand, regulatory suitability, provider-side
+reliability, perfect platform-text conformance, or general production readiness.
+
+### Closing changes and actual verification
+
+- `0fc6cb1` adds native Windows/Python 3.10 and 3.13 tests/builds, fresh-venv wheel installation,
+  installed console-command verification, and the full evaluator under a Unicode path. Both
+  Windows and Linux jobs have a 15-minute timeout. Shell handling follows GitHub's documented
+  [PowerShell exit behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#exit-codes-and-error-action-preference).
+- Initial hosted runs `33384608533` and `33384657101` exposed one failure on each Windows version:
+  `core.autocrlf=true` rewrote byte-exact JSON fixtures. The other 507 tests passed. The failure
+  was not skipped or normalized away.
+- `7556851` sets `tests/fixtures/** -text` in `.gitattributes`, preserving all fixture bytes,
+  including LF JSON/CSV and the existing CRLF calendar. Git documents that an unset `text`
+  attribute disables checkout/check-in conversion in its
+  [attributes reference](https://git-scm.com/docs/gitattributes).
+- A fresh clone with `core.autocrlf=true` retained all eight expected fixture files byte-for-byte;
+  `py -3.11 -m pytest -q tests/test_plans.py::test_plan_export_matches_versioned_adapter_fixture`
+  passed there. No source fixture or assertion was weakened.
+- [PR run 33384822722](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33384822722)
+  and [push run 33384819064](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33384819064)
+  passed all four jobs at `7556851`: Windows 508 passed/93.20% on each Python version; Linux
+  507 passed, one Windows-junction-only skip/92.99% on each version. All builds and wheel
+  evaluations passed; both Windows `pip check` invocations found no broken requirements.
+- Main's strict required status checks now include `quality (3.10)`, `quality (3.13)`,
+  `windows-quality (3.10)`, and `windows-quality (3.13)`, all bound to GitHub Actions app 15368.
+  Existing settings outside required status checks were preserved; no admin merge bypass is
+  needed. GitHub API readback confirmed all four checks and strict mode.
+
+Closing local verification on Windows/Python 3.11.9:
+
+| Command | Actual result |
+| --- | --- |
+| `py -3.11 -m black --check samsarix_creative_spirals tests examples` | 46 files unchanged. |
+| `py -3.11 -m flake8 samsarix_creative_spirals tests examples` | Clean. |
+| `py -3.11 -m mypy` | No issues in 44 source files. |
+| `py -3.11 -m pytest -q --cov=samsarix_creative_spirals --cov-report=term` | 508 passed; 93.20% coverage. |
+| `py -3.11 -m compileall -q samsarix_creative_spirals tests examples` | Passed. |
+| `py -3.11 -m build --outdir <temporary-directory>/dist` | Built sdist and its derived wheel. |
+| Fresh venv `python -m pip install --no-deps <wheel>` | Installed successfully. |
+| Installed `samsarix-campaign --version` | 0.19.0. |
+| Fresh venv `python -I evaluate_release.py --output evaluation-雪`, outside checkout | Two campaigns, ten simulated skips, stale approval rejected, publication-complete board/report; zero provider actions. |
+| Fresh venv `python -m pip check` | No broken requirements. |
+| `git diff --check` | Clean. |
+
+Codex Security scan `7ef84b1b-9aff-487d-96ae-c0d68f9d6acd` completed the exact initial two-file
+CI/contributor patch with zero findings and two reviewed surfaces. The automated inventory omitted
+these configuration/documentation files, so both were explicitly inventoried from Git and reviewed
+in full. Independent architecture review and parent verification covered path derivation, shell
+data boundaries, inherited authority, exit propagation, and venv limitations. The venv is packaging
+isolation, not a security sandbox. The report-finalization metadata error was corrected without
+changing reviewed bytes; the original scan was finalized rather than replaced. TAC status was
+unavailable because its connector was not signed in. The later two-line Git-attribute fix and
+closing prose received direct review and the relevant checkout/CI checks, not a new full scan.
+
+The scan's workbench reports 3,703,640 total tokens, including 3,476,992 cached-input tokens across
+three threads. This is the tool's rollout accounting, not a claim of unique review effort or cost.
+No fresh repository-wide security audit, hosted macOS run, actual provider publishing, or real-user
+pilot was performed in this closing pass. Existing release assets/tags were not replaced.
+
+### Remaining work, ordered by decision value
+
+1. **Consenting-user pilot:** use `docs/EVALUATION.md` with a real, non-sensitive announcement.
+   A creator or release operator must consent and supply observations. Record setup success,
+   review/handoff confusion, elapsed effort, and whether they choose to use it again; redact
+   private drafts and identifiers. This is the highest-value next product step, not an unfinished
+   local engineering gate. No invitations or feedback were sent automatically.
+2. **Optional PyPI distribution:** the project JSON endpoint still returned 404 on this date;
+   that is availability evidence, not a name reservation. The owner must select/control the PyPI
+   account or organization and its upload authorization. From the intended release revision,
+   build into an empty directory, inspect the wheel/sdist, and run `python -m twine check` on both.
+   After explicitly choosing public publication, `python -m twine upload <wheel> <sdist>` can use
+   PyPI's supported token prompt or separately configured trusted publishing. Never commit the
+   token. Verify by installing the exact version from PyPI in a new environment and running the
+   standalone evaluator. No PyPI account, credential, workflow registration, or upload is claimed.
+3. **Optional legal governance:** counsel can confirm the ownership chain, trademarks, and any
+   commercial terms. Repository MPL-2.0, notices, and Samsarix LLC contact identity are consistent;
+   they are not a legal opinion or a promise of prominent UI attribution.
+4. **P2 expansion after evidence:** editor/schema conveniences, further platform-parser parity,
+   macOS hosted coverage, or separately permissioned publisher adapters should follow observed
+   needs and explicit contracts. No automatic publishing, hosted service, signing authority,
+   analytics, or billing is required to evaluate the completed local product.
+
+For rollback of this closing verification work, revert the PR #26 merge through a reviewed PR;
+revert only its Windows required-check entries if intentionally removing those jobs. Preserve the
+existing Linux checks and unrelated protection settings. End users can continue to pin the
+unchanged `v0.19.0` wheel; any runtime correction must receive a new version and fresh artifacts.

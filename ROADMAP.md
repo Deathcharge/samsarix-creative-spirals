@@ -82,7 +82,7 @@ Implementation decisions:
 - Plans are capped at 100 items, matching the current paid Buffer bulk-upload ceiling while keeping
   local validation and review bounded.
 
-## Active milestone — 0.5 review and interoperability
+## Completed technical milestone — 0.5 review and interoperability
 
 - [x] Add semantic campaign/config diff output for reviewers and automation.
 - [x] Add explicit local approval metadata tied to a source hash, without claiming cryptographic
@@ -91,7 +91,17 @@ Implementation decisions:
   third-party draft importers.
 - [x] Run an internal end-to-end scenario using the exact packaged wheel and record technical
   failures and fixes.
+
+### Open product-validation follow-up
+
 - [ ] Run an external user pilot and record adoption signals that cannot be inferred from tests.
+
+This remains deliberately unchecked. The productization brief defines viability as coherent,
+useful, technically supportable, and ready for genuine validation, not proven market fit.
+The completed technical milestones make a pilot possible; they do not replace one. Use the
+consenting-evaluator tasks and privacy guidance in [`docs/EVALUATION.md`](docs/EVALUATION.md).
+Feature expansion should follow observed workflow friction rather than indefinitely postponing
+real evaluation.
 
 ## Completed milestone — 0.6 portable media handoff
 
@@ -501,6 +511,20 @@ matched every asset hash. PR #24 merged as `a04bb49`; post-merge run `3338279432
 CodeRabbit acknowledged a review request but returned no review before merge; manual review and
 regression tests are the stated evidence, not a skipped bot check. See the exact artifact and
 rollback record in [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#019-published-release-evidence).
+
+## Completed engineering acceptance — 0.19
+
+- [x] Extend hosted tests/builds and installed-wheel evaluation to native Windows/Python 3.10 and
+  3.13, including Unicode paths and an environment outside checkout.
+- [x] Preserve exact fixture bytes under Windows Git line-ending conversion without weakening
+  assertions; all four Windows/Linux jobs passed at `7556851` in run `33384822722`.
+- [x] Require both Windows and both Linux jobs on `main`, retaining strict up-to-date checks.
+- [x] Distinguish completed engineering acceptance from the still-open external pilot and
+  optional distribution/legal/product-expansion follow-ups.
+
+The package remains a published alpha ready for genuine evaluation, not a validated business or
+provider-publishing service. See the requirement-level audit, commands, review limits, and rollback
+instructions in [`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#final-engineering-acceptance-audit).
 
 ## Deliberate exclusions
 
