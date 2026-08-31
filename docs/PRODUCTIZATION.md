@@ -1680,8 +1680,8 @@ contacted users, invented feedback, or added telemetry.
 - [x] Add the same evaluation to installed-wheel CI and tests; use bounded child invocations and
   explicit UTF-8 pipes for Windows portability.
 - [x] Add public API, onboarding, pilot protocol, changelog/version, and current roadmap guidance.
-- [ ] Finish final local checks, build and isolated wheel evaluation, hosted review/CI, and merge.
-- [ ] Publish exact release artifacts plus the standalone runner and record hashes/rollback.
+- [x] Finish final local checks, build and isolated wheel evaluation, hosted CI, review disposition, and merge.
+- [x] Publish exact release artifacts plus the standalone runner and record hashes/rollback.
 
 P1 first-plan onboarding and reproducible technical-evaluation gaps are addressed by this slice.
 No new JSON schemas or runtime dependencies are added. The helper intentionally uses subprocesses
@@ -1703,3 +1703,49 @@ examples` (46 files unchanged); `py -3.11 -m flake8 samsarix_creative_spirals te
 `py -3.11 -m compileall -q samsarix_creative_spirals tests examples` (passed).
 The evaluation integration test executes the helper outside the checkout, validates ten simulated
 skips and stale-approval rejection, and checks refusal/preservation on a repeated output directory.
+
+### 0.19 published release evidence
+
+Implementation `85e6198` and a small Unicode-console correction converge at exact release head
+`cb99836306cdaf19c537de17790e73bb164631da`. Final local verification again passed 508 tests with
+93.20% coverage; formatting, lint, strict typing, and compilation passed. The source archive and
+its derived wheel built successfully and passed `twine check`; all 14 packaged schemas validated.
+The standalone runner in the source archive and the separately attached file are byte-identical.
+
+Exact assets in the [published v0.19.0 alpha](https://github.com/Deathcharge/samsarix-creative-spirals/releases/tag/v0.19.0):
+
+- `samsarix_creative_spirals-0.19.0-py3-none-any.whl`: 132,063 bytes; SHA-256
+  `b06484e1599522daa6b454bcfeb1dbe3227d9f54fb6230ce2cc05084ca93e51b`.
+- `samsarix_creative_spirals-0.19.0.tar.gz`: 292,874 bytes; SHA-256
+  `4b8b84a275c043d0f16ceb0a562bbbf87f8ccd6a59435ae11418612f48eb18fa`.
+- `evaluate_release.py`: 6,718 bytes; SHA-256
+  `68f9858ff86a6ec0dfd6b58c330a44cd2ea8043f780bcd75c3939a04dc75d27d`.
+
+A separate Python 3.11 environment installed the exact final wheel with `--no-deps` and ran the
+copied standalone script outside the checkout into a Unicode-named output directory. It created
+plan `scp_29c28c626ad1`, rejected stale approval, restored reviewed source, verified a handoff,
+recorded ten simulated skips, and produced publication-complete status, a local HTML board, and
+`evaluation.json`. `pip check` passed. A separate installed-CLI check also confirmed the default
+unscheduled starter reaches `handoff-ready` with `ready: true` before supplying publication data.
+
+[Push run 33382332268](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33382332268)
+and [PR run 33382336012](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33382336012)
+passed the final Python 3.10/3.13 quality, test, build, and installed-wheel evaluation matrices.
+CodeRabbit acknowledged a manual request but posted no review before release/merge; its skipped
+status is not approval. Manual source review and regression testing found and fixed canonical
+channel ordering and legacy-console output encoding. No new repository-wide security scan was
+performed for this slice.
+
+The prerelease and annotated tag were published before merging the README download link. Fresh
+downloads matched all three hashes and the exact installer URL returned HTTP 200.
+[PR #24](https://github.com/Deathcharge/samsarix-creative-spirals/pull/24) merged as
+`a04bb49ad3195aa59f4dc0200696c78def0f17db`; its tree is identical to tagged `cb99836`.
+[Post-merge run 33382794321](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33382794321)
+passed both complete matrices. This evidence-only record is outside the tag.
+
+Release disposition: **published, technically verified alpha**. No locally actionable P0/P1 is
+known in this slice. Real consenting-user feedback and PyPI credentials/trusted publishing remain
+unavailable; the synthetic evaluation does not satisfy the external pilot milestone. Existing
+schemas, runtime dependencies, and unsigned-evidence semantics are unchanged. Revert merge
+`a04bb49` on a reviewed branch or pin `v0.18.0` for rollback; never replace published assets or tags.
+If a defect needs correction, publish a higher version with new verification evidence.
