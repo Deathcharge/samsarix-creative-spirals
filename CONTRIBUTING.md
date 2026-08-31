@@ -37,6 +37,13 @@ python -m build
 Tests must cover user-visible success and failure behavior. Keep coverage at or above the configured
 90% threshold. Do not relax a check or suppress a failure solely to make CI pass.
 
+CI runs formatting, lint, strict types, tests, builds, and the extended example smoke suite on
+Linux/Python 3.10 and 3.13. Native Windows jobs run the complete test suite and build on those same
+versions, then install the wheel without dependencies into a new virtual environment outside the
+checkout. They exercise the installed console entry point and the complete offline evaluation,
+including a Unicode output path. Jobs have a 15-minute timeout. Windows uses PowerShell and runner
+temporary directories, not POSIX `/tmp` assumptions. macOS is not currently a hosted test target.
+
 ## Change guidelines
 
 - Keep public API additions small and typed.
