@@ -203,7 +203,8 @@ def main() -> int:
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         print(f"Evaluation failed: {error!r}", file=sys.stderr)
         return 1
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    # Keep redirected stdout portable even on Windows consoles using legacy encodings.
+    print(json.dumps(summary, ensure_ascii=True, indent=2))
     return 0
 
 

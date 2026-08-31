@@ -139,7 +139,7 @@ def test_evaluation_runner_works_outside_checkout_and_preserves_existing_output(
     tmp_path: Path,
 ) -> None:
     script = Path(__file__).resolve().parents[1] / "examples" / "evaluate_release.py"
-    output = tmp_path / "evaluation"
+    output = tmp_path / "evaluation-雪"
     arguments = [sys.executable, str(script), "--output", str(output)]
     result = subprocess.run(arguments, cwd=tmp_path, capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stderr
