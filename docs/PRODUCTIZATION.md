@@ -1562,7 +1562,7 @@ and library for creators, release operators, and small Git-native content teams.
 - [x] Replace manual ledger edits in installed-wheel CI with the actual CLI recording journey.
 - [x] Update README, API contract, workflow guide, roadmap, changelog, version, and citation.
 - [x] Verify implementation commit `672e7d5` locally, in an isolated installation, and on hosted CI.
-- [ ] Inspect review feedback, merge, publish versioned GitHub artifacts, and record exact evidence.
+- [x] Inspect review feedback, merge, publish versioned GitHub artifacts, and record exact evidence.
 
 No new runtime dependencies, network calls, credentials, telemetry, schema versions, or provider
 actions are introduced. `record` success means a valid snapshot was saved, not that publishing
@@ -1604,5 +1604,47 @@ No external accounts, paid services, legal-license changes, or cross-repository 
 
 The security-policy maintenance uses the root `SECURITY.md` chain only. It updates release-version
 wording and the outcome-recording boundary; no exclusions, severity criteria, or accepted risks
-change. The release artifact will be built after the documentation/review checkpoint and its exact
-digest recorded separately, rather than claiming this earlier candidate includes later edits.
+change. The release artifact was built after the documentation/review checkpoint and its exact
+digest is recorded separately below, rather than claiming the earlier candidate includes later edits.
+
+### 0.18 published release evidence
+
+CodeRabbit reviewed implementation `672e7d5` and posted one actionable finding: the future release
+wheel URL was not yet live. No code finding was posted. The final documentation checkpoint
+`0864fe65809748ffe50825e53ecabf2b0ce30202` changed only `SECURITY.md` and this verification record;
+application code, tests, and CI remained identical. Both final-head matrices passed in
+[push run 33379649424](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33379649424)
+and [PR run 33379653485](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33379653485).
+
+Final distributions were built from that exact head, including a wheel built from its sdist:
+
+- `samsarix_creative_spirals-0.18.0-py3-none-any.whl`: 130,195 bytes; SHA-256
+  `db84278a7b82c97461efc21ae762e7b982ffe881618c33e461b42a9a62922b52`.
+- `samsarix_creative_spirals-0.18.0.tar.gz`: 280,265 bytes; SHA-256
+  `1fe4d084ed3db11c7e59fccb4291587d1ad2dd7bb9fdfa5518bccb32b4907467`.
+
+Both passed `twine check`, all 14 final wheel schemas validated, and a new isolated Python 3.11
+environment reran the entire ten-outcome CLI journey from the exact final wheel. The failed retry,
+preserved snapshots, publication-complete gate, version check, and `pip check` passed again, with
+ledger ID `scpub_5a37f9f02fff`.
+
+Annotated tag `v0.18.0` points to `0864fe6`. The [GitHub alpha release](https://github.com/Deathcharge/samsarix-creative-spirals/releases/tag/v0.18.0)
+was published with both distributions and `SHA256SUMS.txt` before merging the README link.
+Independent downloads matched both hashes; the exact README wheel URL returned HTTP 200. This
+resolved the sole review finding with evidence, and the review thread was marked resolved.
+[PR #22](https://github.com/Deathcharge/samsarix-creative-spirals/pull/22) then merged as
+`d9c5cde241cffe053917b8e9790d6679252a78b8`. Its tree is identical to the tag, and
+[post-merge CI 33380272863](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33380272863)
+passed all quality, test, build, and installed-wheel steps on Python 3.10 and 3.13.
+
+Release disposition: **published, verified alpha**. No locally actionable P0 or P1 defect is known
+in this feature slice. External pilot/adoption evidence and PyPI credentials/trusted-publisher
+configuration remain separate external gates; they are not inferred from automated checks. There
+was no new repository-wide security scan for this slice; targeted regression tests, source review,
+and CodeRabbit review are the evidence described here.
+
+Compatibility is additive: publication v1 and every existing schema are unchanged. Retain earlier
+snapshot files when using the new command; no automatic merge, signing, or provider verification
+is introduced. For rollback, pin the earlier `v0.17.1` distribution or revert merge `d9c5cde` on a
+new reviewed branch. Published tags/assets must not be overwritten; ship a higher corrective
+version for any future defect. This evidence-only update is intentionally outside the release tag.

@@ -456,19 +456,28 @@ the sdist SHA-256 is `47ce6a05c643609515b3f8f39b3f3dca973468e90621389ccfb162835e
 An isolated Python 3.11 wheel journey imported a publishable two-row plan as
 `scp_668860e86792` and passed `pip check`.
 
-## Active milestone — 0.18 validated publication outcomes
+## Completed milestone — 0.18 validated publication outcomes
 
 - [x] Replace the hand-edit-only outcome workflow with a typed API and `plan publication record`.
 - [x] Verify exact current evidence before and after changes, preserve previous snapshots, reject
   backdated retries, and require explicit corrections of published/skipped outcomes.
 - [x] Preserve publication v1 compatibility and the offline operator-attestation boundary.
 - [x] Add outcome/retry/correction tests and an installed-CLI completion journey in hosted CI.
-- [ ] Complete full local/artifact verification, hosted review, merge, and distribution evidence.
+- [x] Complete full local/artifact verification, hosted review, merge, and distribution evidence.
 
 This closes a usability gap in the already implemented post-handoff journey instead of adding a
 provider account model. Official workflow evidence and exact semantics are in
 [`docs/PUBLICATIONS.md`](docs/PUBLICATIONS.md#recording-retrying-and-correcting-outcomes).
 External user pilots remain the highest-value validation gap; feature completion is not adoption.
+
+Implementation `672e7d5` passed 485 tests at 93.13% coverage. Release head `0864fe6` adds only
+verification/security documentation and is tagged as `v0.18.0`; its tree is identical to merge
+`d9c5cde`. Both final PR matrices and [post-merge run 33380272863](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33380272863)
+passed. The [public alpha release](https://github.com/Deathcharge/samsarix-creative-spirals/releases/tag/v0.18.0)
+contains the exact sdist-derived wheel, source archive, and checksums. CodeRabbit's one finding
+(the not-yet-live installer URL) was resolved by publishing and independently verifying downloads
+before merging PR #22. Full artifact and rollback evidence is in
+[`docs/PRODUCTIZATION.md`](docs/PRODUCTIZATION.md#018-published-release-evidence).
 
 ## Deliberate exclusions
 
