@@ -12,8 +12,52 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  windows-quality:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Test native Windows filesystem behavior
+        run: python -m pytest --cov=samsarix_creative_spirals --cov-report=term-missing
+      - name: Build distributions
+        run: python -m build
+      - name: Install wheel in an isolated environment
+        run: |
+          $wheels = @(Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE "dist") -Filter "*.whl")
+          if ($wheels.Count -ne 1) { throw "Expected exactly one built wheel" }
+          $smokeRoot = Join-Path $env:RUNNER_TEMP "samsarix-wheel-smoke"
+          New-Item -ItemType Directory -Path $smokeRoot -ErrorAction Stop | Out-Null
+          python -m venv (Join-Path $smokeRoot "venv")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $smokePython = Join-Path $smokeRoot "venv/Scripts/python.exe"
+          & $smokePython -m pip install --no-deps $wheels[0].FullName
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -LiteralPath "examples/evaluate_release.py" -Destination $smokeRoot -ErrorAction Stop
+      - name: Evaluate installed wheel outside checkout
+        working-directory: ${{ runner.temp }}/samsarix-wheel-smoke
+        run: |
+          & ./venv/Scripts/samsarix-campaign.exe --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./venv/Scripts/python.exe -I evaluate_release.py --output "evaluation-雪"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./venv/Scripts/python.exe -m pip check
+
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:

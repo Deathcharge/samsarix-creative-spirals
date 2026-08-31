@@ -1,2 +1,4 @@
 # RFC 5545 fixtures require exact CRLF bytes on every checkout.
 tests/fixtures/plan-export-v2/**/calendar.ics binary
+# Versioned export fixtures are byte contracts, including intentional LF/CRLF.
+tests/fixtures/** -text
