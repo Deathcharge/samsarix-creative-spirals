@@ -1532,3 +1532,77 @@ bundled plan-import schema, imported the two-row example as publishable plan
 outside the tagged source tree so the published artifact digests remain self-consistent. Roll back
 before distribution by reverting merge `11707dd` or pinning `ce4abb6`; after distribution, publish
 a higher corrective version rather than replacing artifacts.
+
+## 0.18 validated publication-outcome recording
+
+### Product decision and baseline
+
+The 2026-08-31 continuation began from clean, synchronized main `1949985`, following the public
+0.17.1 prerelease. The local Python 3.11 baseline passed 456 tests with 92.91% coverage. Existing
+publication ledgers could be initialized and verified, but the documented operator journey
+required editing structured JSON by hand. This was an actionable P1 usability/reliability gap:
+ordinary post-handoff outcome updates were easier to mis-key than campaign preparation itself.
+
+Current official Buffer failure/retry documentation and Postiz's post-list contract support the
+need for reconciliation and deliberate retries; links and bounded conclusions are in
+[`PUBLICATIONS.md`](PUBLICATIONS.md#current-workflow-evidence-2026-08-31). These are workflow signals,
+not user-demand or adoption evidence for Samsarix. The product remains a credential-free local CLI
+and library for creators, release operators, and small Git-native content teams.
+
+### Implementation and acceptance
+
+- [x] Add a typed immutable `record_campaign_plan_publication` operation and CLI `plan publication
+  record`, selecting an exact existing one-based item/platform pair.
+- [x] Reuse publication v1 validation and exact handoff verification before and after recording.
+- [x] Support pending outcomes, failed retries, idempotent exact repeats, and explicit
+  published/skipped corrections without backdating or inheriting stale metadata.
+- [x] Save new snapshots with exclusive-create semantics; preserve the input and existing outputs.
+- [x] Cover malformed arguments, stale/altered evidence, chronology, terminal replacement,
+  metadata clearing, schema conformance, CLI diagnostics, and overwrite protection in tests.
+- [x] Replace manual ledger edits in installed-wheel CI with the actual CLI recording journey.
+- [x] Update README, API contract, workflow guide, roadmap, changelog, version, and citation.
+- [x] Verify implementation commit `672e7d5` locally, in an isolated installation, and on hosted CI.
+- [ ] Inspect review feedback, merge, publish versioned GitHub artifacts, and record exact evidence.
+
+No new runtime dependencies, network calls, credentials, telemetry, schema versions, or provider
+actions are introduced. `record` success means a valid snapshot was saved, not that publishing
+succeeded or all outcomes are complete. `verify` and readiness retain their separate completion
+gates. Old v1 ledgers remain readable; previous hashes and schema semantics are unchanged.
+
+### Risks, deferrals, and distribution
+
+Snapshots preserve earlier files but are not linked or authenticated history. Concurrent operators
+can branch from the same input; no automatic latest-file selection or merge is claimed. Git review
+remains the collaboration boundary. URL validation does not establish delivery; operators must
+check native platforms before retrying ambiguous provider failures. The command has zero provider
+cost and retains no additional data outside requested local files.
+
+Highest-value next work is external pilot feedback on the full import/review/handoff/reconciliation
+journey. Automatic synchronization, batch provider adapters, and signed append-only history are P2
+expansions requiring separate contracts, not necessary parts of this local slice. PyPI still needs
+owner-configured credentials or trusted publishing; GitHub wheel/sdist distribution is available.
+No external accounts, paid services, legal-license changes, or cross-repository edits are required.
+
+### Implementation verification at `672e7d5`
+
+- `py -3.11 -m black --check samsarix_creative_spirals tests examples`: 44 files unchanged.
+- `py -3.11 -m flake8 samsarix_creative_spirals tests examples`: no findings.
+- `py -3.11 -m mypy`: strict checks passed across 43 source files.
+- `py -3.11 -m pytest -q --cov=samsarix_creative_spirals --cov-report=term`: 485 passed,
+  93.13% coverage, including 42 publication tests.
+- `py -3.11 -m compileall -q samsarix_creative_spirals tests examples`: passed.
+- `py -3.11 -m build --outdir <isolated-artifact-directory>`: built sdist and its universal wheel;
+  `py -3.11 -m twine check <wheel> <sdist>` passed; all 14 packaged schemas passed Draft 2020-12
+  metaschema validation.
+- A separate Python 3.11 virtual environment installed the exact wheel with no dependencies and
+  ran the CLI outside the checkout: approval, handoff, pending ledger, failed attempt, retry,
+  ten published outcomes, preserved prior files, publication-complete readiness, and `pip check`
+  all passed. The final ledger ID was `scpub_5a37f9f02fff`.
+- [Push run 33379073250](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33379073250)
+  and [PR run 33379137402](https://github.com/Deathcharge/samsarix-creative-spirals/actions/runs/33379137402)
+  passed the complete Python 3.10/3.13 quality, build, and installed-wheel matrices.
+
+The security-policy maintenance uses the root `SECURITY.md` chain only. It updates release-version
+wording and the outcome-recording boundary; no exclusions, severity criteria, or accepted risks
+change. The release artifact will be built after the documentation/review checkpoint and its exact
+digest recorded separately, rather than claiming this earlier candidate includes later edits.

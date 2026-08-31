@@ -136,6 +136,7 @@ from .publication import (
     export_campaign_plan_publication,
     initialize_campaign_plan_publication,
     load_campaign_plan_publication,
+    record_campaign_plan_publication,
     verify_campaign_plan_publication,
 )
 from .schema import (
@@ -274,6 +275,7 @@ __all__ = [
     "load_readiness_schema",
     "parse_approval_timestamp",
     "parse_plan_review_timestamp",
+    "record_campaign_plan_publication",
     "render_campaign_plan_readiness_html",
     "render_plan_adapter",
     "render_plan_calendar",

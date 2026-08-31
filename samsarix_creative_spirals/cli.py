@@ -62,6 +62,7 @@ from .publication import (
     export_campaign_plan_publication,
     initialize_campaign_plan_publication,
     load_campaign_plan_publication,
+    record_campaign_plan_publication,
     verify_campaign_plan_publication,
 )
 from .readiness import (
@@ -72,6 +73,7 @@ from .readiness import (
 from .review import (
     ApprovalCheck,
     CampaignDiff,
+    _parse_timestamp,
     create_campaign_approval,
     diff_campaigns,
     export_campaign_approval,
@@ -718,8 +720,58 @@ def _plan_publication_init_command(args: argparse.Namespace) -> int:
         )
     else:
         print(f"Initialized publication ledger {publication.publication_id} in {path}")
-        print("Edit each pending record, then run plan publication verify.")
+        print("Use plan publication record to save outcomes, then run plan publication verify.")
         print("This is unsigned operator metadata, not platform-verified proof.")
+    return 0
+
+
+def _plan_publication_record_command(args: argparse.Namespace) -> int:
+    timestamp_issues: list[str] = []
+    occurred_at = _parse_timestamp(args.occurred_at, field="--at", issues=timestamp_issues)
+    assessed_at = (
+        _parse_timestamp(args.assessed_at, field="--assessed-at", issues=timestamp_issues)
+        if args.assessed_at is not None
+        else None
+    )
+    if timestamp_issues:
+        raise ConfigError(timestamp_issues)
+    assert occurred_at is not None
+    bundle = build_campaign_plan(load_campaign_plan(args.plan))
+    packet = load_campaign_plan_handoff(args.handoff)
+    previous = load_campaign_plan_publication(args.publication)
+    publication = record_campaign_plan_publication(
+        bundle,
+        packet,
+        previous,
+        sequence=args.item,
+        platform=args.platform,
+        status=args.status,
+        recorded_by=args.recorded_by,
+        occurred_at=occurred_at,
+        url=args.url,
+        note=args.note,
+        replace_outcome=args.replace_outcome,
+        assessed_at=assessed_at,
+        content_policy=_optional_content_policy(args),
+    )
+    path = export_campaign_plan_publication(publication, args.output)
+    if args.json:
+        _json_print(
+            {
+                "path": str(path),
+                "previousPublicationId": previous.publication_id,
+                "publicationId": publication.publication_id,
+                "publication": publication.to_dict(),
+            }
+        )
+    else:
+        print(
+            f"Recorded {args.status} for item {args.item} {args.platform} in {_terminal_safe(path)}"
+        )
+        print(f"Publication ledger: {publication.publication_id}")
+        print(
+            "Previous snapshot preserved. This is operator metadata, not platform-verified proof."
+        )
     return 0
 
 
@@ -1245,7 +1297,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_handoff_verify_parser.set_defaults(handler=_plan_handoff_verify_command)
 
     plan_publication_parser = plan_subparsers.add_parser(
-        "publication", help="initialize or verify operator-attested publication outcomes"
+        "publication", help="initialize, record, or verify operator-attested publication outcomes"
     )
     plan_publication_subparsers = plan_publication_parser.add_subparsers(
         dest="plan_publication_command"
@@ -1268,6 +1320,44 @@ def build_parser() -> argparse.ArgumentParser:
         "--json", action="store_true", help="emit machine-readable output"
     )
     plan_publication_init_parser.set_defaults(handler=_plan_publication_init_command)
+
+    plan_publication_record_parser = plan_publication_subparsers.add_parser(
+        "record", help="record one outcome in a new ledger snapshot; never publish or overwrite"
+    )
+    plan_publication_record_parser.add_argument("plan")
+    plan_publication_record_parser.add_argument("handoff")
+    plan_publication_record_parser.add_argument("publication", help="current ledger snapshot")
+    plan_publication_record_parser.add_argument("--item", type=int, required=True)
+    plan_publication_record_parser.add_argument(
+        "--platform", choices=("x", "linkedin", "bluesky", "mastodon", "discord"), required=True
+    )
+    plan_publication_record_parser.add_argument(
+        "--status", choices=("published", "failed", "skipped"), required=True
+    )
+    plan_publication_record_parser.add_argument("--by", dest="recorded_by", required=True)
+    plan_publication_record_parser.add_argument(
+        "--at", dest="occurred_at", required=True, help="explicit RFC 3339 outcome time"
+    )
+    plan_publication_record_parser.add_argument("--url", help="required for published outcomes")
+    plan_publication_record_parser.add_argument(
+        "--note", help="required for failed/skipped outcomes"
+    )
+    plan_publication_record_parser.add_argument(
+        "--replace-outcome",
+        action="store_true",
+        help="allow correction of a published/skipped outcome",
+    )
+    plan_publication_record_parser.add_argument(
+        "--assessed-at", help="explicit RFC 3339 verification time (default: now)"
+    )
+    plan_publication_record_parser.add_argument(
+        "--policy", help="exact content policy bound to the packet approval, when present"
+    )
+    plan_publication_record_parser.add_argument(
+        "--output", required=True, help="new snapshot file; existing files are never replaced"
+    )
+    plan_publication_record_parser.add_argument("--json", action="store_true")
+    plan_publication_record_parser.set_defaults(handler=_plan_publication_record_command)
 
     plan_publication_verify_parser = plan_publication_subparsers.add_parser(
         "verify", help="verify current bindings, complete coverage, and recorded outcomes"

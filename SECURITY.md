@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-The latest `0.17.x` release line is supported. Version 0.17.0 is superseded by the filesystem and
-validation hardening in 0.17.1. Earlier pre-productization and
+The latest release is supported. Version 0.17.0 is superseded by the filesystem and
+validation hardening introduced in 0.17.1 and retained in 0.18.0. Earlier pre-productization and
 Helix-branded snapshots are not supported.
 
 ## Reporting a vulnerability
@@ -135,7 +135,11 @@ Publication ledgers are unsigned operator assertions. `recordedBy` is not authen
 audience visibility, unchanged content, or continued availability. The verifier performs no DNS
 or HTTP request. Never put credentials, tokens, private provider responses, or unnecessary
 personal data in URLs or notes. Protect the ledger because it can disclose live post URLs,
-operator labels, timing, channel choices, and failure context. See `docs/PUBLICATIONS.md`.
+operator labels, timing, channel choices, and failure context. Outcome recording verifies current
+evidence before and after a change, refuses backdated retries, and requires an explicit flag to
+correct published/skipped outcomes. It saves an exclusively created new snapshot instead of
+overwriting the prior ledger. These files are not an authenticated, linked, append-only history;
+concurrent operators may create divergent snapshots. See `docs/PUBLICATIONS.md`.
 
 Readiness JSON and HTML are point-in-time observations, not authenticated workflow state or proof
 of publication. HTML reports contain complete draft content, intended times, links, media metadata,
